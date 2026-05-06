@@ -35,14 +35,14 @@ function S18HostExplain({ onNext, onBack }) {
 
 /* SCREEN 16 — Host Family Registration (4 internal steps) */
 function S16HostRegistration({ data, setData, onNext, onBack }) {
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 5;
   const [internalStep, setInternalStep] = useState(1);
   const [errors, setErrors]             = useState({});
 
   const set = (key) => (val) =>
     setData((prev) => ({ ...prev, [key]: val }));
 
-  const STEP_LABELS = ['פרטים אישיים', 'סוג אירוח', 'אורח החיים', 'אופי הבית'];
+  const STEP_LABELS = ['פרטים אישיים', 'סוג אירוח', 'אורח החיים', 'שירותים', 'אופי הבית'];
 
   const CAPACITY_OPTIONS = ['1', '2', '3', '4', '5+'];
 
@@ -77,16 +77,18 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
     },
     2: () => {
       const e = {};
-      if (!data.hostingType)      e.hostingType = 'יש לבחור סוג אירוח';
-      if (!data.hostCity?.trim()) e.hostCity    = 'יש להזין עיר או כתובת';
+      if (!data.hostingTypes?.length) e.hostingTypes = 'יש לבחור לפחות סוג אירוח אחד';
+      if (!data.hostCity?.trim())     e.hostCity      = 'יש להזין עיר או כתובת';
       return e;
     },
     3: () => {
       const e = {};
       if (!data.shabbatObservance) e.shabbatObservance = 'יש לבחור רמת שמירת שבת';
+      if (!data.hostKosher)        e.hostKosher        = 'יש לבחור רמת כשרות';
       return e;
     },
-    4: () => {
+    4: () => ({}), /* שירותים — הכל אופציונלי */
+    5: () => {
       const e = {};
       if (!data.hostCapacity) e.hostCapacity = 'יש לבחור מספר חיילים מרבי';
       return e;
@@ -169,14 +171,41 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <StepIndicator />
       <SectionTitle icon="🍽️" title="סוג אירוח ומיקום" sub="ספרו לנו מה אתם מציעים ואיפה אתם נמצאים" />
 
-      <RadioGroup label="סוג אירוח מועדף" value={data.hostingType||''} onChange={set('hostingType')}
-        options={[
-          { value: 'friday_dinner', label: '🍽️ ארוחת ליל שישי',    sub: 'סעודת שבת — ארוחה ראשונה'        },
-          { value: 'shabbat_lunch', label: '☀️ ארוחת צהריים שבת',   sub: 'סעודת היום — ארוחה שנייה'         },
-          { value: 'delivery',      label: '📦 משלוח מנות לבסיסים', sub: 'שליחת מנות חמות לחיילים בבסיס'    },
-        ]}
-      />
-      {errors.hostingType && <p className="text-xs text-red-500 font-medium -mt-3 mb-4">{errors.hostingType}</p>}
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-gray-700 mb-2.5">סוג אירוח מועדף</p>
+        <p className="text-xs text-warm-400 mb-3">אפשר לבחור יותר מאפשרות אחת</p>
+        <div className="flex flex-col gap-2.5">
+          {[
+            { value: 'friday_dinner', label: '🍽️ ארוחת ליל שישי',    sub: 'סעודת שבת — ארוחה ראשונה'       },
+            { value: 'shabbat_lunch', label: '☀️ ארוחת צהריים שבת',   sub: 'סעודת היום — ארוחה שנייה'        },
+            { value: 'delivery',      label: '📦 משלוח מנות לבסיסים', sub: 'שליחת מנות חמות לחיילים בבסיס'   },
+          ].map(opt => {
+            const selected = (data.hostingTypes||[]).includes(opt.value);
+            const toggle = () => {
+              const cur = data.hostingTypes||[];
+              set('hostingTypes')(selected ? cur.filter(v => v !== opt.value) : [...cur, opt.value]);
+            };
+            return (
+              <label key={opt.value} onClick={toggle} className={clsx(
+                'flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150',
+                selected ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
+              )}>
+                <div className={clsx(
+                  'w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                  selected ? 'bg-brand-600 border-brand-600' : 'border-warm-300 bg-white'
+                )}>
+                  {selected && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-800">{opt.label}</span>
+                  <p className="text-xs text-warm-500 mt-0.5">{opt.sub}</p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        {errors.hostingTypes && <p className="mt-2 text-xs text-red-500 font-medium">{errors.hostingTypes}</p>}
+      </div>
 
       <Input label="כתובת בית / עיר" value={data.hostCity||''} onChange={set('hostCity')}
         placeholder="לדוגמה: חיפה, רחוב הרצל 12..." error={errors.hostCity}
@@ -188,7 +217,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
     </div>
   );
 
-  /* ══ STEP 3 — Shabbat Observance · Services ══ */
+  /* ══ STEP 3 — Shabbat Observance · Kashrut ══ */
   if (internalStep === 3) return (
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-10">
       <BackBtn onBack={handleBack} />
@@ -204,24 +233,55 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       />
       {errors.shabbatObservance && <p className="text-xs text-red-500 font-medium -mt-3 mb-4">{errors.shabbatObservance}</p>}
 
-      <Card className="mb-5">
-        <p className="text-sm font-semibold text-gray-700 mb-3">שירותים נוספים</p>
-        <p className="text-xs text-warm-400 mb-3.5">אופציונלי — כל תוספת תסייע לחיילים</p>
-        <div className="space-y-3.5">
-          <CheckRow checked={!!data.hostCanSleep} onChange={set('hostCanSleep')}>
-            <span><span className="font-medium text-gray-800">🛏️ מקום לינה</span><br/><span className="text-warm-400">יכולים לספק מקום שינה לחייל/ת בשבת</span></span>
-          </CheckRow>
-          <CheckRow checked={!!data.hostCanTransport} onChange={set('hostCanTransport')}>
-            <span><span className="font-medium text-gray-800">🚗 הסעה</span><br/><span className="text-warm-400">יכולים להסיע מ/לבסיס או לתחנה קרובה</span></span>
-          </CheckRow>
-        </div>
-      </Card>
+      <RadioGroup label="כשרות" value={data.hostKosher||''} onChange={set('hostKosher')}
+        options={[
+          { value: 'mehadrin', label: '✡️ כשר למהדרין', sub: 'הכשר מהדרין, ללא חשש עירוב' },
+          { value: 'kosher',   label: '🍽️ כשר',          sub: 'בשר/חלב נפרדים ותו הכשר'   },
+          { value: 'none',     label: '🤝 לא חשוב',       sub: 'מתאים לכל סוג חייל'         },
+        ]}
+      />
+      {errors.hostKosher && <p className="text-xs text-red-500 font-medium -mt-3 mb-4">{errors.hostKosher}</p>}
 
       <div className="mt-auto pt-2"><Btn onClick={advance}>המשך ←</Btn></div>
     </div>
   );
 
-  /* ══ STEP 4 — Capacity · Home Atmosphere ══ */
+  /* ══ STEP 4 — Additional Services ══ */
+  if (internalStep === 4) return (
+    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-10">
+      <BackBtn onBack={handleBack} />
+      <StepIndicator />
+      <SectionTitle icon="🤝" title="שירותים נוספים" sub="כל תוספת עוזרת לנו להתאים לכם חיילים שמחפשים בדיוק את זה" />
+
+      <Card className="mb-4">
+        <div className="space-y-4">
+          <CheckRow checked={!!data.hostCanSleep} onChange={set('hostCanSleep')}>
+            <span>
+              <span className="font-medium text-gray-800">🛏️ מקום לינה</span>
+              <br/><span className="text-warm-400">יכולים לספק מקום שינה לחייל/ת בשבת</span>
+            </span>
+          </CheckRow>
+          <CheckRow checked={!!data.hostCanTransport} onChange={set('hostCanTransport')}>
+            <span>
+              <span className="font-medium text-gray-800">🚗 הסעה</span>
+              <br/><span className="text-warm-400">יכולים להסיע מ/לבסיס או לתחנה קרובה</span>
+            </span>
+          </CheckRow>
+        </div>
+      </Card>
+
+      <Card className="bg-brand-50 border-brand-100 flex gap-3 items-start">
+        <span className="text-xl flex-shrink-0">💡</span>
+        <p className="text-xs text-brand-800 leading-relaxed">
+          אם לא תסמנו כלום — נתאים לכם חיילים לארוחה בלבד. אפשר לעדכן בכל עת מהפרופיל.
+        </p>
+      </Card>
+
+      <div className="mt-auto pt-5"><Btn onClick={advance}>המשך ←</Btn></div>
+    </div>
+  );
+
+  /* ══ STEP 5 — Capacity · Home Atmosphere ══ */
   return (
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-10">
       <BackBtn onBack={handleBack} />
@@ -263,8 +323,13 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
           {[
             { label: 'שם',     val: data.hostFullName },
             { label: 'עיר',    val: data.hostCity },
-            { label: 'אירוח',  val: data.hostingType === 'friday_dinner' ? 'ארוחת ליל שישי' : data.hostingType === 'shabbat_lunch' ? 'ארוחת צהריים שבת' : data.hostingType === 'delivery' ? 'משלוח לבסיסים' : null },
+            { label: 'אירוח',  val: (data.hostingTypes||[]).map(t =>
+                t === 'friday_dinner' ? 'ארוחת ליל שישי' :
+                t === 'shabbat_lunch' ? 'ארוחת צהריים שבת' :
+                t === 'delivery'      ? 'משלוח לבסיסים' : t
+              ).join(', ') || null },
             { label: 'שבת',    val: data.shabbatObservance === 'observant' ? 'שומרי שבת' : data.shabbatObservance === 'traditional' ? 'מסורתי' : data.shabbatObservance === 'secular' ? 'חילוני' : null },
+            { label: 'כשרות',  val: data.hostKosher === 'mehadrin' ? 'כשר למהדרין' : data.hostKosher === 'kosher' ? 'כשר' : data.hostKosher === 'none' ? 'לא חשוב' : null },
             { label: 'קיבולת', val: data.hostCapacity ? `עד ${data.hostCapacity} חיילים` : null },
           ].filter(r => r.val).map(r => (
             <div key={r.label} className="flex justify-between text-xs">
@@ -304,6 +369,122 @@ function S17HostSuccess({ onHome, name }) {
         אתם עכשיו חלק ממשפחת מארחי שבת.<br/>חיילים יוכלו למצוא אתכם ולבקש אירוח לשישי! 🕯️
       </p>
       <Btn onClick={onHome} className="text-lg py-4">לעמוד הבית 🏠</Btn>
+    </div>
+  );
+}
+
+/* SCREEN 19 — Host Home */
+function S19HostHome({ data, onNewHosting }) {
+  const nextFriday = new Date(Date.now()+((5-new Date().getDay()+7)%7)*86400000)
+    .toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+
+  const kosherLabel = data.hostKosher === 'mehadrin' ? 'כשר למהדרין'
+    : data.hostKosher === 'kosher' ? 'כשר' : 'לא חשוב';
+
+  const shabbatLabel = data.shabbatObservance === 'observant' ? 'שומרי שבת'
+    : data.shabbatObservance === 'traditional' ? 'מסורתי' : 'חילוני';
+
+  const hostingLabels = (data.hostingTypes||[]).map(t =>
+    t === 'friday_dinner' ? 'ליל שישי' :
+    t === 'shabbat_lunch' ? 'צהריים שבת' : 'משלוח'
+  ).join(' · ');
+
+  const pendingRequests = [
+    { name: 'יונתן כ.', unit: 'גולני', kosher: 'כשר', needSleep: true,  lang: 'עברית' },
+    { name: 'דניאל מ.', unit: 'חי"ר', kosher: 'לא חשוב', needSleep: false, lang: 'עברית' },
+  ];
+
+  return (
+    <div className="screen-enter min-h-screen bg-warm-50 pb-24">
+
+      {/* Header */}
+      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-12 pb-8 rounded-b-3xl shadow-lg">
+        <p className="text-sm opacity-80 mb-0.5">שלום,</p>
+        <h1 className="text-2xl font-bold mb-1">{data.hostFullName || 'משפחה מארחת'} 👋</h1>
+        <div className="flex items-center gap-2 mt-2 mb-4">
+          <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
+          <span className="text-sm font-medium opacity-90">משפחה מארחת מאומתת ✅</span>
+        </div>
+        {/* Profile chips */}
+        <div className="flex flex-wrap gap-2">
+          {hostingLabels && (
+            <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">🍽️ {hostingLabels}</span>
+          )}
+          {data.hostCapacity && (
+            <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">👥 עד {data.hostCapacity} חיילים</span>
+          )}
+          {data.hostKosher && (
+            <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">✡️ {kosherLabel}</span>
+          )}
+          {data.shabbatObservance && (
+            <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">🕯️ {shabbatLabel}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-5 mt-5 space-y-5">
+
+        {/* Main CTA */}
+        <Btn onClick={onNewHosting} className="shadow-md text-base py-4">
+          🏡 פתח אירוח לשישי הקרוב
+        </Btn>
+
+        {/* Next Shabbat card */}
+        <div>
+          <h2 className="text-base font-bold text-gray-800 mb-3">שבת קרובה 🕯️</h2>
+          <Card className="bg-amber-50 border-amber-200 text-center py-5">
+            <p className="text-sm font-semibold text-amber-800 mb-1">שישי, {nextFriday}</p>
+            <p className="text-xs text-amber-600 mb-3">2 חיילים מחפשים אירוח באזורכם</p>
+            <Btn variant="outline" className="border-amber-500 text-amber-700 hover:bg-amber-100 py-2.5 text-sm">
+              צפה בבקשות
+            </Btn>
+          </Card>
+        </div>
+
+        {/* Pending requests */}
+        <div>
+          <h2 className="text-base font-bold text-gray-800 mb-3">בקשות ממתינות 🪖</h2>
+          <div className="space-y-3">
+            {pendingRequests.map(r => (
+              <Card key={r.name} className="cursor-pointer hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-100 flex items-center justify-center flex-shrink-0 text-xl">🪖</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-bold text-gray-800 text-sm">{r.name}</p>
+                      <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">ממתין</span>
+                    </div>
+                    <p className="text-xs text-warm-500 mb-1.5">יחידה: {r.unit}</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Tag>{r.kosher}</Tag>
+                      {r.needSleep && <Tag>🛏️ צריך לינה</Tag>}
+                      <Tag>🌐 {r.lang}</Tag>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button className="flex-1 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition-colors">
+                    ✅ אשר
+                  </button>
+                  <button className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">
+                    ❌ דחה
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Past hostings */}
+        <div>
+          <h2 className="text-base font-bold text-gray-800 mb-3">אירוחים קודמים 📅</h2>
+          <Card className="text-center py-6 text-warm-400">
+            <span className="text-3xl block mb-2">📭</span>
+            <p className="text-sm">עדיין לא אירחתם — <br/>פתחו את האירוח הראשון שלכם! 🎉</p>
+          </Card>
+        </div>
+
+      </div>
     </div>
   );
 }
