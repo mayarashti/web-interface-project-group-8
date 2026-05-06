@@ -32,7 +32,8 @@ function App() {
     18: <S18HostExplain  onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName||'משפחה מארחת'} />,
-    19: <S19HostHome    data={formData} onNewHosting={() => {}} />,
+    19: <S19HostHome    data={formData} onNewHosting={() => go(20)} />,
+    20: <S20NewHosting  data={formData} onBack={() => go(19)} onSubmit={() => go(19)} />,
   };
 
   return (

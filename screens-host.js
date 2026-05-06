@@ -373,7 +373,267 @@ function S17HostSuccess({ onHome, name }) {
   );
 }
 
-/* SCREEN 19 — Host Home */
+/* SCREEN 20 — Create New Hosting */
+function S20NewHosting({ data, onBack, onSubmit }) {
+  const [form, setForm] = useState({
+    date: '',
+    time: '',
+    customTime: '',
+    soldiers: data.hostCapacity || '',
+    note: '',
+    images: [],
+  });
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  /* ── generate next 4 Fridays and their Saturdays ── */
+  const upcomingDates = (() => {
+    const dates = [];
+    const today = new Date();
+    let d = new Date(today);
+    // advance to next Friday
+    d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
+    for (let i = 0; i < 4; i++) {
+      const fri = new Date(d);
+      const sat = new Date(d); sat.setDate(sat.getDate() + 1);
+      dates.push({
+        value: fri.toISOString().split('T')[0],
+        dayLabel: "שישי",
+        dateLabel: fri.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }),
+        satLabel: sat.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }),
+      });
+      d.setDate(d.getDate() + 7);
+    }
+    return dates;
+  })();
+
+  const TIME_OPTIONS = [
+    { value: 'friday_evening', label: '🌆 ערב שישי', sub: 'ארוחת ליל שבת ~19:00' },
+    { value: 'saturday_lunch', label: '☀️ צהריים שבת', sub: 'ארוחת שבת ~12:30' },
+    { value: 'custom',         label: '🕐 שעה אחרת', sub: 'בחר שעה מותאמת אישית' },
+  ];
+
+  const SOLDIER_OPTIONS = ['1', '2', '3', '4', '5+'];
+
+  const validate = () => {
+    const e = {};
+    if (!form.date)    e.date    = 'יש לבחור תאריך';
+    if (!form.time)    e.time    = 'יש לבחור שעה';
+    if (!form.soldiers) e.soldiers = 'יש לבחור מספר חיילים';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    setSubmitted(true);
+    setTimeout(() => onSubmit(), 1800);
+  };
+
+  const handleImageAdd = () => {
+    // mock — add a placeholder image
+    const colors = ['#fbd5b0','#f7b87a','#e87020','#c2560e','#9c420c'];
+    const color = colors[form.images.length % colors.length];
+    setF('images')([...form.images, { id: Date.now(), color }]);
+  };
+
+  if (submitted) return (
+    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
+      <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-5 shadow-lg">
+        <span className="text-5xl">✅</span>
+      </div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">האירוח פורסם!</h1>
+      <p className="text-sm text-warm-500 leading-relaxed">חיילים באזורכם יוכלו לראות את האירוח ולבקש להצטרף</p>
+      <div className="flex gap-1.5 justify-center mt-6">
+        {[0,1,2].map(i => <div key={i} className="w-2 h-2 rounded-full bg-brand-400 animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-12">
+      <BackBtn onBack={onBack} />
+      <SectionTitle icon="🏡" title="פתיחת אירוח חדש" sub="מלאו את הפרטים וחיילים יוכלו להירשם" />
+
+      {/* ── Date picker ── */}
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-gray-700 mb-1">בחרו תאריך</p>
+        <p className="text-xs text-warm-400 mb-3">השישי הקרוב מסומן ראשון</p>
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
+          {upcomingDates.map(d => (
+            <button key={d.value} type="button" onClick={() => setF('date')(d.value)}
+              className={clsx(
+                'p-3.5 rounded-xl border-2 text-right transition-all duration-150 active:scale-95',
+                form.date === d.value
+                  ? 'border-brand-500 bg-brand-50 shadow-sm'
+                  : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
+              )}
+            >
+              <p className={clsx('text-xs font-semibold mb-0.5', form.date === d.value ? 'text-brand-600' : 'text-warm-500')}>
+                {d.dayLabel}
+              </p>
+              <p className={clsx('text-sm font-bold', form.date === d.value ? 'text-brand-700' : 'text-gray-800')}>
+                {d.dateLabel}
+              </p>
+              <p className="text-xs text-warm-400 mt-0.5">שבת {d.satLabel}</p>
+            </button>
+          ))}
+        </div>
+        {/* Custom date fallback */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-px bg-warm-200" />
+          <span className="text-xs text-warm-400">או בחרו תאריך אחר</span>
+          <div className="flex-1 h-px bg-warm-200" />
+        </div>
+        <input
+          type="date"
+          value={form.date}
+          onChange={e => setF('date')(e.target.value)}
+          className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 transition-all"
+        />
+        {errors.date && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.date}</p>}
+      </div>
+
+      {/* ── Time ── */}
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-gray-700 mb-2.5">שעת האירוח</p>
+        <div className="flex flex-col gap-2">
+          {TIME_OPTIONS.map(opt => (
+            <label key={opt.value} onClick={() => setF('time')(opt.value)}
+              className={clsx(
+                'flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150',
+                form.time === opt.value ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
+              )}
+            >
+              <div className={clsx(
+                'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                form.time === opt.value ? 'border-brand-600' : 'border-warm-300'
+              )}>
+                {form.time === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                <p className="text-xs text-warm-500">{opt.sub}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        {form.time === 'custom' && (
+          <input
+            type="time"
+            value={form.customTime}
+            onChange={e => setF('customTime')(e.target.value)}
+            className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 transition-all"
+          />
+        )}
+        {errors.time && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.time}</p>}
+      </div>
+
+      {/* ── Soldier count ── */}
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-gray-700 mb-1">כמה חיילים לאירוח זה?</p>
+        <p className="text-xs text-warm-400 mb-3">ניתן לשנות לכל אירוח בנפרד</p>
+        <div className="flex gap-2.5">
+          {SOLDIER_OPTIONS.map(n => (
+            <button key={n} type="button" onClick={() => setF('soldiers')(n)}
+              className={clsx(
+                'flex-1 h-12 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-300',
+                form.soldiers === n
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105'
+                  : 'bg-white text-gray-600 border-warm-300 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700'
+              )}
+            >{n}</button>
+          ))}
+        </div>
+        {errors.soldiers && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.soldiers}</p>}
+      </div>
+
+      {/* ── Free text ── */}
+      <div className="mb-5">
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">הערה חופשית (אופציונלי)</label>
+        <p className="text-xs text-warm-400 mb-2">ספרו לחיילים משהו על האירוח — מה יהיה בתפריט, אווירה, וכו'</p>
+        <textarea
+          value={form.note}
+          onChange={e => setF('note')(e.target.value)}
+          placeholder="לדוגמה: נכין חמין מסורתי, יש פסנתר בבית, מרפסת נוף לים... 🎵"
+          rows={4}
+          maxLength={300}
+          className="w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 resize-none transition-all"
+        />
+        <p className="text-xs text-warm-400 mt-1 text-left">{form.note.length}/300</p>
+      </div>
+
+      {/* ── Images ── */}
+      <div className="mb-6">
+        <p className="text-sm font-semibold text-gray-700 mb-1.5">תמונות (אופציונלי)</p>
+        <p className="text-xs text-warm-400 mb-3">תמונות של הבית, הארוחה או האווירה — עוזר לחיילים להתחבר</p>
+        <div className="flex gap-2.5 flex-wrap">
+          {form.images.map((img, i) => (
+            <div key={img.id} className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+              <div className="w-full h-full flex items-center justify-center text-2xl" style={{background: img.color}}>
+                🏠
+              </div>
+              <button
+                type="button"
+                onClick={() => setF('images')(form.images.filter((_,j) => j !== i))}
+                className="absolute top-1 left-1 w-5 h-5 bg-gray-800 bg-opacity-60 rounded-full text-white text-xs flex items-center justify-center hover:bg-opacity-80"
+              >✕</button>
+            </div>
+          ))}
+          {form.images.length < 5 && (
+            <button type="button" onClick={handleImageAdd}
+              className="w-20 h-20 rounded-xl border-2 border-dashed border-warm-300 bg-warm-50 flex flex-col items-center justify-center gap-1 hover:border-brand-400 hover:bg-brand-50 transition-all flex-shrink-0"
+            >
+              <span className="text-2xl">📷</span>
+              <span className="text-xs text-warm-400">הוסף</span>
+            </button>
+          )}
+        </div>
+        {form.images.length > 0 && (
+          <p className="text-xs text-warm-400 mt-2">{form.images.length}/5 תמונות</p>
+        )}
+      </div>
+
+      {/* ── Summary preview ── */}
+      {(form.date || form.time || form.soldiers) && (
+        <Card className="mb-5 bg-warm-50 border-warm-200">
+          <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-2.5">תצוגה מקדימה</p>
+          <div className="space-y-1.5">
+            {form.date && (
+              <div className="flex justify-between text-xs">
+                <span className="text-warm-500">תאריך</span>
+                <span className="font-medium text-gray-800">
+                  {new Date(form.date).toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' })}
+                </span>
+              </div>
+            )}
+            {form.time && (
+              <div className="flex justify-between text-xs">
+                <span className="text-warm-500">שעה</span>
+                <span className="font-medium text-gray-800">
+                  {form.time === 'friday_evening' ? 'ערב שישי ~19:00'
+                    : form.time === 'saturday_lunch' ? 'צהריים שבת ~12:30'
+                    : form.customTime || 'שעה מותאמת'}
+                </span>
+              </div>
+            )}
+            {form.soldiers && (
+              <div className="flex justify-between text-xs">
+                <span className="text-warm-500">מקומות</span>
+                <span className="font-medium text-gray-800">עד {form.soldiers} חיילים</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <Btn onClick={handleSubmit} className="text-base py-4">פרסם אירוח 🕯️</Btn>
+    </div>
+  );
+}
+
 function S19HostHome({ data, onNewHosting }) {
   const nextFriday = new Date(Date.now()+((5-new Date().getDay()+7)%7)*86400000)
     .toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
