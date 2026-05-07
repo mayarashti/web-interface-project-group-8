@@ -1,4 +1,3 @@
-/* app.js — Root App component + render */
 
 function App() {
   const [screen,   setScreen]   = useState(1);

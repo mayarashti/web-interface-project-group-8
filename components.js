@@ -1,6 +1,7 @@
 /* ─────────────────────────────────────────
    components.js  —  Shared UI components
 ───────────────────────────────────────── */
+
 const { useState, useEffect, useRef } = React;
 const clsx = (...args) => args.filter(Boolean).join(' ');
 
