@@ -253,8 +253,8 @@ function S15Home({ data, onNewRequest }) {
 
         {/* Map section */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-1">{t('map_title')}</h2>
-          <p className="text-xs text-warm-400 mb-3">{t('map_approx')}</p>
+          <h2 className="text-base font-bold text-gray-800 mb-1">{t('חפשו את האירוח המתאים עבורם!')}</h2>
+          <p className="text-xs text-warm-400 mb-3">{t('מפת האירוחים שלנו')}</p>
           <MapView
             families={MAP_FAMILIES}
             selectedId={selected?.id ?? null}
