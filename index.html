@@ -39,7 +39,58 @@
     .otp-input { letter-spacing: 0.45em; text-align: center; font-size: 1.5rem; font-weight: 700; }
   </style>
 
-  <!-- Tailwind brand colour config -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Map marker + sheet styles -->
+  <style>
+    .host-marker-outer {
+      width: 44px; height: 44px;
+      background: #c2560e;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+      border: 3px solid #fff;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .host-marker-outer:hover { transform: rotate(-45deg) scale(1.15); }
+    .host-marker-inner {
+      transform: rotate(45deg);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .host-marker-outer.selected { background: #7c3aed; }
+
+    .family-sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+      z-index: 2000;
+      max-width: 480px;
+      margin: 0 auto;
+      animation: sheetUp 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      padding: 0 20px 32px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .sheet-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1999;
+      backdrop-filter: blur(2px);
+    }
+    .leaflet-container { font-family: 'Heebo', sans-serif !important; }
+    .leaflet-control-attribution { display: none !important; }
+  </style>
+
+
   <script>
     tailwind.config = {
       theme: {
@@ -81,9 +132,10 @@
       3. screens-host.js    — screens 16-17 (host family flow)
       4. app.js             — App component + ReactDOM render
   -->
-<script type="text/babel" src="components.js"></script>
-<script type="text/babel" src="screens-soldier.js"></script>
-<script type="text/babel" src="screens-host.js"></script>
-<script type="text/babel" src="app.js"></script>
+  <script type="text/babel" src="translations.js"></script>
+  <script type="text/babel" src="components.js"></script>
+  <script type="text/babel" src="solider's side/screens-soldier.js"></script>
+  <script type="text/babel" src="family side/screens-host.js"></script>
+  <script type="text/babel" src="app.js"></script>
 </body>
 </html>

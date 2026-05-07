@@ -5,18 +5,16 @@ const { useState, useEffect, useRef } = React;
 const clsx = (...args) => args.filter(Boolean).join(' ');
 
 function ProgressBar({ step, total }) {
+  const { t } = useLang();
   const pct = Math.round((step / total) * 100);
   return (
     <div className="w-full mb-5">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-brand-600">שלב {step} מתוך {total}</span>
+        <span className="text-xs font-medium text-brand-600">{t('step_label', step, total)}</span>
         <span className="text-xs text-warm-500">{pct}%</span>
       </div>
       <div className="h-2 bg-warm-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-l from-brand-500 to-brand-400 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
+        <div className="h-full bg-gradient-to-l from-brand-500 to-brand-400 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -71,12 +69,13 @@ function Tag({ children }) {
 }
 
 function BackBtn({ onBack }) {
+  const { t } = useLang();
   return (
     <button onClick={onBack} className="flex items-center gap-1.5 text-brand-600 font-medium text-sm mb-4 hover:text-brand-800 transition-colors">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="9 18 15 12 9 6"/>
       </svg>
-      חזור
+      {t('back')}
     </button>
   );
 }

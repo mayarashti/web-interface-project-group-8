@@ -1,18 +1,20 @@
-/* ─────────────────────────────────────────
-   app.js  —  Root App component + render
-───────────────────────────────────────── */
+/* app.js — Root App component + render */
 
 function App() {
   const [screen,   setScreen]   = useState(1);
-  const [formData, setFormData] = useState({
-    languages: ['he'],
-    allergies: [],
-  });
+  const [lang,     setLang]     = useState('he');
+  const [formData, setFormData] = useState({ languages:['he'], allergies:[] });
 
-  const go = (n) => setScreen(n);
+  const go = (n) => { setScreen(n); window.scrollTo(0,0); };
+
+  /* keep <html> dir + lang in sync */
+  useEffect(() => {
+    document.documentElement.dir  = lang === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const screens = {
-    /* ── soldier flow ── */
+    /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(2)} onHost={() => go(18)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
     3:  <S3Account    data={formData} setData={setFormData} onNext={() => go(4)}  onBack={() => go(2)} />,
@@ -28,18 +30,21 @@ function App() {
     13: <S13Pending   onHome={() => go(15)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(15)} name={`${formData.firstName||''} ${formData.lastName||''}`} />,
     15: <S15Home      data={formData} onNewRequest={() => {}} />,
-    /* ── host flow ── */
-    18: <S18HostExplain  onNext={() => go(16)} onBack={() => go(1)} />,
+    /* host flow */
+    18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
-    17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName||'משפחה מארחת'} />,
+    17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
     19: <S19HostHome    data={formData} onNewHosting={() => go(20)} />,
     20: <S20NewHosting  data={formData} onBack={() => go(19)} onSubmit={() => go(19)} />,
   };
 
   return (
-    <div className="min-h-screen" dir="rtl">
-      {screens[screen] || screens[1]}
-    </div>
+    <LangContext.Provider value={{ lang, setLang }}>
+      <div className="min-h-screen">
+        <LangToggle />
+        {screens[screen] || screens[1]}
+      </div>
+    </LangContext.Provider>
   );
 }
 
