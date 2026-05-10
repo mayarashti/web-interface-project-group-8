@@ -22,8 +22,8 @@ function S6Upload({ data, setData, onNext, onBack }) {
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!uploaded}
-      step={4}
-      total={9}
+      step={3}
+      total={8}
       icon="📄"
       title={t('s6_title')}
       sub={t('s6_sub')}

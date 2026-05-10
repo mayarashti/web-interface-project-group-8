@@ -23,7 +23,7 @@ function S3Account({ data, setData, onNext, onBack }) {
       onBack={onBack}
       onNext={() => { if (validate()) onNext(); }}
       step={1}
-      total={9}
+      total={8}
       icon="📝"
       title={t('s3_title')}
       sub={t('s3_sub')}

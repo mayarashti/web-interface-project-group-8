@@ -9,8 +9,8 @@ function S7Kosher({ data, setData, onNext, onBack }) {
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!data.kosher || !data.shabbatKeeps}
-      step={5}
-      total={9}
+      step={4}
+      total={8}
       icon="🕍"
       title={t('s7_title')}
       sub={t('s7_sub')}

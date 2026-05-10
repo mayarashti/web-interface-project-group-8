@@ -19,8 +19,8 @@ function S9Allergies({ data, setData, onNext, onBack }) {
     <ScreenLayout
       onBack={onBack}
       onNext={onNext}
-      step={6}
-      total={9}
+      step={5}
+      total={8}
       icon="🥗"
       title={t('s9_title')}
       sub={t('s9_sub')}

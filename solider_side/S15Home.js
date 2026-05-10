@@ -350,7 +350,8 @@ function S15Home({ data }) {
       {!chattingWith && activeChatFamily && (
         <button 
           onClick={() => setChattingWith(activeChatFamily)}
-          className="fixed bottom-24 left-6 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90"
+          style={{ zIndex: 10000 }}
+          className="fixed bottom-24 left-6 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90"
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
