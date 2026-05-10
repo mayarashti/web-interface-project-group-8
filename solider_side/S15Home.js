@@ -72,7 +72,7 @@ const VIBE_KEY_MAP = {
 /* ════════════════════════════════════════
    FamilySheet — bottom drawer on marker tap
 ════════════════════════════════════════ */
-function FamilySheet({ family, onClose }) {
+function FamilySheet({ family, onClose, onChat }) {
   const { t } = useLang();
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
@@ -81,8 +81,8 @@ function FamilySheet({ family, onClose }) {
     : family.shabbat === 'traditional' ? t('map_trad') : t('map_sec');
 
   const hostingLabels = family.hostingTypes.map(h =>
-    h === 'friday_dinner' ? t('map_friday') :
-    h === 'shabbat_lunch' ? t('map_lunch') : t('map_delivery')
+    h === 'friday_dinner' ? t('map_fri_s') :
+    h === 'shabbat_lunch' ? t('map_lun_s') : t('map_del_s')
   ).join('  ·  ');
 
   return (
@@ -118,7 +118,7 @@ function FamilySheet({ family, onClose }) {
         <div className="flex flex-wrap gap-2 mb-4">
           <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">✡️ {koshLabel}</span>
           <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">🕯️ {shabLabel}</span>
-          <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">👥 {t('map_slots', family.capacity)}</span>
+          <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">👥 {family.capacity}</span>
         </div>
 
         {/* Hosting types */}
@@ -128,8 +128,8 @@ function FamilySheet({ family, onClose }) {
         {/* Extras */}
         {(family.canSleep || family.canTransport) && (
           <div className="flex gap-2 mb-4">
-            {family.canSleep     && <span className="bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-200">{t('map_sleep_yes')}</span>}
-            {family.canTransport && <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200">{t('map_transport_yes')}</span>}
+            {family.canSleep     && <span className="bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-200">{t('map_sleep')}</span>}
+            {family.canTransport && <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200">{t('s16_trn')}</span>}
           </div>
         )}
 
@@ -144,13 +144,86 @@ function FamilySheet({ family, onClose }) {
           </div>
         )}
 
-        {/* Privacy note */}
-        <p className="text-xs text-warm-400 mb-5 text-center">📍 {t(family.city)}</p>
-
         {/* CTA */}
-        <Btn onClick={onClose} className="py-4 text-base">{t('שלח הודעה')} 🍽️</Btn>
+        <Btn onClick={() => onChat(family)} className="py-4 text-base">{t('s15_send_msg')} 💬</Btn>
       </div>
     </>
+  );
+}
+
+/* ════════════════════════════════════════
+   ChatView — dedicated messaging screen
+════════════════════════════════════════ */
+function ChatView({ family, onBack }) {
+  const { t } = useLang();
+  const [msg, setMsg] = useState('');
+  const [messages, setMessages] = useState([
+    { id: 1, text: t('s15_chat_welcome', family.name.replace('משפחת ', '')), sender: 'family', time: '10:00' }
+  ]);
+  const scrollRef = useRef();
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages]);
+
+  const send = () => {
+    if (!msg.trim()) return;
+    const newMsg = { id: Date.now(), text: msg, sender: 'me', time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) };
+    setMessages([...messages, newMsg]);
+    setMsg('');
+    
+    // Mock auto-reply
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        id: Date.now() + 1, 
+        text: 'מצוין! נמשיך לדבר ונתאם הכל. 😊', 
+        sender: 'family', 
+        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) 
+      }]);
+    }, 1500);
+  };
+
+  return (
+    <ScreenLayout
+      onBack={onBack}
+      title={`${t('s15_chat_title')} ${family.name.replace('משפחת ', '')}`}
+    >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 space-y-4 mb-4 pb-4 no-scrollbar">
+        {messages.map(m => (
+          <div key={m.id} className={clsx("flex", m.sender === 'me' ? "justify-start" : "justify-end")}>
+            <div className={clsx(
+              "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm shadow-sm",
+              m.sender === 'me' 
+                ? "bg-brand-600 text-white rounded-br-none" 
+                : "bg-white text-gray-800 border border-warm-200 rounded-bl-none"
+            )}>
+              <p>{m.text}</p>
+              <p className={clsx("text-[10px] mt-1 opacity-70", m.sender === 'me' ? "text-left" : "text-right")}>{m.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2 items-center bg-white p-2 rounded-2xl border border-warm-200 shadow-lg mb-2">
+        <input
+          type="text"
+          value={msg}
+          onChange={e => setMsg(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder={t('s15_chat_ph')}
+          className="flex-1 px-3 py-2 text-sm focus:outline-none bg-transparent"
+        />
+        <button 
+          onClick={send}
+          disabled={!msg.trim()}
+          className="bg-brand-600 text-white w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-50 transition-opacity"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 6 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </ScreenLayout>
   );
 }
 
@@ -231,6 +304,7 @@ function S15Home({ data }) {
   const [selected, setSelected] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState(null);
+  const [chattingWith, setChattingWith] = useState(null);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -259,6 +333,10 @@ function S15Home({ data }) {
     }
     return true;
   });
+
+  if (chattingWith) {
+    return <ChatView family={chattingWith} onBack={() => setChattingWith(null)} />;
+  }
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24">
@@ -516,7 +594,16 @@ function S15Home({ data }) {
       )}
 
       {/* Detail sheet */}
-      {selected && <FamilySheet family={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <FamilySheet 
+          family={selected} 
+          onClose={() => setSelected(null)} 
+          onChat={(fam) => { 
+            setSelected(null); 
+            setChattingWith(fam); 
+          }} 
+        />
+      )}
     </div>
   );
 }
