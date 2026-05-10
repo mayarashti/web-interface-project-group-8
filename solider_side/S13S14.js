@@ -1,4 +1,5 @@
 /* S13Pending — Profile under review (auto-advances after 3.5s) */
+const { useState, useEffect } = React;
 
 function S13Pending({ onHome, autoApprove }) {
   const { t } = useLang();

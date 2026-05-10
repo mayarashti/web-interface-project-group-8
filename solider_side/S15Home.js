@@ -1,6 +1,7 @@
 /* S15Home — Soldier home screen with interactive host-family map
    Includes: MAP_FAMILIES data, FamilySheet bottom drawer, MapView (Leaflet)
 */
+const { useState, useEffect, useRef } = React;
 
 /* ── Mock host-family data (neighbourhood-level coords for privacy) ── */
 const MAP_FAMILIES = [

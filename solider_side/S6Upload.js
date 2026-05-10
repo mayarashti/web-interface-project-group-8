@@ -1,4 +1,5 @@
 /* S6Upload — Service document upload & verification */
+const { useState } = React;
 
 function S6Upload({ data, setData, onNext, onBack }) {
   const { t } = useLang();
@@ -17,10 +18,15 @@ function S6Upload({ data, setData, onNext, onBack }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={4} total={12} />
-      <SectionTitle icon="📄" title={t('s6_title')} sub={t('s6_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      nextDisabled={!uploaded}
+      step={4}
+      icon="📄"
+      title={t('s6_title')}
+      sub={t('s6_sub')}
+    >
       <RadioGroup
         label={t('s6_doc')}
         value={docType}
@@ -72,9 +78,6 @@ function S6Upload({ data, setData, onNext, onBack }) {
         <span className="text-xl flex-shrink-0">🔒</span>
         <p className="text-xs text-amber-800 leading-relaxed">{t('s6_note')}</p>
       </Card>
-      <div className="mt-auto">
-        <Btn onClick={onNext} disabled={!uploaded}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

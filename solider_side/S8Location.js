@@ -5,10 +5,15 @@ function S8Location({ data, setData, onNext, onBack }) {
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={6} total={12} />
-      <SectionTitle icon="🏠" title={t('s8_title')} sub={t('s8_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      step={6}
+      total={12}
+      icon="🏠"
+      title={t('s8_title')}
+      sub={t('s8_sub')}
+    >
       <Card className="mb-5">
         <p className="text-sm font-semibold text-gray-700 mb-3">{t('s8_section')}</p>
         <p className="text-xs text-warm-400 mb-4">{t('s8_multi')}</p>
@@ -33,9 +38,6 @@ function S8Location({ data, setData, onNext, onBack }) {
         <span className="text-xl flex-shrink-0">💡</span>
         <p className="text-xs text-brand-800 leading-relaxed">{t('s8_tip')}</p>
       </Card>
-      <div className="mt-auto pt-5">
-        <Btn onClick={onNext}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

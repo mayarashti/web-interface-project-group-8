@@ -16,11 +16,15 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
   const sol  = { yes: t('map_sol_yes'), no: t('map_sol_no'), dontmind: t('map_sol_dm') };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={10} total={12} />
-      <SectionTitle icon="📋" title={t('s12_title')} sub={t('s12_sub')} />
-
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onSubmit}
+      nextLabel={t('s12_submit')}
+      step={10}
+      icon="📋"
+      title={t('s12_title')}
+      sub={t('s12_sub')}
+    >
       <Card className="mb-4">
         <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-3">{t('s12_personal')}</p>
         <Row label={t('s12_full')}  value={`${data.firstName || ''} ${data.lastName || ''}`} />
@@ -53,10 +57,9 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         </Card>
       )}
 
-      <div className="space-y-3 mt-4">
-        <Btn onClick={onSubmit}>{t('s12_submit')}</Btn>
+      <div className="mt-4">
         <Btn variant="secondary" onClick={onEdit}>{t('s12_edit')}</Btn>
       </div>
-    </div>
+    </ScreenLayout>
   );
 }

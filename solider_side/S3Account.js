@@ -1,4 +1,5 @@
 /* S3Account — Create account / registration form */
+const { useState } = React;
 
 function S3Account({ data, setData, onNext, onBack }) {
   const { t } = useLang();
@@ -19,10 +20,14 @@ function S3Account({ data, setData, onNext, onBack }) {
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={1} total={12} />
-      <SectionTitle icon="📝" title={t('s3_title')} sub={t('s3_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={() => { if (validate()) onNext(); }}
+      step={1}
+      icon="📝"
+      title={t('s3_title')}
+      sub={t('s3_sub')}
+    >
       <div className="flex gap-3">
         <div className="flex-1">
           <Input label={t('s3_first')} value={data.firstName || ''} onChange={set('firstName')} placeholder={t('s3_ph_first')} error={errors.firstName} />
@@ -45,7 +50,6 @@ function S3Account({ data, setData, onNext, onBack }) {
         </CheckRow>
         {errors.terms && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.terms}</p>}
       </div>
-      <Btn onClick={() => { if (validate()) onNext(); }}>{t('continue')}</Btn>
-    </div>
+    </ScreenLayout>
   );
 }

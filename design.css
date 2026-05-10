@@ -1,0 +1,297 @@
+/* ═══════════════════════════════════════════════════════════════
+   design.css — Shabbat Hosts Design System
+   All visual tokens live here. Import once in index.html.
+   Tailwind custom colours are kept in sync via index.html config.
+═══════════════════════════════════════════════════════════════ */
+
+
+/* ─────────────────────────────────────────
+   1. DESIGN TOKENS — CSS Custom Properties
+───────────────────────────────────────── */
+:root {
+  /*To change a specific color in our palette,
+  you can simply change it here and it will update throughout the site.*/
+
+  /* ── Brand (orange-brown) ── */
+  --brand-50:  #fff8f2;
+  --brand-100: #fdeedd;
+  --brand-200: #fbd5b0;
+  --brand-300: #f7b87a;
+  --brand-400: #f29346;
+  --brand-500: #e87020;
+  --brand-600: #c2560e;   /* primary */
+  --brand-700: #9c420c;
+  --brand-800: #7e3510;
+  --brand-900: #672d11;
+
+  /* ── Warm neutrals ── */
+  --warm-50:  #fdf8f4;   /* page background */
+  --warm-100: #f9efe4;
+  --warm-200: #f1dcc8;
+  --warm-300: #e5c4a2;
+  --warm-400: #d4a57a;
+  --warm-500: #b8835a;
+
+  /* ── Semantic ── */
+  --color-success:  #16a34a;
+  --color-error:    #dc2626;
+  --color-warning:  #d97706;
+  --color-info:     #2563eb;
+
+  /* ── Typography ── */
+  --font-primary: 'Heebo', sans-serif; /*If you want to change the fonts, update this variable.*/
+  /*To change a specific size, change here*/
+  --font-size-xs:   0.75rem;   /*  12px */
+  --font-size-sm:   0.875rem;  /*  14px */
+  --font-size-base: 1rem;      /*  16px */
+  --font-size-lg:   1.125rem;  /*  18px */
+  --font-size-xl:   1.25rem;   /*  20px */
+  --font-size-2xl:  1.5rem;    /*  24px */
+  --font-size-3xl:  1.875rem;  /*  30px */
+
+  /*
+  If you want to change how thick the text is,
+  change it here. You also need to change the line that
+  downloads the text in index.htmml.*/
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+  --font-weight-semibold:600;
+  --font-weight-bold:    700;
+  --font-weight-extrabold:800;
+
+  /* ── Spacing scale ── */
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+
+  /* ── Border radius ── */
+  --radius-sm:   0.5rem;    /*  8px */
+  --radius-md:   0.75rem;   /* 12px */
+  --radius-lg:   1rem;      /* 16px */
+  --radius-xl:   1.25rem;   /* 20px */
+  --radius-2xl:  1.5rem;    /* 24px */
+  --radius-3xl:  1.875rem;  /* 30px */
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:   0 2px 8px rgba(0,0,0,0.10);
+  --shadow-lg:   0 4px 16px rgba(0,0,0,0.12);
+  --shadow-xl:   0 8px 32px rgba(0,0,0,0.16);
+  --shadow-brand: 0 4px 12px rgba(194, 86, 14, 0.28);
+
+  /* ── Transition ── */
+  --transition-fast:   0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow:   0.35s ease;
+
+  /* ── Z-index layers ── */
+  --z-map:         100;
+  --z-lang-toggle: 9999;
+  --z-overlay:     1999;
+  --z-sheet:       2000;
+}
+
+
+/* ─────────────────────────────────────────
+   2. BASE / RESET
+───────────────────────────────────────── */
+*, *::before, *::after {
+  font-family: var(--font-primary);
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--warm-50);
+  color: #1f2937;          /* gray-800 */
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────
+   3. SCROLLBAR
+───────────────────────────────────────── */
+::-webkit-scrollbar          { width: 4px; height: 4px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--warm-300); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--warm-400); }
+
+
+/* ─────────────────────────────────────────
+   4. ANIMATIONS
+───────────────────────────────────────── */
+
+/* Screen transition — slide in from the side */
+.screen-enter {
+  animation: fadeSlideIn var(--transition-slow) ease forwards;
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+
+/* Pulsing ring (used on pending screen) */
+.pulse-ring {
+  animation: pulseRing 1.4s ease-out infinite;
+}
+@keyframes pulseRing {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  80%  { transform: scale(1.5); opacity: 0;   }
+  100% { transform: scale(1.5); opacity: 0;   }
+}
+
+/* Loading dots bounce (used in S13Pending) */
+@keyframes bounce-dot {
+  0%, 80%, 100% { transform: scale(0.85); opacity: 0.5; }
+  40%            { transform: scale(1.2);  opacity: 1;   }
+}
+
+/* Spin (used on upload spinner) */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Sheet slide-up */
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+
+/* ─────────────────────────────────────────
+   5. FORM ELEMENTS
+───────────────────────────────────────── */
+input[type=checkbox],
+input[type=radio] {
+  accent-color: var(--brand-600);
+}
+
+/* OTP code input */
+.otp-input {
+  letter-spacing: 0.45em;
+  text-align: center;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+
+/* ─────────────────────────────────────────
+   6. LANGUAGE TOGGLE BUTTON
+───────────────────────────────────────── */
+.lang-toggle {
+  position: fixed;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: var(--z-lang-toggle);
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #ffffff;
+  border: 2px solid var(--warm-200);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+.lang-toggle:hover  { border-color: var(--brand-400); box-shadow: var(--shadow-xl); }
+.lang-toggle:active { transform: scale(0.95); }
+
+/* When the page is in English (LTR), move the button to the right */
+html[lang="en"] .lang-toggle {
+  left: auto;
+  right: var(--space-4);
+}
+/* ─────────────────────────────────────────
+   7. MAP — Leaflet overrides & marker styles
+───────────────────────────────────────── */
+.leaflet-container {
+  font-family: var(--font-primary) !important;
+  border-radius: var(--radius-2xl);
+}
+.leaflet-control-attribution { display: none !important; }
+
+/* House pin marker */
+.host-marker-outer {
+  width: 44px;
+  height: 44px;
+  background: var(--brand-600);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #ffffff;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+.host-marker-outer:hover {
+  transform: rotate(-45deg) scale(1.15);
+}
+.host-marker-outer.selected {
+  background: #7c3aed;    /* purple for active state */
+}
+.host-marker-inner {
+  transform: rotate(45deg);
+  font-size: 18px;
+  line-height: 1;
+}
+
+
+/* ─────────────────────────────────────────
+   8. FAMILY DETAIL BOTTOM SHEET
+───────────────────────────────────────── */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: var(--z-overlay);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.family-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
+  z-index: var(--z-sheet);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 var(--space-5) var(--space-8);
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: sheetUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+
+/* ─────────────────────────────────────────
+   9. UTILITY HELPERS
+───────────────────────────────────────── */
+
+/* Hide scrollbar on horizontal chip rows */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Pre-wrap for multi-line translated strings */
+.pre-line { white-space: pre-line; }

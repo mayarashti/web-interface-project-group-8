@@ -13,10 +13,15 @@ function S10Prefs({ data, setData, onNext, onBack }) {
   ];
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={8} total={12} />
-      <SectionTitle icon="⚙️" title={t('s10_title')} sub={t('s10_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      nextDisabled={!data.withSoldiers || !data.pets}
+      step={8}
+      icon="⚙️"
+      title={t('s10_title')}
+      sub={t('s10_sub')}
+    >
       <RadioGroup
         label={t('s10_sol')}
         value={data.withSoldiers || ''}
@@ -43,9 +48,6 @@ function S10Prefs({ data, setData, onNext, onBack }) {
           { value: 'allergy', label: t('s10_pets_al') },
         ]}
       />
-      <div className="mt-auto pt-2">
-        <Btn onClick={onNext} disabled={!data.withSoldiers || !data.pets}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

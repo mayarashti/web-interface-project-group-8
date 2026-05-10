@@ -1,4 +1,5 @@
 /* S11Profile — Profile photo & bio */
+const { useState } = React;
 
 function S11Profile({ data, setData, onNext, onBack }) {
   const { t } = useLang();
@@ -13,11 +14,14 @@ function S11Profile({ data, setData, onNext, onBack }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={9} total={12} />
-      <SectionTitle icon="😊" title={t('s11_title')} sub={t('s11_sub')} />
-
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      step={9}
+      icon="😊"
+      title={t('s11_title')}
+      sub={t('s11_sub')}
+    >
       {/* Avatar picker */}
       <div className="flex justify-center mb-6">
         <div onClick={mockUploadImg} className="relative w-24 h-24 rounded-full cursor-pointer group">
@@ -53,10 +57,6 @@ function S11Profile({ data, setData, onNext, onBack }) {
         />
         <p className="text-xs text-warm-400 mt-1 text-left">{(data.bio || '').length}/300</p>
       </div>
-
-      <div className="mt-auto">
-        <Btn onClick={onNext}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

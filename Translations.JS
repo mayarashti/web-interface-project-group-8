@@ -5,6 +5,7 @@
 ───────────────────────────────────────── */
 
 const LangContext = React.createContext({ lang: 'he', setLang: () => {} });
+window.LangContext = LangContext;
 
 function useLang() {
   const { lang, setLang } = React.useContext(LangContext);
@@ -20,8 +21,7 @@ function LangToggle() {
   return (
     <button
       onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
-      style={{ position:'fixed', top:'1rem', left:'1rem', zIndex:9999 }}
-      className="bg-white border-2 border-warm-200 rounded-full w-10 h-10 text-xs font-bold shadow-lg hover:shadow-xl hover:border-brand-400 transition-all active:scale-95 flex items-center justify-center"
+      className="lang-toggle"
       title={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
     >
       {lang === 'he' ? 'EN' : 'עב'}
@@ -499,4 +499,4 @@ const T = {
     map_fri: 'Friday Night Dinner', map_lun: 'Saturday Lunch', map_del: 'Base Delivery',
     map_fri_s: 'Friday dinner', map_lun_s: 'Sat. lunch', map_del_s: 'Delivery',
   }
-};3
+};

@@ -62,7 +62,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
     { value: 'singing',      label: '🎵 אוהבי שירה'       },
     { value: 'pets',         label: '🐾 יש חיות בית'      },
     { value: 'spacious',     label: '🏠 בית מרווח'         },
-    { value: 'shabbat_atm',  label: '🕯️ אווירה שבתית'     },
+    { value: 'shabbat_atm',  label: '🕯️ אווירה משפחתית'     },
     { value: 'food_lovers',  label: '🍲 אוהבי בישול'      },
   ];
 

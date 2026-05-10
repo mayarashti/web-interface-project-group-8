@@ -5,10 +5,15 @@ function S7Kosher({ data, setData, onNext, onBack }) {
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={5} total={12} />
-      <SectionTitle icon="🕍" title={t('s7_title')} sub={t('s7_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      nextDisabled={!data.kosher || !data.shabbatKeeps}
+      step={5}
+      icon="🕍"
+      title={t('s7_title')}
+      sub={t('s7_sub')}
+    >
       <RadioGroup
         label={t('s7_kosh')}
         value={data.kosher || ''}
@@ -28,9 +33,6 @@ function S7Kosher({ data, setData, onNext, onBack }) {
           { value: 'no',  label: t('s7_no'),  sub: t('s7_no_s')  },
         ]}
       />
-      <div className="mt-auto">
-        <Btn onClick={onNext} disabled={!data.kosher || !data.shabbatKeeps}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

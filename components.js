@@ -150,3 +150,37 @@ function SectionTitle({ icon, title, sub }) {
     </div>
   );
 }
+
+/**
+ * ScreenLayout — A reusable wrapper for all app screens.
+ * Handles the common structure: container, back button, progress, title, and bottom CTA.
+ */
+function ScreenLayout({ 
+  children, onBack, onNext, 
+  step, total = 12, 
+  icon, title, sub, 
+  nextDisabled = false,
+  nextLabel,
+  className = ""
+}) {
+  const { t } = useLang();
+  return (
+    <div className={clsx("screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto", className)}>
+      {onBack && <BackBtn onBack={onBack} />}
+      {step && <ProgressBar step={step} total={total} />}
+      {(icon || title || sub) && <SectionTitle icon={icon} title={title} sub={sub} />}
+      
+      <div className="flex-1">
+        {children}
+      </div>
+
+      {onNext && (
+        <div className="mt-auto pt-6">
+          <Btn onClick={onNext} disabled={nextDisabled}>
+            {nextLabel || t('continue')}
+          </Btn>
+        </div>
+      )}
+    </div>
+  );
+}

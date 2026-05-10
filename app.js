@@ -1,4 +1,6 @@
 
+const { useState, useEffect } = React;
+
 function App() {
   const [screen,   setScreen]   = useState(1);
   const [lang,     setLang]     = useState('he');

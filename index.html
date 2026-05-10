@@ -5,118 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>מארחי שבת</title>
 
-  <!-- External dependencies -->
+  <!-- ── External libraries ── -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-  <!-- Global styles -->
-  <style>
-    * { font-family: 'Heebo', sans-serif; box-sizing: border-box; }
-    body { margin: 0; background: #fdf8f4; }
+  <!-- ── Fonts ── -->
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200..1000&family=Inter:wght@300;400;500;600;700;800;900;1000&display=swap" rel="stylesheet" />
 
-    .screen-enter { animation: fadeSlideIn 0.35s ease forwards; }
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateX(-18px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+  <!-- ── Design system (tokens, animations, components) ── -->
+  <link rel="stylesheet" href="design.css" />
 
-    .pulse-ring { animation: pulseRing 1.4s ease-out infinite; }
-    @keyframes pulseRing {
-      0%   { transform: scale(1);   opacity: 0.6; }
-      80%  { transform: scale(1.5); opacity: 0; }
-      100% { transform: scale(1.5); opacity: 0; }
-    }
-
-    input[type=checkbox], input[type=radio] { accent-color: #c2560e; }
-
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #e4c9b0; border-radius: 4px; }
-
-    .otp-input { letter-spacing: 0.45em; text-align: center; font-size: 1.5rem; font-weight: 700; }
-  </style>
-
+  <!-- ── Leaflet map ── -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Map marker + sheet styles -->
-  <style>
-    .host-marker-outer {
-      width: 44px; height: 44px;
-      background: #c2560e;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-      display: flex; align-items: center; justify-content: center;
-      border: 3px solid #fff;
-      cursor: pointer;
-      transition: transform 0.15s;
-    }
-    .host-marker-outer:hover { transform: rotate(-45deg) scale(1.15); }
-    .host-marker-inner {
-      transform: rotate(45deg);
-      font-size: 18px;
-      line-height: 1;
-    }
-    .host-marker-outer.selected { background: #7c3aed; }
-
-    .family-sheet {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: #fff;
-      border-radius: 24px 24px 0 0;
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
-      z-index: 2000;
-      max-width: 480px;
-      margin: 0 auto;
-      animation: sheetUp 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards;
-      padding: 0 20px 32px;
-      max-height: 70vh;
-      overflow-y: auto;
-    }
-    @keyframes sheetUp {
-      from { transform: translateY(100%); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
-    }
-    .sheet-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 1999;
-      backdrop-filter: blur(2px);
-    }
-    .leaflet-container { font-family: 'Heebo', sans-serif !important; }
-    .leaflet-control-attribution { display: none !important; }
-  </style>
-
-
+  <!-- ── Tailwind custom colour palette
+       Must run after Tailwind CDN loads.
+       Colours are kept in sync with --brand-* and --warm-* vars in design.css
+  ── -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             brand: {
-              50:  '#fff8f2',
-              100: '#fdeedd',
-              200: '#fbd5b0',
-              300: '#f7b87a',
-              400: '#f29346',
-              500: '#e87020',
-              600: '#c2560e',
-              700: '#9c420c',
-              800: '#7e3510',
-              900: '#672d11',
+              50:  'var(--brand-50)',
+            100: 'var(--brand-100)',
+            200: 'var(--brand-200)',
+            300: 'var(--brand-300)',
+            400: 'var(--brand-400)',
+            500: 'var(--brand-500)',
+            600: 'var(--brand-600)', /* primary */
+            700: 'var(--brand-700)',
+            800: 'var(--brand-800)',
+            900: 'var(--brand-900)',
             },
             warm: {
-              50:  '#fdf8f4',
-              100: '#f9efe4',
-              200: '#f1dcc8',
-              300: '#e5c4a2',
-              400: '#d4a57a',
-              500: '#b8835a',
+             50:  'var(--warm-50)',
+            100: 'var(--warm-100)',
+            200: 'var(--warm-200)',
+            300: 'var(--warm-300)',
+            400: 'var(--warm-400)',
+            500: 'var(--warm-500)',
             }
-          }
+          }, fontFamily: {
+          sans: ['var(--font-primary)', 'Heebo', 'sans-serif'],
+        },
+        fontSize: {
+          'xs':   'var(--font-size-xs)',
+          'sm':   'var(--font-size-sm)',
+          'base': 'var(--font-size-base)',
+          'lg':   'var(--font-size-lg)',
+          'xl':   'var(--font-size-xl)',
+          '2xl':  'var(--font-size-2xl)',
+          '3xl':  'var(--font-size-3xl)',
+        },
+        fontWeight: {
+          regular:   'var(--font-weight-regular)',
+          medium:    'var(--font-weight-medium)',
+          semibold:  'var(--font-weight-semibold)',
+          bold:      'var(--font-weight-bold)',
+          extrabold: 'var(--font-weight-extrabold)',
+        }
+          
         }
       }
     }
@@ -126,16 +79,18 @@
   <div id="root"></div>
 
   <!--
-    Scripts are loaded in dependency order:
-      1. components.js   — shared UI primitives (Btn, Input, Card, …)
-      2. screens-soldier.js — screens 1-15 (soldier flow)
-      3. screens-host.js    — screens 16-17 (host family flow)
-      4. app.js             — App component + ReactDOM render
+    Load order (each file depends on the ones above it):
+      1. translations.js        — language strings + LangContext + LangToggle
+      2. components.js          — shared UI: Btn, Input, Card, Tag, …
+      3. solider_side/S*.js     — soldier screens S1–S15
+      4. family side/screens-host.js — host screens S16–S20
+      5. app.js                 — App router + ReactDOM.render
   -->
   <script type="text/babel" src="translations.js"></script>
   <script type="text/babel" src="components.js"></script>
-  <!-- ═══ Soldier screens (one file per screen) ═══ -->
-  <script type="text/babel" src="S1Welcome.js"></script>
+
+  <!-- Soldier screens -->
+  <script type="text/babel" src="solider_side/S1Welcome.js"></script>
   <script type="text/babel" src="solider_side/S2Explain.js"></script>
   <script type="text/babel" src="solider_side/S3Account.js"></script>
   <script type="text/babel" src="solider_side/S4Verify.js"></script>
@@ -149,7 +104,11 @@
   <script type="text/babel" src="solider_side/S12Summary.js"></script>
   <script type="text/babel" src="solider_side/S13S14.js"></script>
   <script type="text/babel" src="solider_side/S15Home.js"></script>
+
+  <!-- Host screens -->
   <script type="text/babel" src="family side/screens-host.js"></script>
+
+  <!-- App -->
   <script type="text/babel" src="app.js"></script>
 </body>
 </html>

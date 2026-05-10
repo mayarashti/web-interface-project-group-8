@@ -5,10 +5,15 @@ function S5Service({ data, setData, onNext, onBack }) {
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={3} total={12} />
-      <SectionTitle icon="🪖" title={t('s5_title')} sub={t('s5_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      nextDisabled={!data.serviceType}
+      step={3}
+      icon="🪖"
+      title={t('s5_title')}
+      sub={t('s5_sub')}
+    >
       <RadioGroup
         label={t('s5_type')}
         value={data.serviceType || ''}
@@ -26,9 +31,6 @@ function S5Service({ data, setData, onNext, onBack }) {
         placeholder={t('s5_unit_ph')}
         hint={t('s5_unit_hint')}
       />
-      <div className="mt-auto pt-4">
-        <Btn onClick={onNext} disabled={!data.serviceType}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

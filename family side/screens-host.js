@@ -1,4 +1,5 @@
 /* screens-host.js — S16 through S20 + S17 + S18 + S19 */
+const { useState, useEffect, useRef } = React;
 
 /* ── shared data for host screens ── */
 const VIBE_TAGS_KEYS = [

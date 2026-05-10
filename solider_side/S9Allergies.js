@@ -16,10 +16,14 @@ function S9Allergies({ data, setData, onNext, onBack }) {
   ];
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={7} total={12} />
-      <SectionTitle icon="🥗" title={t('s9_title')} sub={t('s9_sub')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      step={7}
+      icon="🥗"
+      title={t('s9_title')}
+      sub={t('s9_sub')}
+    >
       <MultiCheck
         label={t('s9_label')}
         options={opts}
@@ -36,9 +40,6 @@ function S9Allergies({ data, setData, onNext, onBack }) {
           rows={3}
         />
       </div>
-      <div className="mt-auto">
-        <Btn onClick={onNext}>{t('continue')}</Btn>
-      </div>
-    </div>
+    </ScreenLayout>
   );
 }

@@ -1,4 +1,5 @@
 /* S4Verify — OTP phone verification screen */
+const { useState, useEffect, useRef } = React;
 
 function S4Verify({ phone, onNext, onBack }) {
   const { t } = useLang();
@@ -24,10 +25,15 @@ function S4Verify({ phone, onNext, onBack }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
-      <BackBtn onBack={onBack} />
-      <ProgressBar step={2} total={12} />
-      <SectionTitle icon="📱" title={t('s4_title')} />
+    <ScreenLayout
+      onBack={onBack}
+      onNext={verify}
+      nextLabel={t('s4_btn')}
+      nextDisabled={code.length !== 6}
+      step={2}
+      icon="📱"
+      title={t('s4_title')}
+    >
       <Card className="text-center mb-6 py-6">
         <p className="text-sm text-warm-500 mb-1">{t('s4_sent')}</p>
         <p className="text-lg font-bold text-gray-900" style={{ direction: 'ltr' }}>{phone || '050-XXXXXXX'}</p>
@@ -51,16 +57,14 @@ function S4Verify({ phone, onNext, onBack }) {
         {error && <p className="mt-1.5 text-sm text-red-500 font-medium text-center">{error}</p>}
       </div>
       <p className="text-xs text-warm-400 text-center mb-6">💡 {t('s4_hint')}</p>
-      <div className="space-y-3">
-        <Btn onClick={verify} disabled={code.length !== 6}>{t('s4_btn')}</Btn>
-        <button
-          onClick={resend}
-          disabled={timer > 0}
-          className="w-full text-center text-sm text-brand-600 font-medium py-2 disabled:text-warm-400 hover:underline transition-colors"
-        >
-          {t('s4_resend', timer)}
-        </button>
-      </div>
-    </div>
+      
+      <button
+        onClick={resend}
+        disabled={timer > 0}
+        className="w-full text-center text-sm text-brand-600 font-medium py-2 disabled:text-warm-400 hover:underline transition-colors"
+      >
+        {t('s4_resend', timer)}
+      </button>
+    </ScreenLayout>
   );
 }
