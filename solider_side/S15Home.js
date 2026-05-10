@@ -172,7 +172,6 @@ function ChatView({ family, onBack }) {
     setMessages([...messages, newMsg]);
     setMsg('');
     
-    // Mock auto-reply
     setTimeout(() => {
       setMessages(prev => [...prev, { 
         id: Date.now() + 1, 
@@ -184,46 +183,55 @@ function ChatView({ family, onBack }) {
   };
 
   return (
-    <ScreenLayout
-      onBack={onBack}
-      title={`${t('s15_chat_title')} ${family.name.replace('משפחת ', '')}`}
-    >
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 space-y-4 mb-4 pb-4 no-scrollbar">
-        {messages.map(m => (
-          <div key={m.id} className={clsx("flex", m.sender === 'me' ? "justify-start" : "justify-end")}>
-            <div className={clsx(
-              "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm shadow-sm",
-              m.sender === 'me' 
-                ? "bg-brand-600 text-white rounded-br-none" 
-                : "bg-white text-gray-800 border border-warm-200 rounded-bl-none"
-            )}>
-              <p>{m.text}</p>
-              <p className={clsx("text-[10px] mt-1 opacity-70", m.sender === 'me' ? "text-left" : "text-right")}>{m.time}</p>
-            </div>
+    <>
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-md z-[3000]" onClick={onBack} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm h-[500px] bg-white rounded-3xl shadow-2xl z-[3001] flex flex-col overflow-hidden border border-warm-100">
+        {/* Chat Header */}
+        <div className="p-4 border-b border-warm-100 flex justify-between items-center bg-warm-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-sm">🏡</div>
+            <p className="font-bold text-gray-800 text-sm">{family.name.replace('משפחת ', '')}</p>
           </div>
-        ))}
-      </div>
+          <button onClick={onBack} className="text-warm-400 p-1">✕</button>
+        </div>
 
-      <div className="flex gap-2 items-center bg-white p-2 rounded-2xl border border-warm-200 shadow-lg mb-2">
-        <input
-          type="text"
-          value={msg}
-          onChange={e => setMsg(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder={t('s15_chat_ph')}
-          className="flex-1 px-3 py-2 text-sm focus:outline-none bg-transparent"
-        />
-        <button 
-          onClick={send}
-          disabled={!msg.trim()}
-          className="bg-brand-600 text-white w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-50 transition-opacity"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 6 22 2"/>
-          </svg>
-        </button>
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-white">
+          {messages.map(m => (
+            <div key={m.id} className={clsx("flex", m.sender === 'me' ? "justify-start" : "justify-end")}>
+              <div className={clsx(
+                "max-w-[85%] px-3.5 py-2 rounded-2xl text-[13px] shadow-sm",
+                m.sender === 'me' 
+                  ? "bg-brand-600 text-white rounded-br-none" 
+                  : "bg-warm-50 text-gray-800 border border-warm-100 rounded-bl-none"
+              )}>
+                <p>{m.text}</p>
+                <p className={clsx("text-[9px] mt-1 opacity-60", m.sender === 'me' ? "text-left" : "text-right")}>{m.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Input */}
+        <div className="p-3 bg-white border-t border-warm-100">
+          <div className="flex gap-2 items-center bg-warm-50 px-3 py-2 rounded-2xl border border-warm-100">
+            <input
+              type="text"
+              value={msg}
+              onChange={e => setMsg(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
+              placeholder={t('s15_chat_ph')}
+              className="flex-1 text-sm bg-transparent focus:outline-none"
+            />
+            <button onClick={send} disabled={!msg.trim()} className="text-brand-600 disabled:opacity-30">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 6 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
-    </ScreenLayout>
+    </>
   );
 }
 
@@ -277,7 +285,7 @@ function MapView({ families, onSelect, selectedId }) {
 
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; markersRef.current = {}; };
-  }, []);
+  }, [families]);
 
   // Highlight selected marker
   useEffect(() => {
@@ -305,6 +313,7 @@ function S15Home({ data }) {
   const [showFilters, setShowFilters] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState(null);
   const [chattingWith, setChattingWith] = useState(null);
+  const [activeChatFamily, setActiveChatFamily] = useState(null);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -334,12 +343,21 @@ function S15Home({ data }) {
     return true;
   });
 
-  if (chattingWith) {
-    return <ChatView family={chattingWith} onBack={() => setChattingWith(null)} />;
-  }
-
   return (
-    <div className="screen-enter min-h-screen bg-warm-50 pb-24">
+    <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+
+      {/* Persistent Chat Icon (Only if we have an active chat session) */}
+      {!chattingWith && activeChatFamily && (
+        <button 
+          onClick={() => setChattingWith(activeChatFamily)}
+          className="fixed bottom-24 left-6 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
+        </button>
+      )}
 
       {/* Header */}
       <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-12 pb-8 rounded-b-3xl shadow-lg">
@@ -492,7 +510,7 @@ function S15Home({ data }) {
                 )}
               </div>
 
-              {/* Observance Selector */}
+              {/* Type / Observance Selector */}
               <div className="border border-warm-200 rounded-2xl overflow-hidden">
                 <button 
                   onClick={() => setExpandedFilter(expandedFilter === 'type' ? null : 'type')}
@@ -600,8 +618,17 @@ function S15Home({ data }) {
           onClose={() => setSelected(null)} 
           onChat={(fam) => { 
             setSelected(null); 
+            setActiveChatFamily(fam);
             setChattingWith(fam); 
           }} 
+        />
+      )}
+
+      {/* Chat Modal */}
+      {chattingWith && (
+        <ChatView 
+          family={chattingWith} 
+          onBack={() => setChattingWith(null)} 
         />
       )}
     </div>
