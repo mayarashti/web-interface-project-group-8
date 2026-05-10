@@ -31,6 +31,7 @@ function S4Verify({ phone, onNext, onBack }) {
       nextLabel={t('s4_btn')}
       nextDisabled={code.length !== 6}
       step={2}
+      total={9}
       icon="📱"
       title={t('s4_title')}
     >

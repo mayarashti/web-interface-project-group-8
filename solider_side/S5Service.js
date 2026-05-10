@@ -10,6 +10,7 @@ function S5Service({ data, setData, onNext, onBack }) {
       onNext={onNext}
       nextDisabled={!data.serviceType}
       step={3}
+      total={9}
       icon="🪖"
       title={t('s5_title')}
       sub={t('s5_sub')}

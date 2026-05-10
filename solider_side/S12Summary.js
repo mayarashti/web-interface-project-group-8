@@ -20,14 +20,15 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       onBack={onBack}
       onNext={onSubmit}
       nextLabel={t('s12_submit')}
-      step={10}
+      step={9}
+      total={9}
       icon="📋"
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
       <Card className="mb-4">
         <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-3">{t('s12_personal')}</p>
-        <Row label={t('s12_full')}  value={`${data.firstName || ''} ${data.lastName || ''}`} />
+        <Row label={t('s12_full')}  value={data.fullName} />
         <Row label={t('s12_phone')} value={data.phone} />
         <Row label={t('s12_email')} value={data.email} />
       </Card>
