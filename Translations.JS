@@ -151,6 +151,15 @@ const T = {
 
     /* S15 Soldier Home */
     s15_hi: 'שלום,', s15_status: 'סטטוס: חייל/ת מאומת/ת ✅',
+    s15_filter_btn: '🔍 סנן ארוחות',
+    s15_filter_title: 'סינון ארוחות',
+    s15_filter_date: 'תאריך',
+    s15_filter_time: 'טווח שעות',
+    s15_filter_type: 'סוג הבית',
+    s15_filter_sleep: 'כולל לינה',
+    s15_filter_kosh: 'כשרות',
+    s15_filter_apply: 'החל סינון',
+    s15_filter_reset: 'איפוס',
     s15_new: '🍽  צור בקשת אירוח לשישי',
     s15_shab: 'שבת קרובה 🕯️', s15_friday: 'שישי,',
     s15_avail: (n) => `${n} משפחות זמינות באזורך`,

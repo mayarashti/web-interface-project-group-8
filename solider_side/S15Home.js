@@ -145,10 +145,10 @@ function FamilySheet({ family, onClose }) {
         )}
 
         {/* Privacy note */}
-        <p className="text-xs text-warm-400 mb-5 text-center">📍 {t('map_approx')}</p>
+        <p className="text-xs text-warm-400 mb-5 text-center">📍 {t(family.city)}</p>
 
         {/* CTA */}
-        <Btn onClick={onClose} className="py-4 text-base">{t('map_request')} 🍽️</Btn>
+        <Btn onClick={onClose} className="py-4 text-base">{t('שלח הודעה')} 🍽️</Btn>
       </div>
     </>
   );
@@ -226,13 +226,39 @@ function MapView({ families, onSelect, selectedId }) {
 /* ════════════════════════════════════════
    S15Home — Soldier home screen
 ════════════════════════════════════════ */
-function S15Home({ data, onNewRequest }) {
+function S15Home({ data }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedFilter, setExpandedFilter] = useState(null);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    date: '',
+    timeRange: 'all',
+    observance: 'all',
+    includesAccommodation: false,
+    kosher: 'all'
+  });
 
   const nextFriday = new Date(
     Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000
   ).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+
+  const filteredFamilies = MAP_FAMILIES.filter(fam => {
+    if (filters.observance !== 'all' && fam.shabbat !== filters.observance) return false;
+    if (filters.includesAccommodation && !fam.canSleep) return false;
+    if (filters.kosher !== 'all') {
+      if (filters.kosher === 'kosher' && fam.kosher === 'none') return false;
+      if (filters.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+    }
+    // Time range filter (simplified mock logic)
+    if (filters.timeRange !== 'all') {
+      if (filters.timeRange === 'friday' && !fam.hostingTypes.includes('friday_dinner')) return false;
+      if (filters.timeRange === 'saturday' && !fam.hostingTypes.includes('shabbat_lunch')) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24">
@@ -240,7 +266,7 @@ function S15Home({ data, onNewRequest }) {
       {/* Header */}
       <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-12 pb-8 rounded-b-3xl shadow-lg">
         <p className="text-sm opacity-80 mb-0.5">{t('s15_hi')}</p>
-        <h1 className="text-2xl font-bold mb-1">{data.firstName} {data.lastName} 👋</h1>
+        <h1 className="text-2xl font-bold mb-1">{data.fullName || (data.firstName + ' ' + data.lastName)} 👋</h1>
         <div className="flex items-center gap-2 mt-3">
           <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
           <span className="text-sm font-medium opacity-90">{t('s15_status')}</span>
@@ -249,15 +275,17 @@ function S15Home({ data, onNewRequest }) {
 
       <div className="px-5 mt-5 space-y-5">
 
-        {/* New request CTA */}
-        <Btn onClick={onNewRequest} className="shadow-md">{t('s15_new')}</Btn>
+        {/* Filter Trigger */}
+        <Btn onClick={() => setShowFilters(true)} variant="secondary" className="shadow-sm border-brand-200">
+          {t('s15_filter_btn')}
+        </Btn>
 
         {/* Map section */}
         <div>
           <h2 className="text-base font-bold text-gray-800 mb-1">{t('חפשו את האירוח המתאים עבורם!')}</h2>
           <p className="text-xs text-warm-400 mb-3">{t('מפת האירוחים שלנו')}</p>
           <MapView
-            families={MAP_FAMILIES}
+            families={filteredFamilies}
             selectedId={selected?.id ?? null}
             onSelect={fam => setSelected(fam)}
           />
@@ -268,7 +296,7 @@ function S15Home({ data, onNewRequest }) {
 
         {/* Horizontal chip list */}
         <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5" style={{ scrollbarWidth: 'none' }}>
-          {MAP_FAMILIES.map(fam => (
+          {filteredFamilies.map(fam => (
             <button
               key={fam.id}
               onClick={() => setSelected(fam)}
@@ -285,6 +313,9 @@ function S15Home({ data, onNewRequest }) {
               </span>
             </button>
           ))}
+          {filteredFamilies.length === 0 && (
+            <p className="text-sm text-warm-400 py-2 w-full text-center">אין תוצאות התואמות את הסינון</p>
+          )}
         </div>
 
         {/* Next Shabbat card */}
@@ -292,7 +323,7 @@ function S15Home({ data, onNewRequest }) {
           <h2 className="text-base font-bold text-gray-800 mb-3">{t('s15_shab')}</h2>
           <Card className="bg-amber-50 border-amber-200 text-center py-5">
             <p className="text-sm font-semibold text-amber-800 mb-1">{t('s15_friday')} {nextFriday}</p>
-            <p className="text-xs text-amber-600 mb-3">{t('s15_avail', MAP_FAMILIES.length)}</p>
+            <p className="text-xs text-amber-600 mb-3">{t('s15_avail', filteredFamilies.length)}</p>
             <Btn variant="outline" className="border-amber-500 text-amber-700 hover:bg-amber-100 py-2.5 text-sm">
               {t('s15_view')}
             </Btn>
@@ -308,6 +339,181 @@ function S15Home({ data, onNewRequest }) {
           </Card>
         </div>
       </div>
+
+      {/* Filter Panel (Side Sheet) */}
+      {showFilters && (
+        <>
+          <div className="sheet-overlay" onClick={() => setShowFilters(false)} />
+          <div className="family-sheet" style={{ maxHeight: '90vh', paddingBottom: '2rem' }}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">{t('s15_filter_title')}</h2>
+              <button onClick={() => setShowFilters(false)} className="text-2xl text-warm-400">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Date Selector */}
+              <div className="border border-warm-200 rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setExpandedFilter(expandedFilter === 'date' ? null : 'date')}
+                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📅</span>
+                    <span className="font-semibold text-gray-700">{t('s15_filter_date')}</span>
+                  </div>
+                  <span className="text-warm-400">{filters.date || t('map_none')} ▾</span>
+                </button>
+                {expandedFilter === 'date' && (
+                  <div className="p-4 bg-warm-50 border-t border-warm-100">
+                    <input 
+                      type="date" 
+                      className="w-full p-3 rounded-xl border border-warm-200 bg-white"
+                      value={filters.date}
+                      onChange={e => {
+                        setFilters(f => ({ ...f, date: e.target.value }));
+                        setExpandedFilter(null);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Time Range Selector */}
+              <div className="border border-warm-200 rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setExpandedFilter(expandedFilter === 'time' ? null : 'time')}
+                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🕒</span>
+                    <span className="font-semibold text-gray-700">{t('s15_filter_time')}</span>
+                  </div>
+                  <span className="text-warm-400">
+                    {filters.timeRange === 'friday' ? t('map_fri_s') : filters.timeRange === 'saturday' ? t('map_lun_s') : t('map_none')} ▾
+                  </span>
+                </button>
+                {expandedFilter === 'time' && (
+                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
+                    {[
+                      { value: 'all', label: t('map_none') },
+                      { value: 'friday', label: t('map_fri_s') },
+                      { value: 'saturday', label: t('map_lun_s') }
+                    ].map(opt => (
+                      <button 
+                        key={opt.value}
+                        onClick={() => { setFilters(f => ({ ...f, timeRange: opt.value })); setExpandedFilter(null); }}
+                        className={clsx(
+                          "w-full text-right p-3 rounded-xl transition-colors",
+                          filters.timeRange === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Observance Selector */}
+              <div className="border border-warm-200 rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setExpandedFilter(expandedFilter === 'type' ? null : 'type')}
+                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🏠</span>
+                    <span className="font-semibold text-gray-700">{t('s15_filter_type')}</span>
+                  </div>
+                  <span className="text-warm-400">
+                    {filters.observance === 'all' ? t('map_none') : t('map_' + (filters.observance === 'secular' ? 'sec' : filters.observance === 'traditional' ? 'trad' : 'obs'))} ▾
+                  </span>
+                </button>
+                {expandedFilter === 'type' && (
+                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
+                    {[
+                      { value: 'all', label: t('map_none') },
+                      { value: 'secular', label: t('map_sec') },
+                      { value: 'traditional', label: t('map_trad') },
+                      { value: 'observant', label: t('map_obs') }
+                    ].map(opt => (
+                      <button 
+                        key={opt.value}
+                        onClick={() => { setFilters(f => ({ ...f, observance: opt.value })); setExpandedFilter(null); }}
+                        className={clsx(
+                          "w-full text-right p-3 rounded-xl transition-colors",
+                          filters.observance === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Kosher Selector */}
+              <div className="border border-warm-200 rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setExpandedFilter(expandedFilter === 'kosh' ? null : 'kosh')}
+                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">✡️</span>
+                    <span className="font-semibold text-gray-700">{t('s15_filter_kosh')}</span>
+                  </div>
+                  <span className="text-warm-400">
+                    {filters.kosher === 'all' ? t('map_none') : filters.kosher === 'kosher' ? t('map_kosh') : t('map_meh')} ▾
+                  </span>
+                </button>
+                {expandedFilter === 'kosh' && (
+                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
+                    {[
+                      { value: 'all', label: t('map_none') },
+                      { value: 'kosher', label: t('map_kosh') },
+                      { value: 'mehadrin', label: t('map_meh') }
+                    ].map(opt => (
+                      <button 
+                        key={opt.value}
+                        onClick={() => { setFilters(f => ({ ...f, kosher: opt.value })); setExpandedFilter(null); }}
+                        className={clsx(
+                          "w-full text-right p-3 rounded-xl transition-colors",
+                          filters.kosher === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Accommodation Toggle */}
+              <div className="border border-warm-200 rounded-2xl p-4 bg-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🛏️</span>
+                  <span className="font-semibold text-gray-700">{t('s15_filter_sleep')}</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  className="w-6 h-6 rounded-lg accent-brand-600"
+                  checked={filters.includesAccommodation}
+                  onChange={e => setFilters(f => ({ ...f, includesAccommodation: e.target.checked }))}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Btn onClick={() => setShowFilters(false)} className="flex-1">{t('s15_filter_apply')}</Btn>
+                <Btn 
+                  variant="secondary" 
+                  onClick={() => setFilters({ date:'', timeRange:'all', observance:'all', includesAccommodation:false, kosher:'all' })} 
+                >
+                  {t('s15_filter_reset')}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Detail sheet */}
       {selected && <FamilySheet family={selected} onClose={() => setSelected(null)} />}
