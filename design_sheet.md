@@ -8,7 +8,7 @@ The project is built as a **Single Page Application (SPA)** using React (loaded 
 - **Routing:** Navigation is managed by a numeric `screen` state in `app.js` (e.g., `setScreen(1)`).
 - **Styling:** Tailwind CSS (via CDN) with custom configuration for brand colors.
 - **Language:** Dual-language support (Hebrew/English) managed by a global `LangContext` and a `translations.js` dictionary.
-- **State Management:** A centralized `formData` object at the `App` level collects registration and preference data as users move through the screens.
+- **State Management:** A centralized `formData` object at the `App` level collects registration and preference data. It also serves as the global database for the session, containing arrays like `pendingRequests`, `upcomingHostings`, and `postedHostings` to enable interactive dashboard operations (e.g., approving requests, posting new hostings, and profile edits).
 
 ---
 

@@ -27,6 +27,7 @@ The soldier flow focuses on verifying identity and collecting precise preference
   - Features an interactive Map (Leaflet) showing nearby available hosts.
   - Lists upcoming meals and status.
   - Allows requesting new meals.
+  - **S21 Soldier Profile:** Accessible via the profile icon (👤) to edit personal details, kosher preferences, allergies, and bio after registration.
 
 ---
 
@@ -39,18 +40,19 @@ The host flow is designed to build a detailed profile of the family's home envir
 2. **S18 Host Explain:** Brief overview of the responsibilities and benefits of hosting.
 3. **S16 Host Registration:** A wizard divided into 5 internal steps:
    - **Step 1:** Personal Info (Family Name, Phone, Email).
-   - **Step 2:** Hosting Type (Friday Dinner, Shabbat Lunch, Delivery) & City.
+   - **Step 2:** Location (City / Address). *(Hosting Type moved to S20)*
    - **Step 3:** Lifestyle (Shabbat Observance level, Kitchen Kosher level).
    - **Step 4:** Services (Can offer a place to sleep, Can assist with transport).
-   - **Step 5:** Vibe & Capacity (Number of soldiers they can host, Vibe tags like "Kids", "Quiet", "Singing").
+   - **Step 5:** Home Vibe (Tags like "Kids", "Quiet", "Singing"). *(Capacity moved to S20)*
 4. **S17 Host Success:** Confirmation of successful profile creation.
 
 ### Host Home Dashboard & Management
-- **S19 Host Home:** The main dashboard for families.
-  - Displays their current profile status and tags.
-  - Shows pending requests from soldiers (allowing Approve/Reject actions).
-  - Shows upcoming scheduled meals.
+- **S19 Host Home:** The interactive main dashboard for families.
+  - **S22 Host Profile:** Accessible via the profile icon (👤) to edit family details and home environment post-registration.
+  - **Pending Requests:** Displays real requests from soldiers. Families can **Approve** or **Reject** requests, viewing the date and time of the meal.
+  - **Upcoming Hostings:** Shows approved soldiers. Families can cancel the hosting if plans change.
+  - **My Posted Hostings:** Lists active hosting slots created by the family, which can be canceled/deleted.
 - **S20 New Hosting:** Form to open a new hosting slot.
-  - Select Date (Upcoming Fridays) and Time.
-  - Select capacity (Number of soldiers).
+  - Select Date (Upcoming Fridays) and Time (Friday Evening, Saturday Lunch, Custom).
+  - Select Capacity (Maximum number of soldiers for *this specific meal*).
   - Add free-text notes and upload photos of the home/table.
