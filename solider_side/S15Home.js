@@ -307,7 +307,7 @@ function MapView({ families, onSelect, selectedId }) {
 /* ════════════════════════════════════════
    S15Home — Soldier home screen
 ════════════════════════════════════════ */
-function S15Home({ data }) {
+function S15Home({ data, onProfile }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -361,9 +361,14 @@ function S15Home({ data }) {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-12 pb-8 rounded-b-3xl shadow-lg">
-        <p className="text-sm opacity-80 mb-0.5">{t('s15_hi')}</p>
-        <h1 className="text-2xl font-bold mb-1">{data.fullName || (data.firstName + ' ' + data.lastName)} 👋</h1>
+      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
+        <div className="flex items-start gap-4">
+          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="הפרופיל שלי">👤</button>
+          <div>
+            <p className="text-sm opacity-80 mb-0.5">{t('s15_hi')}</p>
+            <h1 className="text-2xl font-bold mb-1">{data.fullName || (data.firstName + ' ' + data.lastName)} 👋</h1>
+          </div>
+        </div>
         <div className="flex items-center gap-2 mt-3">
           <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
           <span className="text-sm font-medium opacity-90">{t('s15_status')}</span>

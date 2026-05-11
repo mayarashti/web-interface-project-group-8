@@ -4,7 +4,16 @@ const { useState, useEffect } = React;
 function App() {
   const [screen,   setScreen]   = useState(1);
   const [lang,     setLang]     = useState('he');
-  const [formData, setFormData] = useState({ languages:['he'], allergies:[] });
+  const [formData, setFormData] = useState({ 
+    languages:['he'], 
+    allergies:[],
+    pendingRequests: [
+      { id: 1, name:'יונתן כ.', unit:'גולני', kosher:'kosher', needSleep:true, date: new Date(Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000).toISOString().split('T')[0], time: 'friday_evening' },
+      { id: 2, name:'דניאל מ.',  unit:'חי"ר',  kosher:'none', needSleep:false, date: new Date(Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000).toISOString().split('T')[0], time: 'saturday_lunch' },
+    ],
+    upcomingHostings: [],
+    postedHostings: [],
+  });
 
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
 
@@ -28,13 +37,15 @@ function App() {
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => go(13)} onBack={() => go(11)} />,
     13: <S13Pending   onHome={() => go(15)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(15)} name={formData.fullName} />,
-    15: <S15Home      data={formData} onNewRequest={() => {}} />,
+    15: <S15Home      data={formData} onNewRequest={() => {}} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
-    19: <S19HostHome    data={formData} onNewHosting={() => go(20)} />,
-    20: <S20NewHosting  data={formData} onBack={() => go(19)} onSubmit={() => go(19)} />,
+    19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
+    20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,
+    21: <S21SoldierProfile data={formData} setData={setFormData} onBack={() => go(15)} />,
+    22: <S22HostProfile data={formData} setData={setFormData} onBack={() => go(19)} />,
   };
 
   return (

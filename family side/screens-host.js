@@ -120,21 +120,11 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
     );
   }
 
-  /* ────────── Step 2 — Hosting type & location ────────── */
+  /* ────────── Step 2 — Location & Languages ────────── */
   if (internalStep === 2) {
-    const HOSTING_OPTS = [
-      { value:'friday_dinner', title:t('s16_fri_din'), sub:t('s16_fri_din_s') },
-      { value:'shabbat_lunch', title:t('s16_sat_lun'), sub:t('s16_sat_lun_s') },
-      { value:'delivery',      title:t('s16_deliv'),   sub:t('s16_deliv_s')   },
-    ];
-    const toggleHosting = (val) => {
-      const cur = data.hostingTypes || [];
-      set('hostingTypes')(cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val]);
-    };
     const langOpts = LANG_KEYS.map(l => ({ value:l.value, label:t(l.key) }));
     const validate = () => {
       const e = {};
-      if (!(data.hostingTypes||[]).length) e.hosting = t('v_hosting');
       if (!data.hostCity?.trim()) e.city = t('v_city');
       setErrors(e); return Object.keys(e).length === 0;
     };
@@ -142,33 +132,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
         <BackBtn onBack={back} />
         <StepDots />
-        <SectionTitle icon="🍽️" title={t('s16_2_title')} sub={t('s16_2_sub')} />
-        <div className="mb-5">
-          <p className="text-sm font-semibold text-gray-700 mb-1">{t('s16_host_label')}</p>
-          <p className="text-xs text-warm-400 mb-3">{t('s16_host_multi')}</p>
-          <div className="space-y-2.5">
-            {HOSTING_OPTS.map(opt => {
-              const checked = (data.hostingTypes||[]).includes(opt.value);
-              return (
-                <div key={opt.value} onClick={() => toggleHosting(opt.value)}
-                  className={clsx('p-4 rounded-xl border-2 cursor-pointer transition-all duration-150 flex items-start gap-3',
-                    checked ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
-                  )}>
-                  <div className={clsx('w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
-                    checked ? 'bg-brand-600 border-brand-600' : 'border-warm-300'
-                  )}>
-                    {checked && <span className="text-white text-xs">✓</span>}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm">{opt.title}</p>
-                    <p className="text-xs text-warm-500 mt-0.5">{opt.sub}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {errors.hosting && <p className="mt-2 text-xs text-red-500 font-medium">{errors.hosting}</p>}
-        </div>
+        <SectionTitle icon="📍" title={t('s16_2_title')} sub={t('s16_2_sub')} />
         <Input label={t('s16_city')} value={data.hostCity||''} onChange={set('hostCity')} placeholder={t('s16_city_ph')} hint={t('s16_city_hint')} error={errors.city} />
         <MultiCheck label={t('s16_langs')} options={langOpts} values={data.hostLanguages||['he']} onChange={val => set('hostLanguages')(val)} />
         <div className="mt-auto pt-4"><Btn onClick={() => advance(validate)}>{t('continue')}</Btn></div>
@@ -238,35 +202,16 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
   }
 
   /* ────────── Step 5 — Home vibe + summary ────────── */
-  const CAPS = ['1','2','3','4','5+'];
   const vibeOpts = VIBE_TAGS_KEYS.map(v => ({ value:v.value, label:t(v.key) }));
-  const validate5 = () => {
-    const e = {};
-    if (!data.hostCapacity) e.cap = t('v_cap');
-    setErrors(e); return Object.keys(e).length === 0;
-  };
+  
   const koshLabel = data.hostKosher === 'mehadrin' ? t('map_meh') : data.hostKosher === 'kosher' ? t('map_kosh') : t('map_none');
   const shabbatLabel = data.shabbatObservance === 'observant' ? t('map_obs') : data.shabbatObservance === 'traditional' ? t('map_trad') : t('map_sec');
-  const hostLabels = (data.hostingTypes||[]).map(h => h==='friday_dinner'?t('map_fri_s'):h==='shabbat_lunch'?t('map_lun_s'):t('map_del_s')).join(' · ');
 
   return (
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-12">
       <BackBtn onBack={back} />
       <StepDots />
       <SectionTitle icon="🏡" title={t('s16_5_title')} sub={t('s16_5_sub')} />
-      <div className="mb-5">
-        <p className="text-sm font-semibold text-gray-700 mb-1">{t('s16_cap_label')}</p>
-        <p className="text-xs text-warm-400 mb-3">{t('s16_cap_sub')}</p>
-        <div className="flex gap-2.5">
-          {CAPS.map(n => (
-            <button key={n} type="button" onClick={() => set('hostCapacity')(n)}
-              className={clsx('flex-1 h-12 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-300',
-                data.hostCapacity === n ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105' : 'bg-white text-gray-600 border-warm-300 hover:border-brand-400 hover:bg-brand-50'
-              )}>{n}</button>
-          ))}
-        </div>
-        {errors.cap && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.cap}</p>}
-      </div>
       <MultiCheck label={t('s16_vibe_label')} options={vibeOpts} values={data.hostVibeTags||[]} onChange={val => set('hostVibeTags')(val)} />
       <p className="text-xs text-warm-400 -mt-2 mb-4">{t('s16_vibe_sub')}</p>
       <Card className="mb-5 bg-warm-50 border-warm-200">
@@ -274,10 +219,8 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
         <div className="space-y-1.5">
           {data.hostFullName && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_name')}</span><span className="font-medium text-gray-800">{data.hostFullName}</span></div>}
           {data.hostCity     && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_city')}</span><span className="font-medium text-gray-800">{data.hostCity}</span></div>}
-          {hostLabels        && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_host')}</span><span className="font-medium text-gray-800">{hostLabels}</span></div>}
           {shabbatLabel      && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_shab')}</span><span className="font-medium text-gray-800">{shabbatLabel}</span></div>}
           {koshLabel         && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_name')}</span><span className="font-medium text-gray-800">{koshLabel}</span></div>}
-          {data.hostCapacity && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_cap')}</span><span className="font-medium text-gray-800">{t('s16_cap_unit', data.hostCapacity)}</span></div>}
           {(data.hostVibeTags||[]).length > 0 && (
             <div className="flex justify-between text-xs items-start gap-2">
               <span className="text-warm-500 flex-shrink-0">{t('s16_sum_tags')}</span>
@@ -286,7 +229,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
           )}
         </div>
       </Card>
-      <Btn onClick={() => advance(validate5)} className="text-base py-4">{t('s16_submit')}</Btn>
+      <Btn onClick={() => advance()} className="text-base py-4">{t('s16_submit')}</Btn>
     </div>
   );
 }
@@ -315,76 +258,164 @@ function S17HostSuccess({ onHome, name }) {
 /* ════════════════════════════════════════
    S19 — Host Home
 ════════════════════════════════════════ */
-function S19HostHome({ data, onNewHosting }) {
+function S19HostHome({ data, setData, onNewHosting, onProfile }) {
   const { t } = useLang();
-  const nextFriday = new Date(Date.now()+((5-new Date().getDay()+7)%7)*86400000)
-    .toLocaleDateString('he-IL', { day:'numeric', month:'long' });
+  
+  const pending = data.pendingRequests || [];
+  const upcoming = data.upcomingHostings || [];
+  const posted = data.postedHostings || [];
+
+  const handleApprove = (req) => {
+    setData(prev => ({
+      ...prev,
+      pendingRequests: prev.pendingRequests.filter(r => r.id !== req.id),
+      upcomingHostings: [...prev.upcomingHostings, req]
+    }));
+  };
+
+  const handleReject = (req) => {
+    setData(prev => ({
+      ...prev,
+      pendingRequests: prev.pendingRequests.filter(r => r.id !== req.id)
+    }));
+  };
+
+  const handleCancelUpcoming = (req) => {
+    setData(prev => ({
+      ...prev,
+      upcomingHostings: prev.upcomingHostings.filter(r => r.id !== req.id)
+    }));
+  };
+
+  const handleDeletePosted = (post) => {
+    setData(prev => ({
+      ...prev,
+      postedHostings: prev.postedHostings.filter(p => p.id !== post.id)
+    }));
+  };
+
   const koshLabel  = data.hostKosher === 'mehadrin' ? t('map_meh') : data.hostKosher === 'kosher' ? t('map_kosh') : t('map_none');
   const shabbatLabel = data.shabbatObservance === 'observant' ? t('map_obs') : data.shabbatObservance === 'traditional' ? t('map_trad') : t('map_sec');
-  const hostingLabels = (data.hostingTypes||[]).map(h => h==='friday_dinner'?t('map_fri_s'):h==='shabbat_lunch'?t('map_lun_s'):t('map_del_s')).join(' · ');
-  const pending = [
-    { name:'יונתן כ.', unit:'גולני', kosher:t('map_kosh'), needSleep:true  },
-    { name:'דניאל מ.',  unit:'חי"ר',  kosher:t('map_none'), needSleep:false },
-  ];
+  
   return (
-    <div className="screen-enter min-h-screen bg-warm-50 pb-24">
-      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-12 pb-8 rounded-b-3xl shadow-lg">
-        <p className="text-sm opacity-80 mb-0.5">{t('s19_hi')}</p>
-        <h1 className="text-2xl font-bold mb-1">{data.hostFullName || '...'} 👋</h1>
+    <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+      {/* Header */}
+      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
+        <div className="flex items-start gap-4">
+          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="פרופיל">👤</button>
+          <div>
+            <p className="text-sm opacity-80 mb-0.5">{t('s19_hi')}</p>
+            <h1 className="text-2xl font-bold mb-1">{data.hostFullName || '...'} 👋</h1>
+          </div>
+        </div>
         <div className="flex items-center gap-2 mt-2 mb-4">
           <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
           <span className="text-sm font-medium opacity-90">{t('s19_status')}</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {hostingLabels && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">🍽️ {hostingLabels}</span>}
-          {data.hostCapacity && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">👥 {t('s16_cap_unit', data.hostCapacity)}</span>}
           {data.hostKosher   && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">✡️ {koshLabel}</span>}
           {data.shabbatObservance && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">🕯️ {shabbatLabel}</span>}
         </div>
       </div>
+
       <div className="px-5 mt-5 space-y-5">
         <Btn onClick={onNewHosting} className="shadow-md text-base py-4">{t('s19_new')}</Btn>
+        
+        {/* Upcoming Hostings */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_shab')}</h2>
-          <Card className="bg-amber-50 border-amber-200 text-center py-5">
-            <p className="text-sm font-semibold text-amber-800 mb-1">{t('s19_friday')} {nextFriday}</p>
-            <p className="text-xs text-amber-600 mb-3">{t('s19_looking', 2)}</p>
-            <Btn variant="outline" className="border-amber-500 text-amber-700 hover:bg-amber-100 py-2.5 text-sm">{t('s19_view')}</Btn>
-          </Card>
+          <h2 className="text-base font-bold text-gray-800 mb-3">אירוחים קרובים</h2>
+          {upcoming.length === 0 ? (
+             <Card className="text-center py-6 text-warm-400">
+               <p className="text-sm">אין אירוחים קרובים</p>
+             </Card>
+          ) : (
+            <div className="space-y-3">
+              {upcoming.map(r => (
+                <Card key={r.id} className="border-brand-200 bg-brand-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-bold text-gray-800 text-sm">{r.name}</p>
+                    <span className="text-xs bg-brand-100 text-brand-700 font-semibold px-2 py-0.5 rounded-full">מאושר</span>
+                  </div>
+                  <p className="text-xs text-warm-500 mb-1">{t('s19_unit')} {r.unit}</p>
+                  {r.date && (
+                    <div className="text-xs text-warm-600 font-medium mb-3 bg-white p-2 rounded-lg border border-brand-100 flex justify-between items-center">
+                      <span>📅 {new Date(r.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</span>
+                      <span>{r.time === 'friday_evening' ? t('s20_fri_time') : r.time === 'saturday_lunch' ? t('s20_sat_time') : r.customTime || t('s20_cust_time')}</span>
+                    </div>
+                  )}
+                  <button onClick={() => handleCancelUpcoming(r)} className="w-full py-2 rounded-xl bg-white border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors">ביטול אירוח</button>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Pending Requests */}
         <div>
           <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_pending')}</h2>
-          <div className="space-y-3">
-            {pending.map(r => (
-              <Card key={r.name} className="cursor-pointer hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-100 flex items-center justify-center flex-shrink-0 text-xl">🪖</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-bold text-gray-800 text-sm">{r.name}</p>
-                      <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">{t('s19_badge')}</span>
-                    </div>
-                    <p className="text-xs text-warm-500 mb-1.5">{t('s19_unit')} {r.unit}</p>
-                    <div className="flex gap-2 flex-wrap">
-                      <Tag>{r.kosher}</Tag>
-                      {r.needSleep && <Tag>{t('s19_sleep_tag')}</Tag>}
+          {pending.length === 0 ? (
+            <Card className="text-center py-6 text-warm-400">
+              <span className="text-3xl block mb-2">📭</span>
+              <p className="text-sm">אין בקשות ממתינות</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {pending.map(r => (
+                <Card key={r.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-100 flex items-center justify-center flex-shrink-0 text-xl">🪖</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-bold text-gray-800 text-sm">{r.name}</p>
+                        <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">{t('s19_badge')}</span>
+                      </div>
+                      <p className="text-xs text-warm-500 mb-1.5">{t('s19_unit')} {r.unit}</p>
+                      {r.date && (
+                        <div className="text-xs text-warm-600 font-medium mb-2 bg-white border border-warm-200 p-1.5 rounded-md flex justify-between items-center">
+                          <span>📅 {new Date(r.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</span>
+                          <span>{r.time === 'friday_evening' ? t('s20_fri_time') : r.time === 'saturday_lunch' ? t('s20_sat_time') : r.customTime || t('s20_cust_time')}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        <Tag>{r.kosher === 'kosher' ? t('map_kosh') : t('map_none')}</Tag>
+                        {r.needSleep && <Tag>{t('s19_sleep_tag')}</Tag>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button className="flex-1 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition-colors">{t('s19_approve')}</button>
-                  <button className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">{t('s19_reject')}</button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleApprove(r)} className="flex-1 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition-colors">{t('s19_approve')}</button>
+                    <button onClick={() => handleReject(r)} className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">{t('s19_reject')}</button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Posted Hostings */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_past')}</h2>
-          <Card className="text-center py-6 text-warm-400">
-            <span className="text-3xl block mb-2">📭</span>
-            <p className="text-sm">{t('s19_no_past')}</p>
-          </Card>
+          <h2 className="text-base font-bold text-gray-800 mb-3">האירוחים שפרסמתי</h2>
+          {posted.length === 0 ? (
+            <Card className="text-center py-6 text-warm-400">
+              <span className="text-3xl block mb-2">🗓️</span>
+              <p className="text-sm">לא פרסמת אירוחים</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {posted.map(p => (
+                <Card key={p.id}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">{new Date(p.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'})}</p>
+                      <p className="text-xs text-warm-500 mt-0.5">{p.time === 'friday_evening' ? t('s20_fri_time') : p.time === 'saturday_lunch' ? t('s20_sat_time') : p.customTime || t('s20_cust_time')} · {t('s20_slots_val', p.soldiers)}</p>
+                    </div>
+                    <span className="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">פעיל</span>
+                  </div>
+                  <button onClick={() => handleDeletePosted(p)} className="mt-2 w-full py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">מחק פרסום</button>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -394,9 +425,9 @@ function S19HostHome({ data, onNewHosting }) {
 /* ════════════════════════════════════════
    S20 — Create New Hosting
 ════════════════════════════════════════ */
-function S20NewHosting({ data, onBack, onSubmit }) {
+function S20NewHosting({ data, setData, onBack, onSubmit }) {
   const { t } = useLang();
-  const [form, setForm] = useState({ date:'', time:'', customTime:'', soldiers:data.hostCapacity||'', note:'', images:[] });
+  const [form, setForm] = useState({ date:'', time:'', customTime:'', soldiers:'', note:'', images:[] });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
@@ -433,6 +464,13 @@ function S20NewHosting({ data, onBack, onSubmit }) {
 
   const handleSubmit = () => {
     if (!validate()) return;
+    
+    // Add to postedHostings
+    setData(prev => ({
+      ...prev,
+      postedHostings: [...(prev.postedHostings || []), { ...form, id: Date.now() }]
+    }));
+
     setSubmitted(true);
     setTimeout(() => onSubmit(), 1800);
   };
@@ -467,7 +505,7 @@ function S20NewHosting({ data, onBack, onSubmit }) {
             <button key={d.value} type="button" onClick={() => setF('date')(d.value)}
               className={clsx('p-3.5 rounded-xl border-2 text-right transition-all duration-150 active:scale-95',
                 form.date === d.value ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
-              )}>2
+              )}>
               <p className={clsx('text-xs font-semibold mb-0.5', form.date === d.value ? 'text-brand-600' : 'text-warm-500')}>{t('s20_day')}</p>
               <p className={clsx('text-sm font-bold', form.date === d.value ? 'text-brand-700' : 'text-gray-800')}>{d.dateLabel}</p>
               <p className="text-xs text-warm-400 mt-0.5">{t('s20_shab')} {d.satLabel}</p>
