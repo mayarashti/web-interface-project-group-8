@@ -261,36 +261,22 @@ function S17HostSuccess({ onHome, name }) {
 function S19HostHome({ data, setData, onNewHosting, onProfile }) {
   const { t } = useLang();
   
-  const pending = data.pendingRequests || [];
-  const upcoming = data.upcomingHostings || [];
-  const posted = data.postedHostings || [];
+  const hostings = data.hostings || [];
 
-  const handleApprove = (req) => {
-    setData(prev => ({
-      ...prev,
-      pendingRequests: prev.pendingRequests.filter(r => r.id !== req.id),
-      upcomingHostings: [...prev.upcomingHostings, req]
-    }));
+  const handleEditHosting = (hosting) => {
+    setData(prev => ({ ...prev, editingHostingId: hosting.id }));
+    onNewHosting(); // Navigate to S20
   };
 
-  const handleReject = (req) => {
-    setData(prev => ({
-      ...prev,
-      pendingRequests: prev.pendingRequests.filter(r => r.id !== req.id)
-    }));
+  const handleNewHosting = () => {
+    setData(prev => ({ ...prev, editingHostingId: null }));
+    onNewHosting();
   };
 
-  const handleCancelUpcoming = (req) => {
+  const handleCancelHosting = (hosting) => {
     setData(prev => ({
       ...prev,
-      upcomingHostings: prev.upcomingHostings.filter(r => r.id !== req.id)
-    }));
-  };
-
-  const handleDeletePosted = (post) => {
-    setData(prev => ({
-      ...prev,
-      postedHostings: prev.postedHostings.filter(p => p.id !== post.id)
+      hostings: prev.hostings.filter(h => h.id !== hosting.id)
     }));
   };
 
@@ -302,7 +288,7 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
       {/* Header */}
       <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
         <div className="flex items-start gap-4">
-          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="פרופיל">👤</button>
+          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="הגדרות">⚙️</button>
           <div>
             <p className="text-sm opacity-80 mb-0.5">{t('s19_hi')}</p>
             <h1 className="text-2xl font-bold mb-1">{data.hostFullName || '...'} 👋</h1>
@@ -319,101 +305,62 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
       </div>
 
       <div className="px-5 mt-5 space-y-5">
-        <Btn onClick={onNewHosting} className="shadow-md text-base py-4">{t('s19_new')}</Btn>
-        
-        {/* Upcoming Hostings */}
-        <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">אירוחים קרובים</h2>
-          {upcoming.length === 0 ? (
-             <Card className="text-center py-6 text-warm-400">
-               <p className="text-sm">אין אירוחים קרובים</p>
-             </Card>
-          ) : (
-            <div className="space-y-3">
-              {upcoming.map(r => (
-                <Card key={r.id} className="border-brand-200 bg-brand-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-gray-800 text-sm">{r.name}</p>
-                    <span className="text-xs bg-brand-100 text-brand-700 font-semibold px-2 py-0.5 rounded-full">מאושר</span>
-                  </div>
-                  <p className="text-xs text-warm-500 mb-1">{t('s19_unit')} {r.unit}</p>
-                  {r.date && (
-                    <div className="text-xs text-warm-600 font-medium mb-3 bg-white p-2 rounded-lg border border-brand-100 flex justify-between items-center">
-                      <span>📅 {new Date(r.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</span>
-                      <span>{r.time === 'friday_evening' ? t('s20_fri_time') : r.time === 'saturday_lunch' ? t('s20_sat_time') : r.customTime || t('s20_cust_time')}</span>
-                    </div>
-                  )}
-                  <button onClick={() => handleCancelUpcoming(r)} className="w-full py-2 rounded-xl bg-white border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors">ביטול אירוח</button>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        <Btn onClick={handleNewHosting} className="shadow-md text-base py-4">{t('s19_new')}</Btn>
 
-        {/* Pending Requests */}
+        {/* My Hostings */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_pending')}</h2>
-          {pending.length === 0 ? (
-            <Card className="text-center py-6 text-warm-400">
-              <span className="text-3xl block mb-2">📭</span>
-              <p className="text-sm">אין בקשות ממתינות</p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {pending.map(r => (
-                <Card key={r.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-brand-100 flex items-center justify-center flex-shrink-0 text-xl">🪖</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-bold text-gray-800 text-sm">{r.name}</p>
-                        <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">{t('s19_badge')}</span>
-                      </div>
-                      <p className="text-xs text-warm-500 mb-1.5">{t('s19_unit')} {r.unit}</p>
-                      {r.date && (
-                        <div className="text-xs text-warm-600 font-medium mb-2 bg-white border border-warm-200 p-1.5 rounded-md flex justify-between items-center">
-                          <span>📅 {new Date(r.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</span>
-                          <span>{r.time === 'friday_evening' ? t('s20_fri_time') : r.time === 'saturday_lunch' ? t('s20_sat_time') : r.customTime || t('s20_cust_time')}</span>
-                        </div>
-                      )}
-                      <div className="flex gap-2 flex-wrap">
-                        <Tag>{r.kosher === 'kosher' ? t('map_kosh') : t('map_none')}</Tag>
-                        {r.needSleep && <Tag>{t('s19_sleep_tag')}</Tag>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <button onClick={() => handleApprove(r)} className="flex-1 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition-colors">{t('s19_approve')}</button>
-                    <button onClick={() => handleReject(r)} className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">{t('s19_reject')}</button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Posted Hostings */}
-        <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">האירוחים שפרסמתי</h2>
-          {posted.length === 0 ? (
+          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_my_hostings')}</h2>
+          {hostings.length === 0 ? (
             <Card className="text-center py-6 text-warm-400">
               <span className="text-3xl block mb-2">🗓️</span>
-              <p className="text-sm">לא פרסמת אירוחים</p>
+              <p className="text-sm">{t('s19_no_hostings')}</p>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {posted.map(p => (
-                <Card key={p.id}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-bold text-gray-800 text-sm">{new Date(p.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'})}</p>
-                      <p className="text-xs text-warm-500 mt-0.5">{p.time === 'friday_evening' ? t('s20_fri_time') : p.time === 'saturday_lunch' ? t('s20_sat_time') : p.customTime || t('s20_cust_time')} · {t('s20_slots_val', p.soldiers)}</p>
+            <div className="space-y-4">
+              {hostings.map(h => {
+                const guests = h.guests || [];
+                const guestCount = guests.length;
+                const capacity = h.soldiers || 0;
+                const isFull = guestCount >= capacity && capacity > 0;
+                
+                return (
+                  <Card key={h.id} className="border-brand-200">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">{new Date(h.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</p>
+                        <p className="text-xs text-warm-500 mt-0.5">{h.time === 'friday_evening' ? t('s20_fri_time') : h.time === 'saturday_lunch' ? t('s20_sat_time') : h.customTime || t('s20_cust_time')}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {guestCount} / {capacity} {t('s19_spots_taken')}
+                      </span>
                     </div>
-                    <span className="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">פעיל</span>
-                  </div>
-                  <button onClick={() => handleDeletePosted(p)} className="mt-2 w-full py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">מחק פרסום</button>
-                </Card>
-              ))}
+                    
+                    {/* Guests List */}
+                    {guestCount > 0 ? (
+                      <div className="mt-3 mb-4 bg-warm-50 p-2.5 rounded-xl border border-warm-200">
+                        <p className="text-xs font-bold text-gray-700 mb-2">{t('s19_guests_title')}</p>
+                        <div className="space-y-2">
+                          {guests.map(g => (
+                            <div key={g.id} className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center text-[10px]">🪖</div>
+                              <span className="text-xs font-medium text-gray-800">{g.name} <span className="text-warm-500 font-normal">({g.unit})</span></span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 mb-4 text-xs text-warm-400 italic">
+                        {t('s19_no_guests_yet')}
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditHosting(h)} className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">{t('s19_edit_hosting')}</button>
+                      <button onClick={() => handleCancelHosting(h)} className="flex-1 py-2 rounded-xl bg-white border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors">{t('s19_cancel_hosting')}</button>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -427,7 +374,11 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
 ════════════════════════════════════════ */
 function S20NewHosting({ data, setData, onBack, onSubmit }) {
   const { t } = useLang();
-  const [form, setForm] = useState({ date:'', time:'', customTime:'', soldiers:'', note:'', images:[] });
+  const editingHosting = data.hostings?.find(h => h.id === data.editingHostingId);
+  const [form, setForm] = useState(() => {
+    if (editingHosting) return { ...editingHosting, images: editingHosting.images || [], soldiers: String(editingHosting.soldiers) };
+    return { date:'', time:'', customTime:'', soldiers:'', note:'', images:[] };
+  });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
@@ -465,11 +416,21 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
   const handleSubmit = () => {
     if (!validate()) return;
     
-    // Add to postedHostings
-    setData(prev => ({
-      ...prev,
-      postedHostings: [...(prev.postedHostings || []), { ...form, id: Date.now() }]
-    }));
+    setData(prev => {
+      const hostings = prev.hostings || [];
+      if (prev.editingHostingId) {
+        return {
+          ...prev,
+          hostings: hostings.map(h => h.id === prev.editingHostingId ? { ...form } : h),
+          editingHostingId: null
+        };
+      } else {
+        return {
+          ...prev,
+          hostings: [...hostings, { ...form, id: Date.now(), guests: [] }]
+        };
+      }
+    });
 
     setSubmitted(true);
     setTimeout(() => onSubmit(), 1800);
@@ -554,7 +515,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
           {SOLDIER_OPTS.map(n => (
             <button key={n} type="button" onClick={() => setF('soldiers')(n)}
               className={clsx('flex-1 h-12 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-300',
-                form.soldiers === n ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105' : 'bg-white text-gray-600 border-warm-300 hover:border-brand-400 hover:bg-brand-50'
+                String(form.soldiers) === n ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105' : 'bg-white text-gray-600 border-warm-300 hover:border-brand-400 hover:bg-brand-50'
               )}>{n}</button>
           ))}
         </div>

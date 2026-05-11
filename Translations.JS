@@ -232,12 +232,14 @@ const T = {
     /* S19 Host Home */
     s19_hi: 'שלום,', s19_status: 'משפחה מארחת מאומתת ✅',
     s19_new: '🏡 פתח אירוח לשישי הקרוב',
-    s19_shab: 'שבת קרובה 🕯️', s19_friday: 'שישי,',
-    s19_looking: (n) => `${n} חיילים מחפשים אירוח באזורכם`,
-    s19_view: 'צפה בבקשות', s19_pending: 'בקשות ממתינות 🪖',
-    s19_badge: 'ממתין', s19_unit: 'יחידה:', s19_approve: '✅ אשר', s19_reject: '❌ דחה',
-    s19_sleep_tag: '🛏️ צריך לינה', s19_past: 'אירוחים קודמים 📅',
-    s19_no_past: 'עדיין לא אירחתם — פתחו את האירוח הראשון שלכם! 🎉',
+    s19_my_hostings: 'האירוחים שלי',
+    s19_no_hostings: 'לא יצרת אירוחים עדיין',
+    s19_spots_taken: 'מקומות תפוסים',
+    s19_guests_title: 'חיילים שמגיעים:',
+    s19_no_guests_yet: 'עדיין אין נרשמים לאירוח זה',
+    s19_edit_hosting: 'ערוך אירוח',
+    s19_cancel_hosting: 'בטל אירוח',
+    s19_unit: 'יחידה:',
 
     /* S20 New Hosting */
     s20_title: 'פתיחת אירוח חדש', s20_sub: 'מלאו את הפרטים וחיילים יוכלו להירשם',
@@ -467,12 +469,14 @@ const T = {
     /* S19 Host Home */
     s19_hi: 'Hello,', s19_status: 'Verified Host Family ✅',
     s19_new: '🏡 Open Hosting for Next Friday',
-    s19_shab: 'Upcoming Shabbat 🕯️', s19_friday: 'Friday,',
-    s19_looking: (n) => `${n} soldiers looking for hosting in your area`,
-    s19_view: 'View Requests', s19_pending: 'Pending Requests 🪖',
-    s19_badge: 'Pending', s19_unit: 'Unit:', s19_approve: '✅ Approve', s19_reject: '❌ Decline',
-    s19_sleep_tag: '🛏️ Needs overnight', s19_past: 'Past Hostings 📅',
-    s19_no_past: 'No hostings yet — open your first one! 🎉',
+    s19_my_hostings: 'My Hostings',
+    s19_no_hostings: 'You haven\'t created any hostings yet',
+    s19_spots_taken: 'spots taken',
+    s19_guests_title: 'Attending Soldiers:',
+    s19_no_guests_yet: 'No soldiers have joined this hosting yet',
+    s19_edit_hosting: 'Edit Details',
+    s19_cancel_hosting: 'Cancel Hosting',
+    s19_unit: 'Unit:',
 
     /* S20 New Hosting */
     s20_title: 'Create New Hosting', s20_sub: 'Fill in the details and soldiers can sign up',
