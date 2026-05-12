@@ -5,12 +5,25 @@ function S0Login({ onBack, onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // For now, just navigate to main screen
-    // In real app, this would validate credentials
-    onLogin();
+    const loginKey = email.trim();
+
+    if (loginKey === 'חייל') {
+      setError('');
+      onLogin('soldier');
+      return;
+    }
+
+    if (loginKey === 'משפחה') {
+      setError('');
+      onLogin('host');
+      return;
+    }
+
+    setError('להתחברות דמו הזינו בשדה המייל: חייל או משפחה');
   };
 
   const handleForgotPassword = () => {
@@ -36,13 +49,17 @@ function S0Login({ onBack, onLogin }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s0_email')}</label>
             <input
-              type="email"
+              type="text"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError('');
+              }}
               placeholder={t('s0_email_placeholder')}
               required
               className="w-full px-4 py-3 rounded-xl border border-warm-300 bg-white text-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400"
             />
+            {error && <p className="mt-2 text-xs text-red-500 font-medium">{error}</p>}
           </div>
 
           <div>

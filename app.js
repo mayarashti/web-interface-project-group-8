@@ -24,6 +24,48 @@ function App() {
 
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
 
+  const demoSoldierData = {
+    firstName: 'יונתן',
+    lastName: 'כהן',
+    fullName: 'יונתן כהן',
+    phone: '052-1234567',
+    email: 'soldier@example.com',
+    unit: 'גולני',
+    serviceType: 'regular',
+    languages: ['he'],
+    kosher: 'kosher',
+    shabbat: 'traditional',
+    needsSleep: false,
+    walkDistance: true,
+    allergies: ['none'],
+    preferWithSoldiers: true,
+  };
+
+  const demoHostData = {
+    hostFullName: 'משפחת כהן',
+    hostPhone: '052-7654321',
+    hostEmail: 'family@example.com',
+    hostCity: 'חיפה',
+    hostKosher: 'kosher',
+    hostShabbat: 'traditional',
+    hostLanguages: ['he'],
+    hostCanSleep: true,
+    hostCanTransport: false,
+    hostCapacity: 4,
+    hostVibeTags: ['kids', 'shabbat_atm'],
+  };
+
+  const handleDemoLogin = (role) => {
+    if (role === 'host') {
+      setFormData(prev => ({ ...prev, ...demoHostData }));
+      go(19);
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, ...demoSoldierData }));
+    go(15);
+  };
+
   /* keep <html> dir + lang in sync */
   useEffect(() => {
     document.documentElement.dir  = lang === 'he' ? 'rtl' : 'ltr';
@@ -32,7 +74,7 @@ function App() {
 
   const screens = {
     /* login */
-    0:  <S0Login      onBack={() => go(1)} onLogin={() => go(15)} />,
+    0:  <S0Login      onBack={() => go(1)} onLogin={handleDemoLogin} />,
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(2)} onHost={() => go(18)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
