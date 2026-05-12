@@ -12,7 +12,7 @@ function App() {
         date: new Date(Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000).toISOString().split('T')[0], 
         time: 'friday_evening', 
         soldiers: 4, 
-        note: 'נשמח לארח חיילים אצלנו! 🏡',
+        note: 'נשמח לארח חיילים אצלנו!',
         guests: [
           { id: 101, name: 'יונתן כ.', unit: 'גולני' },
           { id: 102, name: 'דניאל מ.', unit: 'חי"ר' }
