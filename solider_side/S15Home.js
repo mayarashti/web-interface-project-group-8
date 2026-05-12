@@ -315,6 +315,7 @@ function S15Home({ data, onProfile }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
+  const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
 
   const nextFriday = new Date(
     Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000
@@ -327,21 +328,18 @@ function S15Home({ data, onProfile }) {
 
 
       {/* Header */}
-      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
-        <div className="flex items-start gap-4">
-          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="הגדרות">⚙️</button>
-          <div>
-            <p className="text-sm opacity-80 mb-0.5">{t('s15_hi')}</p>
-            <h1 className="text-2xl font-bold mb-1">{data.fullName || (data.firstName + ' ' + data.lastName)} 👋</h1>
-          </div>
+      <div className="soldier-home-header">
+        <div className="soldier-home-greeting">
+          <span>{t('s15_hi')}</span>
+          <strong>{soldierName}</strong>
         </div>
-        <div className="flex items-center gap-2 mt-3">
-          <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
-          <span className="text-sm font-medium opacity-90">{t('s15_status')}</span>
+        <div className="soldier-home-actions">
+          <LangToggle variant="inline" />
+          <button onClick={onProfile} className="soldier-home-icon-btn" title="הגדרות" aria-label="הגדרות">⚙️</button>
         </div>
       </div>
 
-      <div className="px-5 mt-5 space-y-5">
+      <div className="px-5 mt-2 space-y-5">
         <FamilyStrip families={filteredFamilies} selectedId={selected?.id ?? null} onSelect={fam => setSelected(fam)} onHover={setHovered} />
 
         <div>

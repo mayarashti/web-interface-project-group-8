@@ -102,7 +102,7 @@ function App() {
   return (
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
-        <LangToggle />
+        {![15, 19].includes(screen) && <LangToggle />}
         {screens[screen] || screens[1]}
       </div>
     </LangContext.Provider>

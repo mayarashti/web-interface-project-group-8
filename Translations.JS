@@ -16,12 +16,12 @@ function useLang() {
   return { lang, setLang, t, isRTL: lang === 'he' };
 }
 
-function LangToggle() {
+function LangToggle({ variant = 'fixed' } = {}) {
   const { lang, setLang } = useLang();
   return (
     <button
       onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
-      className="lang-toggle"
+      className={`lang-toggle${variant === 'inline' ? ' lang-toggle-inline' : ''}`}
       title={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
     >
       {lang === 'he' ? 'EN' : 'עב'}

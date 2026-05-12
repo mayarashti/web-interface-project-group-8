@@ -218,6 +218,82 @@ html[lang="en"] .lang-toggle {
   left: auto;
   right: var(--space-4);
 }
+
+.lang-toggle-inline {
+  position: static;
+  z-index: auto;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid rgba(229, 196, 162, 0.55);
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--brand-700);
+  box-shadow: none;
+}
+.lang-toggle-inline:hover {
+  border-color: var(--brand-300);
+  box-shadow: none;
+}
+
+.soldier-home-header {
+  padding: var(--space-6) var(--space-5) var(--space-3);
+  background: transparent;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 2.35rem;
+}
+.soldier-home-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+.soldier-home-actions > button:not(.lang-toggle) {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 2.35rem;
+  border: 1px solid rgba(229, 196, 162, 0.55);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--brand-700);
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  font-size: var(--font-size-base);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+.soldier-home-actions > button:not(.lang-toggle):hover {
+  border-color: var(--brand-300);
+  background: rgba(255, 255, 255, 0.78);
+}
+.soldier-home-actions > button:not(.lang-toggle):active {
+  transform: scale(0.96);
+}
+.soldier-home-greeting {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  color: #111827;
+  line-height: 1.2;
+}
+.soldier-home-greeting span {
+  color: var(--warm-500);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+.soldier-home-greeting strong {
+  min-width: 0;
+  color: #111827;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* ─────────────────────────────────────────
    7. MAP — Leaflet overrides & marker styles
 ───────────────────────────────────────── */

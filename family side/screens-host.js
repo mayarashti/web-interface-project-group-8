@@ -280,31 +280,23 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
     }));
   };
 
-  const koshLabel  = data.hostKosher === 'mehadrin' ? t('map_meh') : data.hostKosher === 'kosher' ? t('map_kosh') : t('map_none');
-  const shabbatLabel = data.shabbatObservance === 'observant' ? t('map_obs') : data.shabbatObservance === 'traditional' ? t('map_trad') : t('map_sec');
+  const hostName = data.hostFullName || '...';
   
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
       {/* Header */}
-      <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
-        <div className="flex items-start gap-4">
-          <button onClick={onProfile} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/30 transition-colors flex-shrink-0" title="הגדרות">⚙️</button>
-          <div>
-            <p className="text-sm opacity-80 mb-0.5">{t('s19_hi')}</p>
-            <h1 className="text-2xl font-bold mb-1">{data.hostFullName || '...'} 👋</h1>
-          </div>
+      <div className="soldier-home-header">
+        <div className="soldier-home-greeting">
+          <span>{t('s19_hi')}</span>
+          <strong>{hostName}</strong>
         </div>
-        <div className="flex items-center gap-2 mt-2 mb-4">
-          <div className="bg-green-400 w-2.5 h-2.5 rounded-full flex-shrink-0" />
-          <span className="text-sm font-medium opacity-90">{t('s19_status')}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {data.hostKosher   && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">✡️ {koshLabel}</span>}
-          {data.shabbatObservance && <span className="bg-white bg-opacity-20 text-white text-xs font-medium px-2.5 py-1 rounded-full">🕯️ {shabbatLabel}</span>}
+        <div className="soldier-home-actions">
+          <LangToggle variant="inline" />
+          <button onClick={onProfile} className="soldier-home-icon-btn" title="הגדרות" aria-label="הגדרות">⚙️</button>
         </div>
       </div>
 
-      <div className="px-5 mt-5 space-y-5">
+      <div className="px-5 mt-2 space-y-5">
         <Btn onClick={handleNewHosting} className="shadow-md text-base py-4">{t('s19_new')}</Btn>
 
         {/* My Hostings */}
