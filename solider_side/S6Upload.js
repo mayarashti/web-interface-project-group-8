@@ -24,7 +24,7 @@ function S6Upload({ data, setData, onNext, onBack }) {
       nextDisabled={!uploaded}
       step={3}
       total={8}
-      icon="📄"
+      icon
       title={t('s6_title')}
       sub={t('s6_sub')}
     >
@@ -43,20 +43,20 @@ function S6Upload({ data, setData, onNext, onBack }) {
           <div
             onClick={() => docType && mockUpload()}
             className={clsx(
-              'border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200',
+              'border border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-150',
               docType
-                ? 'border-brand-400 bg-brand-50 hover:bg-brand-100'
+                ? 'border-brand-200 bg-brand-50 hover:bg-brand-100'
                 : 'border-warm-300 bg-warm-50 cursor-not-allowed opacity-60'
             )}
           >
             {uploading ? (
               <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
                 <p className="text-sm text-brand-600 font-medium">{t('s6_loading')}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <span className="text-4xl">📸</span>
+                <span className="w-10 h-10 rounded-full border border-brand-200 bg-white flex items-center justify-center text-xl leading-none" aria-hidden="true">+</span>
                 <p className="font-semibold text-gray-700 text-sm">{t('s6_tap')}</p>
                 <p className="text-xs text-warm-400">{t('s6_size')}</p>
               </div>
@@ -66,8 +66,8 @@ function S6Upload({ data, setData, onNext, onBack }) {
         </div>
       ) : (
         <Card className="flex items-center gap-4 mb-5 border-green-200 bg-green-50">
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">✅</span>
+          <div className="w-12 h-12 bg-support-50 border border-support-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-support-500" />
           </div>
           <div>
             <p className="font-semibold text-green-800 text-sm">{t('s6_done')}</p>
@@ -76,7 +76,7 @@ function S6Upload({ data, setData, onNext, onBack }) {
         </Card>
       )}
       <Card className="flex items-start gap-3 mb-6 bg-amber-50 border-amber-200">
-        <span className="text-xl flex-shrink-0">🔒</span>
+        <span className="w-6 h-6 rounded-full bg-amber-100 border border-amber-200 flex-shrink-0" aria-hidden="true" />
         <p className="text-xs text-amber-800 leading-relaxed">{t('s6_note')}</p>
       </Card>
     </ScreenLayout>

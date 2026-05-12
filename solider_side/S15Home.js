@@ -4,13 +4,13 @@
 const { useState, useEffect, useRef } = React;
 
 const familyAvatarUrl = (bgColor, familyId) => {
-  // Create unique warm gradients based on family ID
+  // Create calm, distinct avatar tones based on family ID.
   const gradients = [
-    { from: '#fdeedd', to: '#f7d1b5' }, // Warm peach
-    { from: '#f7d1b5', to: '#e8c5a5' }, // Soft orange
-    { from: '#e8c5a5', to: '#d4b08a' }, // Earthy brown
-    { from: '#d4b08a', to: '#c49b7a' }, // Rich brown
-    { from: '#c49b7a', to: '#b8876a' }, // Deep brown
+    { from: '#f3e3d9', to: '#e8e3dc' },
+    { from: '#e3ecdf', to: '#f4f1ed' },
+    { from: '#dfe8ed', to: '#f4f1ed' },
+    { from: '#eadfd8', to: '#f3e3d9' },
+    { from: '#e8e3dc', to: '#d8d0c6' },
   ];
   const grad = gradients[familyId % gradients.length];
 
@@ -23,11 +23,11 @@ const familyAvatarUrl = (bgColor, familyId) => {
     </defs>
     <circle cx="60" cy="60" r="60" fill="url(#grad${familyId})"/>
     <circle cx="60" cy="50" r="22" fill="#ffffff" opacity="0.9"/>
-    <ellipse cx="60" cy="52" rx="18" ry="16" fill="#f1c6a4"/>
-    <path d="M48 72c6-8 18-8 24 0" fill="#8b5a3c" opacity="0.8"/>
-    <circle cx="54" cy="48" r="3" fill="#8b5a3c"/>
-    <circle cx="66" cy="48" r="3" fill="#8b5a3c"/>
-    <path d="M54 60c4 3 8 3 12 0" stroke="#8b5a3c" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <ellipse cx="60" cy="52" rx="18" ry="16" fill="#d8b09d"/>
+    <path d="M48 72c6-8 18-8 24 0" fill="#6f5b4f" opacity="0.8"/>
+    <circle cx="54" cy="48" r="3" fill="#6f5b4f"/>
+    <circle cx="66" cy="48" r="3" fill="#6f5b4f"/>
+    <path d="M54 60c4 3 8 3 12 0" stroke="#6f5b4f" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
@@ -250,8 +250,8 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
     families.forEach(fam => {
       L.circle([fam.lat, fam.lng], {
         radius: 420,
-        color: '#c2560e',
-        fillColor: '#fdeedd',
+        color: '#b86442',
+        fillColor: '#f3e3d9',
         fillOpacity: 0.2,
         weight: 1.8,
         dashArray: '5 5',
@@ -302,7 +302,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
     <div
       ref={containerRef}
       style={{ height: '420px', width: '100%' }}
-      className="rounded-[28px] overflow-hidden shadow-lg bg-white"
+      className="rounded-xl overflow-hidden border border-warm-200 shadow-sm bg-white"
     />
   );
 }
@@ -325,21 +325,23 @@ function S15Home({ data, onProfile }) {
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+      <AppHeader
+        eyebrow={t('s15_hi')}
+        title={soldierName}
+        actions={(
+          <React.Fragment>
+            <LangToggle variant="inline" />
+            <button onClick={onProfile} className="app-icon-btn" title="הגדרות" aria-label="הגדרות">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" />
+              </svg>
+            </button>
+          </React.Fragment>
+        )}
+      />
 
-
-      {/* Header */}
-      <div className="soldier-home-header">
-        <div className="soldier-home-greeting">
-          <span>{t('s15_hi')}</span>
-          <strong>{soldierName}</strong>
-        </div>
-        <div className="soldier-home-actions">
-          <LangToggle variant="inline" />
-          <button onClick={onProfile} className="soldier-home-icon-btn" title="הגדרות" aria-label="הגדרות">⚙️</button>
-        </div>
-      </div>
-
-      <div className="px-5 mt-2 space-y-5">
+      <div className="px-5 mt-2 space-y-5 max-w-6xl mx-auto">
         <FamilyStrip families={filteredFamilies} selectedId={selected?.id ?? null} onSelect={fam => setSelected(fam)} onHover={setHovered} />
 
         <div>
@@ -362,8 +364,8 @@ function S15Home({ data, onProfile }) {
           <p className="text-xs text-center text-warm-400 mt-3">{t('s15_tap_map')}</p>
         </div>
 
-        <div className="rounded-3xl bg-brand-50 border border-brand-100 p-4 text-center">
-          <p className="text-sm font-semibold text-brand-700">{t('s15_open_table')} • {nextFriday}</p>
+        <div className="rounded-xl bg-support-50 border border-support-100 p-4 text-center">
+          <p className="text-sm font-semibold text-support-600">{t('s15_open_table')} • {nextFriday}</p>
           <p className="text-xs text-brand-500 mt-1">{t('s15_avail', filteredFamilies.length)}</p>
         </div>
       </div>

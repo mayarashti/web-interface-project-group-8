@@ -22,10 +22,10 @@ function S13Pending({ onHome, autoApprove }) {
       {!approved ? (
         <>
           <div className="relative mb-8">
-            <div className="w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center">
-              <span className="text-4xl">⏳</span>
+            <div className="w-20 h-20 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-4 border-brand-500 border-t-transparent animate-spin" />
             </div>
-            <div className="pulse-ring absolute inset-0 rounded-full border-4 border-brand-400" />
+            <div className="pulse-ring absolute inset-0 rounded-full border-4 border-brand-200" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">{t('s13_title')}</h1>
           <p className="text-sm text-warm-500 leading-relaxed mb-6">{t('s13_sub')}</p>
@@ -38,8 +38,8 @@ function S13Pending({ onHome, autoApprove }) {
         </>
       ) : (
         <div className="flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-4 shadow-lg">
-            <span className="text-5xl">✅</span>
+          <div className="w-20 h-20 rounded-full bg-support-50 border border-support-100 flex items-center justify-center mb-4">
+            <div className="w-10 h-10 rounded-full bg-support-500" />
           </div>
           <h1 className="text-2xl font-bold text-green-700">{t('s13_done')}</h1>
           <p className="text-sm text-warm-500 mt-2">{t('s13_redir')}</p>
@@ -57,8 +57,8 @@ function S14Success({ onHome, name }) {
   return (
     <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
       <div className="mb-6">
-        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-brand-500 to-amber-400 flex items-center justify-center shadow-xl">
-          <span className="text-5xl">🎉</span>
+        <div className="w-20 h-20 rounded-2xl bg-support-50 border border-support-100 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-support-500" />
         </div>
       </div>
       <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t('s14_hi')}</h1>

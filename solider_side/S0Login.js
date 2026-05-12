@@ -31,23 +31,21 @@ function S0Login({ onBack, onLogin }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-gradient-to-b from-brand-50 via-warm-50 to-white">
+    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-warm-50">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="mb-6 flex justify-center">
-            <div className="w-20 h-20 rounded-3xl bg-brand-600 flex items-center justify-center shadow-xl">
-              <span className="text-3xl">🔐</span>
-            </div>
+        <div className="mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-5">
+            <div className="w-5 h-5 rounded-full border-4 border-brand-500" />
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">{t('s0_title')}</h1>
-          <p className="text-sm text-warm-500">{t('s0_subtitle')}</p>
+          <h1 className="text-[28px] leading-[34px] font-bold text-gray-900 mb-2">{t('s0_title')}</h1>
+          <p className="text-base text-warm-500 leading-6">{t('s0_subtitle')}</p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 bg-white border border-warm-200 rounded-xl p-4 shadow-xs">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s0_email')}</label>
+            <label className="block text-sm font-semibold text-warm-600 mb-1.5">{t('s0_email')}</label>
             <input
               type="text"
               value={email}
@@ -57,20 +55,20 @@ function S0Login({ onBack, onLogin }) {
               }}
               placeholder={t('s0_email_placeholder')}
               required
-              className="w-full px-4 py-3 rounded-xl border border-warm-300 bg-white text-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400"
+              className="w-full min-h-12 px-4 py-3 rounded-xl border border-warm-200 bg-white text-base transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
             />
-            {error && <p className="mt-2 text-xs text-red-500 font-medium">{error}</p>}
+            {error && <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s0_password')}</label>
+            <label className="block text-sm font-semibold text-warm-600 mb-1.5">{t('s0_password')}</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('s0_password_placeholder')}
               required
-              className="w-full px-4 py-3 rounded-xl border border-warm-300 bg-white text-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400"
+              className="w-full min-h-12 px-4 py-3 rounded-xl border border-warm-200 bg-white text-base transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
             />
           </div>
 
@@ -88,14 +86,14 @@ function S0Login({ onBack, onLogin }) {
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="text-sm text-brand-600 hover:text-brand-700 font-medium underline underline-offset-2"
+              className="text-sm text-brand-600 hover:text-brand-700 font-semibold"
             >
               {t('s0_forgot')}
             </button>
           </div>
 
           {/* Login Button */}
-          <Btn type="submit" className="text-lg py-4 mt-6">
+          <Btn type="submit" className="mt-6">
             {t('s0_login_button')}
           </Btn>
         </form>
@@ -103,7 +101,7 @@ function S0Login({ onBack, onLogin }) {
         {/* Back to Registration */}
         <button
           onClick={onBack}
-          className="w-full mt-6 text-sm text-warm-500 hover:text-warm-600 font-medium underline underline-offset-2 transition-colors text-center"
+          className="w-full mt-6 text-sm text-warm-500 hover:text-warm-600 font-semibold transition-colors text-center"
         >
           {t('s0_back_to_register')}
         </button>

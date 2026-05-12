@@ -7,7 +7,7 @@ function S11Profile({ data, setData, onNext, onBack }) {
   const [imgPreview, setImgPreview] = useState(data.avatarPreview || null);
 
   const mockUploadImg = () => {
-    const colors = ['#c2560e', '#2563eb', '#16a34a', '#7c3aed', '#db2777'];
+    const colors = ['#b86442', '#6f8f72', '#687076', '#d59f83', '#5e7b61'];
     const col = colors[Math.floor(Math.random() * colors.length)];
     setImgPreview(col);
     setData(prev => ({ ...prev, avatarPreview: col }));
@@ -19,7 +19,7 @@ function S11Profile({ data, setData, onNext, onBack }) {
       onNext={onNext}
       step={7}
       total={8}
-      icon="😊"
+      icon
       title={t('s11_title')}
       sub={t('s11_sub')}
     >
@@ -34,11 +34,11 @@ function S11Profile({ data, setData, onNext, onBack }) {
               {(data.firstName || '?')[0]}
             </div>
           ) : (
-            <div className="w-24 h-24 rounded-full bg-warm-200 flex items-center justify-center border-2 border-dashed border-warm-400 group-hover:border-brand-400 transition-colors">
-              <span className="text-3xl">📷</span>
+            <div className="w-24 h-24 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+              <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-xl leading-none" aria-hidden="true">+</span>
             </div>
           )}
-          <div className="absolute -bottom-1 -left-1 w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center shadow-md">
+          <div className="absolute -bottom-1 -left-1 w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
             <span className="text-white text-sm">+</span>
           </div>
         </div>
@@ -47,12 +47,12 @@ function S11Profile({ data, setData, onNext, onBack }) {
 
       {/* Bio textarea */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s11_bio')}</label>
+        <label className="block text-sm font-semibold text-warm-600 mb-1.5">{t('s11_bio')}</label>
         <textarea
           value={data.bio || ''}
           onChange={e => set('bio')(e.target.value)}
           placeholder={t('s11_bio_ph')}
-          className="w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 resize-none transition-all"
+          className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
           rows={4}
           maxLength={300}
         />

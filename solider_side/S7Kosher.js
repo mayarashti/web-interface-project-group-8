@@ -11,7 +11,7 @@ function S7Kosher({ data, setData, onNext, onBack }) {
       nextDisabled={!data.kosher || !data.shabbatKeeps}
       step={4}
       total={8}
-      icon="🕍"
+      icon
       title={t('s7_title')}
       sub={t('s7_sub')}
     >

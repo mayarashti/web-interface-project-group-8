@@ -1,38 +1,83 @@
 # Shabbat Dinner - Design Sheet
 
-This document outlines the architecture, design system, and styling conventions of the application.
+This document describes the current UI architecture and visual system for the app.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
-The project is built as a **Single Page Application (SPA)** using React (loaded via CDN) without a traditional build step like Vite or Webpack.
-- **Routing:** Navigation is managed by a numeric `screen` state in `app.js` (e.g., `setScreen(1)`).
-- **Styling:** Tailwind CSS (via CDN) with custom configuration for brand colors.
-- **Language:** Dual-language support (Hebrew/English) managed by a global `LangContext` and a `translations.js` dictionary.
-- **State Management:** A centralized `formData` object at the `App` level collects registration and preference data. It also serves as the global database for the session, containing a unified `hostings` array to enable interactive dashboard operations (e.g., auto-enrolling guests, editing hostings, and profile edits).
+The project is a React SPA loaded from CDN without a build step.
 
----
+- **Routing:** Numeric `screen` state in `app.js`.
+- **Styling:** Tailwind CDN plus global tokens and shared CSS in `design.css`.
+- **Language:** Hebrew/English via `LangContext` and `Translations.JS`.
+- **State:** A centralized `formData` object in `App` stores registration, profile, and hosting data for the session.
 
-## 🎨 Design System & UI Elements
+## Design Direction
 
-The application utilizes a highly cohesive, warm, and inviting aesthetic tailored for mobile devices.
+The UI should feel calm, premium, approachable, and community-centered. The current direction takes inspiration from Notion clarity, Apple restraint, and Airbnb warmth.
 
-### 1. Color Palette
-Defined in Tailwind config inside `index.html`:
-- **Brand (Oranges):** Used for primary actions, active states, and highlights. `brand-600` (#c2560e) is the primary button color.
-- **Warm (Beiges/Creams):** Used for backgrounds and cards. `warm-50` (#fdf8f4) is the global background color, creating a soft, paper-like feel.
+The product language favors:
 
-### 2. Typography
-- **Font:** `Heebo` (Google Font), selected for excellent Hebrew readability and modern look.
-- **Weights:** Ranges from Light (300) to Black (900), relying heavily on bold weights for headers and buttons.
+- generous whitespace
+- soft hierarchy
+- neutral surfaces
+- accessible contrast
+- subtle shadows
+- medium-radius components
+- quiet motion
+- responsive, mobile-first layouts
 
-### 3. Core UI Components (`components.js`)
-- **`Btn`:** Pill-shaped, heavily rounded buttons with subtle hover/active scale animations.
-- **`Card`:** White or lightly tinted containers with soft shadows (`shadow-sm` or `shadow-md`) and large border radii (`rounded-2xl` or `rounded-3xl`).
-- **`Input`:** Text inputs with consistent padding, border colors that transition on focus, and built-in error messaging.
-- **`StepDots`:** Visual progress indicators used in the host registration wizard.
-- **`MultiCheck` & `RadioGroup`:** Custom interactive selection grids that look like clickable tiles rather than standard radio buttons, enhancing touch usability.
-- **Icons:** Extensive use of native emojis (🏡, 🕯️, 🍽️, 🪖) for visual hierarchy without needing an external icon library.
+## Design Tokens
 
-### 4. Animations
-- **Screen Transitions:** `.screen-enter` class provides a smooth fade and slide-in effect when navigating between screens (`app.js` renders).
-- **Micro-interactions:** Buttons and cards use CSS transforms (`active:scale-95`, `hover:scale-105`) to feel responsive and tactile.
+### Color
+
+- **Page:** `#FAFAF8`
+- **Surface:** `#FFFFFF`
+- **Text primary:** `#1F2428`
+- **Text secondary:** `#687076`
+- **Border:** `#E8E3DC`
+- **Primary accent:** muted terracotta `#B86442`
+- **Community accent:** sage `#6F8F72`
+
+Brand colors are intentionally restrained. Avoid returning to heavy orange/beige-only screens, strong gradients, or decorative visual noise.
+
+### Typography
+
+- **Primary font:** `Assistant`
+- **Fallback:** `Inter`, system UI
+- **Page title:** 28/34, bold
+- **Section title:** 20/28, semibold/bold
+- **Body:** 16/24, regular
+- **Small text:** 13/18, regular/medium
+- **Buttons:** 15/20, semibold
+
+Typography should stay clear and readable in Hebrew RTL first, with English LTR support.
+
+### Spacing And Shape
+
+- Spacing follows a 4px scale: `4, 8, 12, 16, 24, 32, 48, 64`.
+- Cards and inputs use 12-16px radii.
+- Full pills are reserved for chips, avatar rings, and compact icon controls.
+- Shadows should be very subtle and used only for real elevation.
+
+## Core Components
+
+- **`Btn`:** Solid primary, quiet secondary, and simple ghost/outline variants with small press motion and accessible focus rings.
+- **`Card`:** White surface, 1px warm border, medium radius, light shadow.
+- **`Input`:** Standard height, soft border, clear focus ring, consistent error/hint styling.
+- **`RadioGroup` / `MultiCheck`:** Selected states use a soft tint and border instead of heavy filled blocks.
+- **`ScreenLayout`:** Shared mobile-first onboarding layout with progress, title, content, and bottom CTA.
+- **`AppHeader`:** Shared header pattern for home/profile surfaces, replacing role-specific header class names in JSX.
+
+## Navigation And Motion
+
+- Home/profile screens use a shared app header with compact icon actions.
+- Screen transitions use a subtle fade/vertical slide.
+- Micro interactions should be 120-180ms and avoid large scale jumps.
+- Respect reduced-motion preferences.
+
+## Responsive Behavior
+
+- Onboarding remains single-column and mobile-first.
+- Home/dashboard pages can expand to wider constrained containers.
+- The map/detail layout becomes two columns on larger viewports and stacks on mobile.
+- Horizontal family previews remain scrollable and touch-friendly.

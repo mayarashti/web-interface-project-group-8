@@ -24,24 +24,19 @@ function S22HostProfile({ data, setData, onBack }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-12 bg-warm-50">
-      <div className="flex items-center justify-between mb-6">
-        <button onClick={onBack} className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-brand-600 font-bold border border-warm-200">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        </button>
-        <h1 className="text-xl font-bold text-gray-800">פרופיל משפחה</h1>
-        <div className="w-10 h-10" /> {/* spacing */}
-      </div>
+    <div className="screen-enter min-h-screen flex flex-col pb-12 bg-warm-50">
+      <AppHeader title="פרופיל משפחה" onBack={onBack} />
 
+      <div className="w-full max-w-md mx-auto px-5">
       <Card className="mb-4 space-y-4">
-        <h2 className="text-sm font-bold text-brand-600 uppercase tracking-wide">פרטי המשפחה</h2>
+        <h2 className="section-label">פרטי המשפחה</h2>
         <Input label={t('s16_sum_name')} value={form.hostFullName} onChange={setF('hostFullName')} />
         <Input label="טלפון" value={form.hostPhone} onChange={setF('hostPhone')} />
         <Input label={t('s16_city')} value={form.hostCity} onChange={setF('hostCity')} />
       </Card>
 
       <Card className="mb-6 space-y-4">
-        <h2 className="text-sm font-bold text-brand-600 uppercase tracking-wide">אורח חיים</h2>
+        <h2 className="section-label">אורח חיים</h2>
         <RadioGroup label={t('s16_shab_lev')} value={form.shabbatObservance} onChange={setF('shabbatObservance')}
           options={[
             { value:'observant',   label:t('s16_obs') },
@@ -59,6 +54,7 @@ function S22HostProfile({ data, setData, onBack }) {
       </Card>
 
       <Btn onClick={handleSave} className="text-base py-4">{saved ? 'נשמר בהצלחה! ✓' : 'שמור שינויים'}</Btn>
+      </div>
     </div>
   );
 }

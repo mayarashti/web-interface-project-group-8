@@ -20,19 +20,19 @@ const LANG_KEYS = [
 function S18HostExplain({ onNext, onBack }) {
   const { t } = useLang();
   const features = [
-    { icon:'✅', title:t('s18_f1_t'), desc:t('s18_f1_d') },
-    { icon:'📅', title:t('s18_f2_t'), desc:t('s18_f2_d') },
-    { icon:'🎯', title:t('s18_f3_t'), desc:t('s18_f3_d') },
-    { icon:'🔒', title:t('s18_f4_t'), desc:t('s18_f4_d') },
+    { title:t('s18_f1_t'), desc:t('s18_f1_d') },
+    { title:t('s18_f2_t'), desc:t('s18_f2_d') },
+    { title:t('s18_f3_t'), desc:t('s18_f3_d') },
+    { title:t('s18_f4_t'), desc:t('s18_f4_d') },
   ];
   return (
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
       <BackBtn onBack={onBack} />
-      <SectionTitle icon="🏡" title={t('s18_title')} sub={t('s18_sub')} />
+      <SectionTitle icon title={t('s18_title')} sub={t('s18_sub')} />
       <div className="flex-1 space-y-3 mb-8">
-        {features.map(f => (
-          <Card key={f.icon} className="flex gap-4 items-start p-4">
-            <span className="text-2xl flex-shrink-0 mt-0.5">{f.icon}</span>
+        {features.map((f, index) => (
+          <Card key={f.title} className="flex gap-4 items-start p-4">
+            <span className="w-8 h-8 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
             <div>
               <p className="font-semibold text-gray-800 text-sm">{f.title}</p>
               <p className="text-xs text-warm-500 mt-0.5 leading-relaxed">{f.desc}</p>
@@ -68,18 +68,18 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
           return (
             <React.Fragment key={n}>
               <div className="flex flex-col items-center">
-                <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all',
-                  done   ? 'bg-brand-600 text-white' :
-                  active ? 'bg-brand-600 text-white ring-4 ring-brand-100' :
-                  'bg-warm-200 text-warm-500'
+                <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border transition-all',
+                  done   ? 'bg-support-500 text-white border-support-500' :
+                  active ? 'bg-brand-50 text-brand-700 border-brand-200 ring-4 ring-brand-100' :
+                  'bg-white text-warm-500 border-warm-200'
                 )}>
                   {done ? '✓' : n}
                 </div>
                 <span className={clsx('text-xs mt-1 text-center max-w-14 leading-tight',
-                  active ? 'text-brand-600 font-semibold' : 'text-warm-400'
+                  active ? 'text-brand-700 font-semibold' : 'text-warm-500'
                 )}>{label}</span>
               </div>
-              {i < TOTAL-1 && <div className={clsx('h-0.5 w-8 mb-4 flex-shrink-0 mx-0.5 transition-all', n < internalStep ? 'bg-brand-500' : 'bg-warm-200')} />}
+              {i < TOTAL-1 && <div className={clsx('h-px w-8 mb-4 flex-shrink-0 mx-0.5 transition-all', n < internalStep ? 'bg-support-500' : 'bg-warm-200')} />}
             </React.Fragment>
           );
         })}
@@ -107,9 +107,9 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
         <BackBtn onBack={back} />
         <StepDots />
-        <SectionTitle icon="👨‍👩‍👧" title={t('s16_1_title')} sub={t('s16_1_sub')} />
+        <SectionTitle icon title={t('s16_1_title')} sub={t('s16_1_sub')} />
         <Card className="bg-brand-50 border-brand-100 flex gap-3 items-start mb-5">
-          <span className="text-2xl flex-shrink-0">🕯️</span>
+          <span className="w-7 h-7 rounded-full bg-brand-100 border border-brand-200 flex-shrink-0" aria-hidden="true" />
           <p className="text-xs text-brand-800 leading-relaxed">{t('s16_welcome')}</p>
         </Card>
         <Input label={t('s16_name')} value={data.hostFullName||''} onChange={set('hostFullName')} placeholder={t('s16_name_ph')} error={errors.name} />
@@ -132,7 +132,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
         <BackBtn onBack={back} />
         <StepDots />
-        <SectionTitle icon="📍" title={t('s16_2_title')} sub={t('s16_2_sub')} />
+        <SectionTitle icon title={t('s16_2_title')} sub={t('s16_2_sub')} />
         <Input label={t('s16_city')} value={data.hostCity||''} onChange={set('hostCity')} placeholder={t('s16_city_ph')} hint={t('s16_city_hint')} error={errors.city} />
         <MultiCheck label={t('s16_langs')} options={langOpts} values={data.hostLanguages||['he']} onChange={val => set('hostLanguages')(val)} />
         <div className="mt-auto pt-4"><Btn onClick={() => advance(validate)}>{t('continue')}</Btn></div>
@@ -152,7 +152,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
         <BackBtn onBack={back} />
         <StepDots />
-        <SectionTitle icon="🕯️" title={t('s16_3_title')} sub={t('s16_3_sub')} />
+        <SectionTitle icon title={t('s16_3_title')} sub={t('s16_3_sub')} />
         <RadioGroup label={t('s16_shab_lev')} value={data.shabbatObservance||''} onChange={set('shabbatObservance')}
           options={[
             { value:'observant',   label:t('s16_obs'),  sub:t('s16_obs_s')  },
@@ -180,7 +180,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto">
         <BackBtn onBack={back} />
         <StepDots />
-        <SectionTitle icon="🤝" title={t('s16_4_title')} sub={t('s16_4_sub')} />
+        <SectionTitle icon title={t('s16_4_title')} sub={t('s16_4_sub')} />
         <Card className="mb-5">
           <p className="text-xs text-warm-400 mb-4">{t('s16_opt')}</p>
           <div className="space-y-4">
@@ -193,7 +193,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
           </div>
         </Card>
         <Card className="bg-brand-50 border-brand-100 flex gap-3 items-start">
-          <span className="text-xl flex-shrink-0">💡</span>
+          <span className="w-6 h-6 rounded-full bg-brand-100 border border-brand-200 flex-shrink-0" aria-hidden="true" />
           <p className="text-xs text-brand-800 leading-relaxed">{t('s16_tip')}</p>
         </Card>
         <div className="mt-auto pt-5"><Btn onClick={() => advance()}>{t('continue')}</Btn></div>
@@ -211,11 +211,11 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-12">
       <BackBtn onBack={back} />
       <StepDots />
-      <SectionTitle icon="🏡" title={t('s16_5_title')} sub={t('s16_5_sub')} />
+      <SectionTitle icon title={t('s16_5_title')} sub={t('s16_5_sub')} />
       <MultiCheck label={t('s16_vibe_label')} options={vibeOpts} values={data.hostVibeTags||[]} onChange={val => set('hostVibeTags')(val)} />
       <p className="text-xs text-warm-400 -mt-2 mb-4">{t('s16_vibe_sub')}</p>
       <Card className="mb-5 bg-warm-50 border-warm-200">
-        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-2.5">{t('s16_sum_title')}</p>
+          <p className="section-label mb-2.5">{t('s16_sum_title')}</p>
         <div className="space-y-1.5">
           {data.hostFullName && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_name')}</span><span className="font-medium text-gray-800">{data.hostFullName}</span></div>}
           {data.hostCity     && <div className="flex justify-between text-xs"><span className="text-warm-500">{t('s16_sum_city')}</span><span className="font-medium text-gray-800">{data.hostCity}</span></div>}
@@ -242,8 +242,8 @@ function S17HostSuccess({ onHome, name }) {
   return (
     <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
       <div className="mb-6">
-        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-brand-500 to-amber-400 flex items-center justify-center shadow-xl">
-          <span className="text-5xl">🏡</span>
+        <div className="w-20 h-20 rounded-2xl bg-support-50 border border-support-100 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-support-500" />
         </div>
       </div>
       <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t('s17_hi')}</h1>
@@ -284,24 +284,28 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
   
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
-      {/* Header */}
-      <div className="soldier-home-header">
-        <div className="soldier-home-greeting">
-          <span>{t('s19_hi')}</span>
-          <strong>{hostName}</strong>
-        </div>
-        <div className="soldier-home-actions">
-          <LangToggle variant="inline" />
-          <button onClick={onProfile} className="soldier-home-icon-btn" title="הגדרות" aria-label="הגדרות">⚙️</button>
-        </div>
-      </div>
+      <AppHeader
+        eyebrow={t('s19_hi')}
+        title={hostName}
+        actions={(
+          <React.Fragment>
+            <LangToggle variant="inline" />
+            <button onClick={onProfile} className="app-icon-btn" title="הגדרות" aria-label="הגדרות">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" />
+              </svg>
+            </button>
+          </React.Fragment>
+        )}
+      />
 
-      <div className="px-5 mt-2 space-y-5">
-        <Btn onClick={handleNewHosting} className="shadow-md text-base py-4">{t('s19_new')}</Btn>
+      <div className="px-5 mt-2 space-y-5 max-w-3xl mx-auto">
+        <Btn onClick={handleNewHosting}>{t('s19_new')}</Btn>
 
         {/* My Hostings */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s19_my_hostings')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-3">{t('s19_my_hostings')}</h2>
           {hostings.length === 0 ? (
             <Card className="text-center py-6 text-warm-400">
               <span className="text-3xl block mb-2">🗓️</span>
@@ -316,25 +320,25 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
                 const isFull = guestCount >= capacity && capacity > 0;
                 
                 return (
-                  <Card key={h.id} className="border-brand-200">
+                <Card key={h.id}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{new Date(h.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</p>
                         <p className="text-xs text-warm-500 mt-0.5">{h.time === 'friday_evening' ? t('s20_fri_time') : h.time === 'saturday_lunch' ? t('s20_sat_time') : h.customTime || t('s20_cust_time')}</p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${isFull ? 'bg-red-50 text-red-700 border-red-100' : 'bg-support-50 text-support-600 border-support-100'}`}>
                         {guestCount} / {capacity} {t('s19_spots_taken')}
                       </span>
                     </div>
                     
                     {/* Guests List */}
                     {guestCount > 0 ? (
-                      <div className="mt-3 mb-4 bg-warm-50 p-2.5 rounded-xl border border-warm-200">
+                      <div className="mt-3 mb-4 bg-warm-50 p-3 rounded-xl border border-warm-200">
                         <p className="text-xs font-bold text-gray-700 mb-2">{t('s19_guests_title')}</p>
                         <div className="space-y-2">
                           {guests.map(g => (
                             <div key={g.id} className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center text-[10px]">🪖</div>
+                              <div className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px]" aria-hidden="true" />
                               <span className="text-xs font-medium text-gray-800">{g.name} <span className="text-warm-500 font-normal">({g.unit})</span></span>
                             </div>
                           ))}
@@ -347,8 +351,8 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
                     )}
                     
                     <div className="flex gap-2">
-                      <button onClick={() => handleEditHosting(h)} className="flex-1 py-2 rounded-xl bg-warm-100 text-warm-600 text-xs font-bold hover:bg-warm-200 transition-colors">{t('s19_edit_hosting')}</button>
-                      <button onClick={() => handleCancelHosting(h)} className="flex-1 py-2 rounded-xl bg-white border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors">{t('s19_cancel_hosting')}</button>
+                      <button onClick={() => handleEditHosting(h)} className="flex-1 py-2.5 rounded-xl bg-white border border-warm-200 text-warm-600 text-xs font-bold hover:border-brand-200 hover:bg-brand-50 transition-colors">{t('s19_edit_hosting')}</button>
+                      <button onClick={() => handleCancelHosting(h)} className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors">{t('s19_cancel_hosting')}</button>
                     </div>
                   </Card>
                 );
@@ -435,7 +439,9 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 
   if (submitted) return (
     <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
-      <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-5 shadow-lg"><span className="text-5xl">✅</span></div>
+      <div className="w-20 h-20 rounded-full bg-support-50 border border-support-100 flex items-center justify-center mb-5">
+        <div className="w-10 h-10 rounded-full bg-support-500" />
+      </div>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('s20_done_title')}</h1>
       <p className="text-sm text-warm-500 leading-relaxed">{t('s20_done_sub')}</p>
       <div className="flex gap-1.5 justify-center mt-6">
@@ -447,7 +453,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
   return (
     <div className="screen-enter min-h-screen flex flex-col px-5 py-8 max-w-md mx-auto pb-12">
       <BackBtn onBack={onBack} />
-      <SectionTitle icon="🏡" title={t('s20_title')} sub={t('s20_sub')} />
+      <SectionTitle icon title={t('s20_title')} sub={t('s20_sub')} />
 
       {/* Date */}
       <div className="mb-5">
@@ -456,8 +462,8 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         <div className="grid grid-cols-2 gap-2.5 mb-3">
           {upcomingDates.map(d => (
             <button key={d.value} type="button" onClick={() => setF('date')(d.value)}
-              className={clsx('p-3.5 rounded-xl border-2 text-right transition-all duration-150 active:scale-95',
-                form.date === d.value ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
+              className={clsx('p-3.5 rounded-xl border text-right transition-all duration-150 active:scale-[0.99]',
+                form.date === d.value ? 'border-brand-300 bg-brand-50 shadow-xs' : 'border-warm-200 bg-white hover:border-brand-200 hover:bg-warm-50'
               )}>
               <p className={clsx('text-xs font-semibold mb-0.5', form.date === d.value ? 'text-brand-600' : 'text-warm-500')}>{t('s20_day')}</p>
               <p className={clsx('text-sm font-bold', form.date === d.value ? 'text-brand-700' : 'text-gray-800')}>{d.dateLabel}</p>
@@ -469,7 +475,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
           <div className="flex-1 h-px bg-warm-200" /><span className="text-xs text-warm-400">{t('s20_other')}</span><div className="flex-1 h-px bg-warm-200" />
         </div>
         <input type="date" value={form.date} onChange={e => setF('date')(e.target.value)}
-          className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 transition-all" />
+          className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 transition-all" />
         {errors.date && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.date}</p>}
       </div>
 
@@ -480,10 +486,10 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
           {TIME_OPTIONS.map(opt => (
             <label key={opt.value} onClick={() => setF('time')(opt.value)}
               className={clsx('flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150',
-                form.time === opt.value ? 'border-brand-500 bg-brand-50 shadow-sm' : 'border-warm-200 bg-white hover:border-brand-300 hover:bg-warm-50'
+                form.time === opt.value ? 'border-brand-300 bg-brand-50 shadow-xs' : 'border-warm-200 bg-white hover:border-brand-200 hover:bg-warm-50'
               )}>
-              <div className={clsx('w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all', form.time === opt.value ? 'border-brand-600' : 'border-warm-300')}>
-                {form.time === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
+              <div className={clsx('w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all', form.time === opt.value ? 'border-brand-500' : 'border-warm-300')}>
+                {form.time === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-500" />}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800">{opt.label}</p>
@@ -494,7 +500,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         </div>
         {form.time === 'custom' && (
           <input type="time" value={form.customTime} onChange={e => setF('customTime')(e.target.value)}
-            className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 transition-all" />
+            className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 transition-all" />
         )}
         {errors.time && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.time}</p>}
       </div>
@@ -506,8 +512,8 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         <div className="flex gap-2.5">
           {SOLDIER_OPTS.map(n => (
             <button key={n} type="button" onClick={() => setF('soldiers')(n)}
-              className={clsx('flex-1 h-12 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-300',
-                String(form.soldiers) === n ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105' : 'bg-white text-gray-600 border-warm-300 hover:border-brand-400 hover:bg-brand-50'
+              className={clsx('flex-1 h-12 rounded-xl text-sm font-bold border transition-all duration-150 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-brand-100',
+                String(form.soldiers) === n ? 'bg-brand-50 text-brand-700 border-brand-300' : 'bg-white text-gray-600 border-warm-200 hover:border-brand-200 hover:bg-brand-50'
               )}>{n}</button>
           ))}
         </div>
@@ -520,7 +526,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         <p className="text-xs text-warm-400 mb-2">{t('s20_note_sub')}</p>
         <textarea value={form.note} onChange={e => setF('note')(e.target.value)} placeholder={t('s20_note_ph')}
           rows={4} maxLength={300}
-          className="w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 resize-none transition-all" />
+          className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all" />
         <p className="text-xs text-warm-400 mt-1 text-left">{form.note.length}/300</p>
       </div>
 
@@ -538,8 +544,8 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
           ))}
           {form.images.length < 5 && (
             <button type="button" onClick={handleImageAdd}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-warm-300 bg-warm-50 flex flex-col items-center justify-center gap-1 hover:border-brand-400 hover:bg-brand-50 transition-all flex-shrink-0">
-              <span className="text-2xl">📷</span>
+              className="w-20 h-20 rounded-xl border border-dashed border-warm-300 bg-warm-50 flex flex-col items-center justify-center gap-1 hover:border-brand-200 hover:bg-brand-50 transition-all flex-shrink-0">
+              <span className="text-2xl leading-none" aria-hidden="true">+</span>
               <span className="text-xs text-warm-400">{t('s20_add')}</span>
             </button>
           )}
@@ -550,7 +556,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
       {/* Preview */}
       {(form.date || form.time || form.soldiers) && (
         <Card className="mb-5 bg-warm-50 border-warm-200">
-          <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-2.5">{t('s20_prev_title')}</p>
+          <p className="section-label mb-2.5">{t('s20_prev_title')}</p>
           <div className="space-y-1.5">
             {form.date && (
               <div className="flex justify-between text-xs">

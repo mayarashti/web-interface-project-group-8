@@ -21,7 +21,7 @@ function S9Allergies({ data, setData, onNext, onBack }) {
       onNext={onNext}
       step={5}
       total={8}
-      icon="🥗"
+      icon
       title={t('s9_title')}
       sub={t('s9_sub')}
     >

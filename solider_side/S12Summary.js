@@ -22,26 +22,26 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       nextLabel={t('s12_submit')}
       step={8}
       total={8}
-      icon="📋"
+      icon
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
       <Card className="mb-4">
-        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-3">{t('s12_personal')}</p>
+        <p className="section-label mb-3">{t('s12_personal')}</p>
         <Row label={t('s12_full')}  value={data.fullName} />
         <Row label={t('s12_phone')} value={data.phone} />
         <Row label={t('s12_email')} value={data.email} />
       </Card>
 
       <Card className="mb-4">
-        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-3">{t('s12_mil')}</p>
+        <p className="section-label mb-3">{t('s12_mil')}</p>
         <Row label={t('s12_stype')} value={svc[data.serviceType]} />
         <Row label={t('s12_unit')}  value={data.unit} />
         <Row label={t('s12_doc')}   value={data.docUploaded ? t('s12_uploaded') : '—'} />
       </Card>
 
       <Card className="mb-4">
-        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-3">{t('s12_prefs')}</p>
+        <p className="section-label mb-3">{t('s12_prefs')}</p>
         <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
         <Row label={t('s12_shab')}   value={data.shabbatKeeps === 'yes' ? t('s7_yes') : data.shabbatKeeps === 'no' ? t('s7_no') : null} />
         <Row label={t('s12_sleep')}  value={data.needSleep    ? t('map_sleep') : null} />
@@ -53,7 +53,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
 
       {data.bio && (
         <Card className="mb-4 bg-brand-50 border-brand-100">
-          <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-2">{t('s12_bio')}</p>
+          <p className="section-label mb-2">{t('s12_bio')}</p>
           <p className="text-sm text-gray-700 leading-relaxed italic">"{data.bio}"</p>
         </Card>
       )}
