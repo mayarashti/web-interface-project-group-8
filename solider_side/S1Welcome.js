@@ -1,6 +1,6 @@
 /* S1Welcome — Welcome / role selector screen */
 
-function S1Welcome({ onSoldier, onHost }) {
+function S1Welcome({ onSoldier, onHost, onLogin }) {
   const { t } = useLang();
   return (
     <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-gradient-to-b from-brand-50 via-warm-50 to-white">
@@ -20,6 +20,12 @@ function S1Welcome({ onSoldier, onHost }) {
           <Btn onClick={onSoldier} className="text-lg py-4">{t('s1_soldier')}</Btn>
           <Btn variant="secondary" onClick={onHost}>{t('s1_host')}</Btn>
         </div>
+        <button 
+          onClick={onLogin}
+          className="mt-6 text-sm text-brand-600 hover:text-brand-700 font-medium underline underline-offset-2 transition-colors"
+        >
+          {t('s1_login')}
+        </button>
         <p className="mt-8 text-xs text-warm-400">{t('s1_footer')}</p>
       </div>
     </div>

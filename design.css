@@ -223,65 +223,311 @@ html[lang="en"] .lang-toggle {
 ───────────────────────────────────────── */
 .leaflet-container {
   font-family: var(--font-primary) !important;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-3xl);
+  background: #fdf7f1;
+  border: 1px solid rgba(255,255,255,0.7);
 }
 .leaflet-control-attribution { display: none !important; }
 
 /* House pin marker */
 .host-marker-outer {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   background: var(--brand-600);
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 3px solid #ffffff;
   cursor: pointer;
-  transition: transform var(--transition-fast), background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
 .host-marker-outer:hover {
-  transform: rotate(-45deg) scale(1.15);
+  transform: rotate(-45deg) scale(1.12);
 }
 .host-marker-outer.selected {
-  background: #7c3aed;    /* purple for active state */
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-400));
+  transform: rotate(-45deg) scale(1.18);
+  box-shadow:
+    0 0 0 8px rgba(253, 238, 221, 0.95),
+    0 0 0 14px rgba(194, 86, 14, 0.24),
+    0 10px 28px rgba(126, 53, 16, 0.28);
+}
+.host-marker-outer.hovered {
+  background: var(--brand-600);
+  transform: rotate(-45deg) scale(1.08);
+  box-shadow: 0 0 0 8px rgba(194, 86, 14, 0.2);
 }
 .host-marker-inner {
   transform: rotate(45deg);
-  font-size: 18px;
-  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  display: block;
 }
 
+.family-strip {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-top: var(--space-3);
+}
+.family-strip::-webkit-scrollbar { display: none; }
+.family-story-item {
+  width: 82px;
+  flex: 0 0 82px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: #374151;
+}
+.family-story-item:hover {
+  transform: translateY(-2px);
+}
+.family-story-item.selected {
+  transform: scale(1.04);
+  color: var(--brand-700);
+}
+.family-story-item p {
+  width: 100%;
+  min-height: 2.15rem;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.family-strip-avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 9999px;
+  padding: 3px;
+  background: linear-gradient(145deg, var(--brand-200), var(--brand-500), var(--warm-300));
+  box-shadow: 0 4px 14px rgba(126, 53, 16, 0.12);
+  display: grid;
+  place-items: center;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.family-story-item.selected .family-strip-avatar {
+  background: linear-gradient(145deg, var(--brand-700), var(--brand-400), var(--brand-200));
+  box-shadow:
+    0 0 0 4px rgba(253, 238, 221, 0.95),
+    0 8px 22px rgba(194, 86, 14, 0.24);
+}
+.family-strip-avatar-inner {
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  border-radius: inherit;
+  background: #ffffff;
+  overflow: hidden;
+}
+.family-strip-image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
 
 /* ─────────────────────────────────────────
-   8. FAMILY DETAIL BOTTOM SHEET
+   8. MAP DETAILS CARD
 ───────────────────────────────────────── */
-.sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  z-index: var(--z-overlay);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+.map-detail-layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+.map-detail-layout.has-selection {
+  direction: ltr;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-areas: "map card";
+}
+.map-panel {
+  direction: rtl;
+  min-width: 0;
+}
+.map-detail-layout.has-selection .map-panel {
+  grid-area: map;
+}
+.family-info-card {
+  grid-area: card;
+  direction: rtl;
+  background: #ffffff;
+  border: 1px solid var(--warm-200);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-4);
+  overflow-y: auto;
+  max-height: 420px;
+}
+.family-info-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.family-info-card-avatar {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-brand);
+}
+.family-info-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.family-info-card h2 {
+  margin: 0;
+  color: #111827;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.15;
+}
+.family-info-card-header p {
+  margin: var(--space-1) 0 0;
+  color: var(--warm-500);
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+}
+.family-info-card-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: var(--radius-full);
+  background: var(--warm-100);
+  color: var(--warm-500);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.family-info-card-close:hover {
+  background: var(--warm-200);
+  color: var(--brand-700);
+}
+.family-info-card-description {
+  margin: var(--space-4) 0;
+  color: #4b5563;
+  font-size: var(--font-size-xs);
+  line-height: 1.55;
+}
+.family-info-card-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--brand-100);
+  background: var(--brand-50);
+}
+.family-info-card-status p,
+.family-info-card-status span {
+  margin: 0;
+}
+.family-info-card-status p {
+  color: #111827;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.family-info-card-status span {
+  color: var(--warm-500);
+  font-size: var(--font-size-xs);
+}
+.family-info-card-status strong {
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--brand-100);
+  color: var(--brand-700);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold);
+}
+.family-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.family-info-grid > div {
+  min-width: 0;
+  border: 1px solid var(--warm-200);
+  border-radius: var(--radius-xl);
+  background: #ffffff;
+  padding: var(--space-3);
+}
+.family-info-grid span {
+  display: block;
+  color: var(--warm-400);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  margin-bottom: var(--space-1);
+}
+.family-info-grid strong {
+  display: block;
+  color: #1f2937;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+}
+.family-info-grid-wide {
+  grid-column: 1 / -1;
+}
+.family-info-actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.family-info-actions button {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  padding: 0.85rem var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.family-info-primary {
+  background: var(--brand-600);
+  color: #ffffff;
+}
+.family-info-primary:hover {
+  background: var(--brand-700);
+}
+.family-info-secondary {
+  border: 1px solid var(--warm-200);
+  background: #ffffff;
+  color: #1f2937;
+}
+.family-info-secondary:hover {
+  border-color: var(--warm-300);
+  background: var(--warm-50);
 }
 
-.family-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
-  z-index: var(--z-sheet);
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 0 var(--space-5) var(--space-8);
-  max-height: 70vh;
-  overflow-y: auto;
-  animation: sheetUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+@media (max-width: 760px) {
+  .map-detail-layout.has-selection {
+    direction: rtl;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "map"
+      "card";
+  }
+  .family-info-card {
+    max-height: none;
+  }
 }
 
 

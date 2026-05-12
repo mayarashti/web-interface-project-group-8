@@ -31,8 +31,10 @@ function App() {
   }, [lang]);
 
   const screens = {
+    /* login */
+    0:  <S0Login      onBack={() => go(1)} onLogin={() => go(15)} />,
     /* soldier flow */
-    1:  <S1Welcome    onSoldier={() => go(2)} onHost={() => go(18)} />,
+    1:  <S1Welcome    onSoldier={() => go(2)} onHost={() => go(18)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
     3:  <S3Account    data={formData} setData={setFormData} onNext={() => go(5)}  onBack={() => go(2)} />,
     5:  <S5Service    data={formData} setData={setFormData} onNext={() => go(6)}  onBack={() => go(3)} />,

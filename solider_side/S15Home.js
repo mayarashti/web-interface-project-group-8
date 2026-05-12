@@ -1,7 +1,36 @@
 /* S15Home — Soldier home screen with interactive host-family map
-   Includes: MAP_FAMILIES data, FamilySheet bottom drawer, MapView (Leaflet)
+   Includes: MAP_FAMILIES data, FamilyInfoCard, FamilyStrip, MapView (Leaflet)
 */
 const { useState, useEffect, useRef } = React;
+
+const familyAvatarUrl = (bgColor, familyId) => {
+  // Create unique warm gradients based on family ID
+  const gradients = [
+    { from: '#fdeedd', to: '#f7d1b5' }, // Warm peach
+    { from: '#f7d1b5', to: '#e8c5a5' }, // Soft orange
+    { from: '#e8c5a5', to: '#d4b08a' }, // Earthy brown
+    { from: '#d4b08a', to: '#c49b7a' }, // Rich brown
+    { from: '#c49b7a', to: '#b8876a' }, // Deep brown
+  ];
+  const grad = gradients[familyId % gradients.length];
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+    <defs>
+      <radialGradient id="grad${familyId}" cx="30%" cy="30%">
+        <stop offset="0%" style="stop-color:${grad.from};stop-opacity:1" />
+        <stop offset="100%" style="stop-color:${grad.to};stop-opacity:1" />
+      </radialGradient>
+    </defs>
+    <circle cx="60" cy="60" r="60" fill="url(#grad${familyId})"/>
+    <circle cx="60" cy="50" r="22" fill="#ffffff" opacity="0.9"/>
+    <ellipse cx="60" cy="52" rx="18" ry="16" fill="#f1c6a4"/>
+    <path d="M48 72c6-8 18-8 24 0" fill="#8b5a3c" opacity="0.8"/>
+    <circle cx="54" cy="48" r="3" fill="#8b5a3c"/>
+    <circle cx="66" cy="48" r="3" fill="#8b5a3c"/>
+    <path d="M54 60c4 3 8 3 12 0" stroke="#8b5a3c" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
 
 /* ── Mock host-family data (neighbourhood-level coords for privacy) ── */
 const MAP_FAMILIES = [
@@ -13,6 +42,11 @@ const MAP_FAMILIES = [
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'singing'],
     rating: 4.9,
+    shortDescription: 'אירוח חם עם נוף לים וקצת שירה משותפת',
+    hostedCount: 18,
+    phoneDisplay: '+972528765432',
+    waDigits: '972528765432',
+    imageColor: '#fdeedd',
   },
   {
     id: 2, name: 'משפחת כהן', city: 'קריית אתא',
@@ -22,6 +56,11 @@ const MAP_FAMILIES = [
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['quiet', 'shabbat_atm'],
     rating: 4.7,
+    shortDescription: 'בית משפחתי רגוע עם מנהגי שבת מסורתיים',
+    hostedCount: 24,
+    phoneDisplay: '+972528123987',
+    waDigits: '972528123987',
+    imageColor: '#f7d1b5',
   },
   {
     id: 3, name: 'משפחת גולן', city: 'נשר',
@@ -31,6 +70,11 @@ const MAP_FAMILIES = [
     hostingTypes: ['friday_dinner'],
     tags: ['food', 'spacious'],
     rating: 4.8,
+    shortDescription: 'בית פתוח עם מטבח גדול ועוגת שבת טעימה',
+    hostedCount: 12,
+    phoneDisplay: '+972523456789',
+    waDigits: '972523456789',
+    imageColor: '#fff1e5',
   },
   {
     id: 4, name: 'משפחת אברהם', city: 'חיפה — נווה שאנן',
@@ -40,6 +84,11 @@ const MAP_FAMILIES = [
     hostingTypes: ['shabbat_lunch'],
     tags: ['multilingual', 'spacious'],
     rating: 4.6,
+    shortDescription: 'אירוח משפחתי בשפה עברית ואנגלית',
+    hostedCount: 9,
+    phoneDisplay: '+972527654321',
+    waDigits: '972527654321',
+    imageColor: '#f9efe4',
   },
   {
     id: 5, name: 'משפחת שמיר', city: 'קריית ביאליק',
@@ -49,6 +98,11 @@ const MAP_FAMILIES = [
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'shabbat_atm'],
     rating: 5.0,
+    shortDescription: 'בית שמח עם אווירה משפחתית וחלבית',
+    hostedCount: 21,
+    phoneDisplay: '+972527890123',
+    waDigits: '972527890123',
+    imageColor: '#f1dcc8',
   },
   {
     id: 6, name: 'משפחת פרץ', city: 'טירת כרמל',
@@ -58,21 +112,19 @@ const MAP_FAMILIES = [
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['food', 'pets', 'spacious'],
     rating: 4.5,
+    shortDescription: 'בית גדול ומסביר פנים עם מקום למנוחה אחרי הארוחה',
+    hostedCount: 31,
+    phoneDisplay: '+972523210987',
+    waDigits: '972523210987',
+    imageColor: '#f3e2d3',
   },
 ];
 
-/* ── vibe tag key → translation key map ── */
-const VIBE_KEY_MAP = {
-  kids: 'vibe_kids', quiet: 'vibe_quiet', multilingual: 'vibe_multi',
-  singing: 'vibe_sing', pets: 'vibe_pets', spacious: 'vibe_space',
-  shabbat_atm: 'vibe_shab', food: 'vibe_food',
-};
-
 
 /* ════════════════════════════════════════
-   FamilySheet — bottom drawer on marker tap
+   FamilyInfoCard — compact details beside the map
 ════════════════════════════════════════ */
-function FamilySheet({ family, onClose, onChat }) {
+function FamilyInfoCard({ family, onClose }) {
   const { t } = useLang();
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
@@ -80,166 +132,101 @@ function FamilySheet({ family, onClose, onChat }) {
   const shabLabel = family.shabbat === 'observant' ? t('map_obs')
     : family.shabbat === 'traditional' ? t('map_trad') : t('map_sec');
 
-  const hostingLabels = family.hostingTypes.map(h =>
-    h === 'friday_dinner' ? t('map_fri_s') :
-    h === 'shabbat_lunch' ? t('map_lun_s') : t('map_del_s')
-  ).join('  ·  ');
-
-  return (
-    <>
-      <div className="sheet-overlay" onClick={onClose} />
-      <div className="family-sheet">
-
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-warm-200" />
-        </div>
-
-        {/* Header row */}
-        <div className="flex items-start justify-between mt-3 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-brand-100 flex items-center justify-center text-3xl flex-shrink-0">🏡</div>
-            <div>
-              <h2 className="text-lg font-extrabold text-gray-900 leading-tight">{family.name}</h2>
-              <p className="text-sm text-warm-500 mt-0.5">📍 {family.city}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-xs font-bold text-gray-700">{family.rating}</span>
-                <span className="text-xs">⭐</span>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-warm-100 flex items-center justify-center text-warm-500 hover:bg-warm-200 transition-colors text-sm flex-shrink-0"
-          >✕</button>
-        </div>
-
-        {/* Key badges */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">✡️ {koshLabel}</span>
-          <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">🕯️ {shabLabel}</span>
-          <span className="bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-200">👥 {family.capacity}</span>
-        </div>
-
-        {/* Hosting types */}
-        <p className="text-xs text-warm-500 font-medium mb-1">{t('s16_host_label')}</p>
-        <p className="text-sm font-semibold text-gray-800 mb-4">{hostingLabels}</p>
-
-        {/* Extras */}
-        {(family.canSleep || family.canTransport) && (
-          <div className="flex gap-2 mb-4">
-            {family.canSleep     && <span className="bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-200">{t('map_sleep')}</span>}
-            {family.canTransport && <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200">{t('s16_trn')}</span>}
-          </div>
-        )}
-
-        {/* Vibe tags */}
-        {family.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {family.tags.map(tag => (
-              <span key={tag} className="bg-warm-100 text-warm-600 text-xs px-2.5 py-1 rounded-full">
-                {t(VIBE_KEY_MAP[tag] || tag)}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        <Btn onClick={() => onChat(family)} className="py-4 text-base">{t('s15_send_msg')} 💬</Btn>
-      </div>
-    </>
-  );
-}
-
-/* ════════════════════════════════════════
-   ChatView — dedicated messaging screen
-════════════════════════════════════════ */
-function ChatView({ family, onBack }) {
-  const { t } = useLang();
-  const [msg, setMsg] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, text: t('s15_chat_welcome', family.name.replace('משפחת ', '')), sender: 'family', time: '10:00' }
-  ]);
-  const scrollRef = useRef();
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
-  }, [messages]);
-
-  const send = () => {
-    if (!msg.trim()) return;
-    const newMsg = { id: Date.now(), text: msg, sender: 'me', time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) };
-    setMessages([...messages, newMsg]);
-    setMsg('');
-    
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: 'מצוין! נמשיך לדבר ונתאם הכל. 😊', 
-        sender: 'family', 
-        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) 
-      }]);
-    }, 1500);
+  const openWhatsApp = () => {
+    window.open(`https://wa.me/${family.waDigits}`, '_blank');
+  };
+  const makeCall = () => {
+    window.location.href = `tel:${family.phoneDisplay}`;
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-md z-[3000]" onClick={onBack} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm h-[500px] bg-white rounded-3xl shadow-2xl z-[3001] flex flex-col overflow-hidden border border-warm-100">
-        {/* Chat Header */}
-        <div className="p-4 border-b border-warm-100 flex justify-between items-center bg-warm-50/50">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-sm">🏡</div>
-            <p className="font-bold text-gray-800 text-sm">{family.name.replace('משפחת ', '')}</p>
-          </div>
-          <button onClick={onBack} className="text-warm-400 p-1">✕</button>
+    <aside className="family-info-card">
+      <div className="family-info-card-header">
+        <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor }}>
+          <img src={familyAvatarUrl(family.imageColor, family.id)} alt={family.name} />
         </div>
-
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-white">
-          {messages.map(m => (
-            <div key={m.id} className={clsx("flex", m.sender === 'me' ? "justify-start" : "justify-end")}>
-              <div className={clsx(
-                "max-w-[85%] px-3.5 py-2 rounded-2xl text-[13px] shadow-sm",
-                m.sender === 'me' 
-                  ? "bg-brand-600 text-white rounded-br-none" 
-                  : "bg-warm-50 text-gray-800 border border-warm-100 rounded-bl-none"
-              )}>
-                <p>{m.text}</p>
-                <p className={clsx("text-[9px] mt-1 opacity-60", m.sender === 'me' ? "text-left" : "text-right")}>{m.time}</p>
-              </div>
-            </div>
-          ))}
+        <div className="min-w-0 flex-1">
+          <h2>{family.name}</h2>
+          <p>{family.city} &middot; {shabLabel}</p>
         </div>
-
-        {/* Input */}
-        <div className="p-3 bg-white border-t border-warm-100">
-          <div className="flex gap-2 items-center bg-warm-50 px-3 py-2 rounded-2xl border border-warm-100">
-            <input
-              type="text"
-              value={msg}
-              onChange={e => setMsg(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder={t('s15_chat_ph')}
-              className="flex-1 text-sm bg-transparent focus:outline-none"
-            />
-            <button onClick={send} disabled={!msg.trim()} className="text-brand-600 disabled:opacity-30">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 6 22 2"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={onClose}
+          className="family-info-card-close"
+          aria-label="Close family details"
+        >&times;</button>
       </div>
-    </>
+
+      <p className="family-info-card-description">{family.shortDescription}</p>
+
+      <div className="family-info-card-status">
+        <div>
+          <p>{t('s15_open_table')}</p>
+          <span>{family.hostedCount} {t('s15_guests_title')}</span>
+        </div>
+        <strong>{t('s15_open_table')}</strong>
+      </div>
+
+      <div className="family-info-grid">
+        <div>
+          <span>{t('map_kosh')}</span>
+          <strong>{koshLabel}</strong>
+        </div>
+        <div>
+          <span>{t('s15_capacity')}</span>
+          <strong>{family.capacity}</strong>
+        </div>
+        {family.canSleep && (
+          <div className="family-info-grid-wide">
+            <span>{t('s15_sleep_available')}</span>
+            <strong>{t('s15_sleep_available')}</strong>
+          </div>
+        )}
+      </div>
+
+      <div className="family-info-actions">
+        <button onClick={openWhatsApp} className="family-info-primary">
+          {t('s15_talk_whatsapp')}
+        </button>
+        <button onClick={makeCall} className="family-info-secondary">
+          {t('s15_call')} &middot; {family.phoneDisplay}
+        </button>
+      </div>
+    </aside>
   );
 }
-
 
 /* ════════════════════════════════════════
    MapView — Leaflet map with fuzzy markers
 ════════════════════════════════════════ */
-function MapView({ families, onSelect, selectedId }) {
+function FamilyStrip({ families, selectedId, onSelect, onHover }) {
+  return (
+    <div className="family-strip overflow-x-auto pb-3 -mx-5 px-5">
+      <div className="flex gap-4 items-start">
+        {families.map(fam => (
+          <button
+            key={fam.id}
+            onClick={() => onSelect(fam)}
+            onMouseEnter={() => onHover?.(fam)}
+            onMouseLeave={() => onHover?.(null)}
+            className={clsx(
+              'family-story-item transition-all duration-200',
+              selectedId === fam.id && 'selected'
+            )}
+          >
+            <div className="family-strip-avatar">
+              <div className="family-strip-avatar-inner">
+                <img src={familyAvatarUrl(fam.imageColor, fam.id)} alt={fam.name} className="family-strip-image" />
+              </div>
+            </div>
+            <p>{fam.name}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MapView({ families, onSelect, selectedId, hoveredId }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
   const markersRef   = useRef({});
@@ -253,30 +240,32 @@ function MapView({ families, onSelect, selectedId }) {
       zoomControl: false,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: false,
+      maxZoom: 17,
+      minZoom: 10,
+    }).addTo(map);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     families.forEach(fam => {
-      // Fuzzy halo circle
       L.circle([fam.lat, fam.lng], {
-        radius: 380,
+        radius: 420,
         color: '#c2560e',
-        fillColor: '#f7b87a',
-        fillOpacity: 0.18,
-        weight: 1.5,
-        dashArray: '4 4',
+        fillColor: '#fdeedd',
+        fillOpacity: 0.2,
+        weight: 1.8,
+        dashArray: '5 5',
       }).addTo(map);
 
-      // Custom house pin icon
-      const makeIcon = (selected) => L.divIcon({
+      const makeIcon = (selected, hovered) => L.divIcon({
         className: '',
-        html: `<div class="host-marker-outer${selected ? ' selected' : ''}"><span class="host-marker-inner">🏡</span></div>`,
-        iconSize: [44, 44],
-        iconAnchor: [22, 44],
-        popupAnchor: [0, -48],
+        html: `<div class="host-marker-outer${selected ? ' selected' : hovered ? ' hovered' : ''}"><img class="host-marker-inner" src="${familyAvatarUrl(fam.imageColor, fam.id)}" alt="${fam.name}"/></div>`,
+        iconSize: [56, 56],
+        iconAnchor: [28, 56],
+        popupAnchor: [0, -52],
       });
 
-      const marker = L.marker([fam.lat, fam.lng], { icon: makeIcon(false) })
+      const marker = L.marker([fam.lat, fam.lng], { icon: makeIcon(false, false) })
         .addTo(map)
         .on('click', () => onSelect(fam));
 
@@ -287,18 +276,33 @@ function MapView({ families, onSelect, selectedId }) {
     return () => { map.remove(); mapRef.current = null; markersRef.current = {}; };
   }, [families]);
 
-  // Highlight selected marker
+  // Highlight selected/hovered marker and pan to selected
   useEffect(() => {
+    if (!mapRef.current) return;
+
+    const resizeTimer = setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 180);
+
+    const selectedFamily = selectedId ? families.find(f => f.id === selectedId) : null;
+    if (selectedFamily) {
+      mapRef.current.panTo([selectedFamily.lat, selectedFamily.lng], { animate: true, duration: 0.5 });
+    }
+
     Object.entries(markersRef.current).forEach(([id, { marker, makeIcon }]) => {
-      marker.setIcon(makeIcon(Number(id) === selectedId));
+      const isSelected = Number(id) === selectedId;
+      const isHovered = Number(id) === hoveredId;
+      marker.setIcon(makeIcon(isSelected, isHovered));
     });
-  }, [selectedId]);
+
+    return () => clearTimeout(resizeTimer);
+  }, [selectedId, hoveredId, families]);
 
   return (
     <div
       ref={containerRef}
-      style={{ height: '310px', width: '100%' }}
-      className="rounded-2xl overflow-hidden shadow-md border border-warm-200"
+      style={{ height: '420px', width: '100%' }}
+      className="rounded-[28px] overflow-hidden shadow-lg bg-white"
     />
   );
 }
@@ -310,55 +314,17 @@ function MapView({ families, onSelect, selectedId }) {
 function S15Home({ data, onProfile }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [expandedFilter, setExpandedFilter] = useState(null);
-  const [chattingWith, setChattingWith] = useState(null);
-  const [activeChatFamily, setActiveChatFamily] = useState(null);
-  
-  // Filter state
-  const [filters, setFilters] = useState({
-    date: '',
-    timeRange: 'all',
-    observance: 'all',
-    includesAccommodation: false,
-    kosher: 'all'
-  });
+  const [hovered, setHovered] = useState(null);
 
   const nextFriday = new Date(
     Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000
   ).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
 
-  const filteredFamilies = MAP_FAMILIES.filter(fam => {
-    if (filters.observance !== 'all' && fam.shabbat !== filters.observance) return false;
-    if (filters.includesAccommodation && !fam.canSleep) return false;
-    if (filters.kosher !== 'all') {
-      if (filters.kosher === 'kosher' && fam.kosher === 'none') return false;
-      if (filters.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
-    }
-    // Time range filter (simplified mock logic)
-    if (filters.timeRange !== 'all') {
-      if (filters.timeRange === 'friday' && !fam.hostingTypes.includes('friday_dinner')) return false;
-      if (filters.timeRange === 'saturday' && !fam.hostingTypes.includes('shabbat_lunch')) return false;
-    }
-    return true;
-  });
+  const filteredFamilies = MAP_FAMILIES;
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
 
-      {/* Persistent Chat Icon (Only if we have an active chat session) */}
-      {!chattingWith && activeChatFamily && (
-        <button 
-          onClick={() => setChattingWith(activeChatFamily)}
-          style={{ zIndex: 10000 }}
-          className="fixed bottom-24 left-6 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90"
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
-        </button>
-      )}
 
       {/* Header */}
       <div className="bg-gradient-to-l from-brand-700 to-brand-600 text-white px-5 pt-10 pb-8 rounded-b-3xl shadow-lg">
@@ -376,267 +342,35 @@ function S15Home({ data, onProfile }) {
       </div>
 
       <div className="px-5 mt-5 space-y-5">
+        <FamilyStrip families={filteredFamilies} selectedId={selected?.id ?? null} onSelect={fam => setSelected(fam)} onHover={setHovered} />
 
-        {/* Filter Trigger */}
-        <Btn onClick={() => setShowFilters(true)} variant="secondary" className="shadow-sm border-brand-200">
-          {t('s15_filter_btn')}
-        </Btn>
-
-        {/* Map section */}
         <div>
-          <h2 className="text-base font-bold text-gray-800 mb-1">{t('חפשו את האירוח המתאים עבורם!')}</h2>
-          <p className="text-xs text-warm-400 mb-3">{t('מפת האירוחים שלנו')}</p>
-          <MapView
-            families={filteredFamilies}
-            selectedId={selected?.id ?? null}
-            onSelect={fam => setSelected(fam)}
-          />
-          <p className="text-xs text-center text-warm-400 mt-2">
-            {t('s15_hi') === 'שלום,' ? 'לחץ על אייקון 🏡 לפרטים על המשפחה' : 'Tap a 🏡 icon to see family details'}
-          </p>
+          <div className={clsx('map-detail-layout', selected && 'has-selection')}>
+            <div className="map-panel">
+              <MapView
+                families={filteredFamilies}
+                selectedId={selected?.id ?? null}
+                hoveredId={hovered?.id ?? null}
+                onSelect={fam => setSelected(fam)}
+              />
+            </div>
+            {selected && (
+              <FamilyInfoCard
+                family={selected}
+                onClose={() => setSelected(null)}
+              />
+            )}
+          </div>
+          <p className="text-xs text-center text-warm-400 mt-3">{t('s15_tap_map')}</p>
         </div>
 
-        {/* Horizontal chip list */}
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5" style={{ scrollbarWidth: 'none' }}>
-          {filteredFamilies.map(fam => (
-            <button
-              key={fam.id}
-              onClick={() => setSelected(fam)}
-              className={clsx(
-                'flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-sm font-medium transition-all whitespace-nowrap',
-                selected?.id === fam.id
-                  ? 'border-brand-600 bg-brand-600 text-white shadow-md'
-                  : 'border-warm-200 bg-white text-gray-700 hover:border-brand-400'
-              )}
-            >
-              🏡 {fam.name}
-              <span className={clsx('text-xs', selected?.id === fam.id ? 'text-white opacity-80' : 'text-warm-500')}>
-                ⭐{fam.rating}
-              </span>
-            </button>
-          ))}
-          {filteredFamilies.length === 0 && (
-            <p className="text-sm text-warm-400 py-2 w-full text-center">אין תוצאות התואמות את הסינון</p>
-          )}
-        </div>
-
-        {/* Next Shabbat card */}
-        <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s15_shab')}</h2>
-          <Card className="bg-amber-50 border-amber-200 text-center py-5">
-            <p className="text-sm font-semibold text-amber-800 mb-1">{t('s15_friday')} {nextFriday}</p>
-            <p className="text-xs text-amber-600 mb-3">{t('s15_avail', filteredFamilies.length)}</p>
-            <Btn variant="outline" className="border-amber-500 text-amber-700 hover:bg-amber-100 py-2.5 text-sm">
-              {t('s15_view')}
-            </Btn>
-          </Card>
-        </div>
-
-        {/* Past meals */}
-        <div>
-          <h2 className="text-base font-bold text-gray-800 mb-3">{t('s15_past')}</h2>
-          <Card className="text-center py-6 text-warm-400">
-            <span className="text-3xl block mb-2">📭</span>
-            <p className="text-sm">{t('s15_no_past')}</p>
-          </Card>
+        <div className="rounded-3xl bg-brand-50 border border-brand-100 p-4 text-center">
+          <p className="text-sm font-semibold text-brand-700">{t('s15_open_table')} • {nextFriday}</p>
+          <p className="text-xs text-brand-500 mt-1">{t('s15_avail', filteredFamilies.length)}</p>
         </div>
       </div>
 
-      {/* Filter Panel (Side Sheet) */}
-      {showFilters && (
-        <>
-          <div className="sheet-overlay" onClick={() => setShowFilters(false)} />
-          <div className="family-sheet" style={{ maxHeight: '90vh', paddingBottom: '2rem' }}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">{t('s15_filter_title')}</h2>
-              <button onClick={() => setShowFilters(false)} className="text-2xl text-warm-400">✕</button>
-            </div>
 
-            <div className="space-y-3">
-              {/* Date Selector */}
-              <div className="border border-warm-200 rounded-2xl overflow-hidden">
-                <button 
-                  onClick={() => setExpandedFilter(expandedFilter === 'date' ? null : 'date')}
-                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📅</span>
-                    <span className="font-semibold text-gray-700">{t('s15_filter_date')}</span>
-                  </div>
-                  <span className="text-warm-400">{filters.date || t('map_none')} ▾</span>
-                </button>
-                {expandedFilter === 'date' && (
-                  <div className="p-4 bg-warm-50 border-t border-warm-100">
-                    <input 
-                      type="date" 
-                      className="w-full p-3 rounded-xl border border-warm-200 bg-white"
-                      value={filters.date}
-                      onChange={e => {
-                        setFilters(f => ({ ...f, date: e.target.value }));
-                        setExpandedFilter(null);
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Time Range Selector */}
-              <div className="border border-warm-200 rounded-2xl overflow-hidden">
-                <button 
-                  onClick={() => setExpandedFilter(expandedFilter === 'time' ? null : 'time')}
-                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🕒</span>
-                    <span className="font-semibold text-gray-700">{t('s15_filter_time')}</span>
-                  </div>
-                  <span className="text-warm-400">
-                    {filters.timeRange === 'friday' ? t('map_fri_s') : filters.timeRange === 'saturday' ? t('map_lun_s') : t('map_none')} ▾
-                  </span>
-                </button>
-                {expandedFilter === 'time' && (
-                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
-                    {[
-                      { value: 'all', label: t('map_none') },
-                      { value: 'friday', label: t('map_fri_s') },
-                      { value: 'saturday', label: t('map_lun_s') }
-                    ].map(opt => (
-                      <button 
-                        key={opt.value}
-                        onClick={() => { setFilters(f => ({ ...f, timeRange: opt.value })); setExpandedFilter(null); }}
-                        className={clsx(
-                          "w-full text-right p-3 rounded-xl transition-colors",
-                          filters.timeRange === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Type / Observance Selector */}
-              <div className="border border-warm-200 rounded-2xl overflow-hidden">
-                <button 
-                  onClick={() => setExpandedFilter(expandedFilter === 'type' ? null : 'type')}
-                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🏠</span>
-                    <span className="font-semibold text-gray-700">{t('s15_filter_type')}</span>
-                  </div>
-                  <span className="text-warm-400">
-                    {filters.observance === 'all' ? t('map_none') : t('map_' + (filters.observance === 'secular' ? 'sec' : filters.observance === 'traditional' ? 'trad' : 'obs'))} ▾
-                  </span>
-                </button>
-                {expandedFilter === 'type' && (
-                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
-                    {[
-                      { value: 'all', label: t('map_none') },
-                      { value: 'secular', label: t('map_sec') },
-                      { value: 'traditional', label: t('map_trad') },
-                      { value: 'observant', label: t('map_obs') }
-                    ].map(opt => (
-                      <button 
-                        key={opt.value}
-                        onClick={() => { setFilters(f => ({ ...f, observance: opt.value })); setExpandedFilter(null); }}
-                        className={clsx(
-                          "w-full text-right p-3 rounded-xl transition-colors",
-                          filters.observance === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Kosher Selector */}
-              <div className="border border-warm-200 rounded-2xl overflow-hidden">
-                <button 
-                  onClick={() => setExpandedFilter(expandedFilter === 'kosh' ? null : 'kosh')}
-                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-warm-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">✡️</span>
-                    <span className="font-semibold text-gray-700">{t('s15_filter_kosh')}</span>
-                  </div>
-                  <span className="text-warm-400">
-                    {filters.kosher === 'all' ? t('map_none') : filters.kosher === 'kosher' ? t('map_kosh') : t('map_meh')} ▾
-                  </span>
-                </button>
-                {expandedFilter === 'kosh' && (
-                  <div className="p-2 bg-warm-50 border-t border-warm-100 flex flex-col gap-1">
-                    {[
-                      { value: 'all', label: t('map_none') },
-                      { value: 'kosher', label: t('map_kosh') },
-                      { value: 'mehadrin', label: t('map_meh') }
-                    ].map(opt => (
-                      <button 
-                        key={opt.value}
-                        onClick={() => { setFilters(f => ({ ...f, kosher: opt.value })); setExpandedFilter(null); }}
-                        className={clsx(
-                          "w-full text-right p-3 rounded-xl transition-colors",
-                          filters.kosher === opt.value ? "bg-brand-600 text-white" : "hover:bg-warm-100 text-gray-700"
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Accommodation Toggle */}
-              <div className="border border-warm-200 rounded-2xl p-4 bg-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🛏️</span>
-                  <span className="font-semibold text-gray-700">{t('s15_filter_sleep')}</span>
-                </div>
-                <input 
-                  type="checkbox" 
-                  className="w-6 h-6 rounded-lg accent-brand-600"
-                  checked={filters.includesAccommodation}
-                  onChange={e => setFilters(f => ({ ...f, includesAccommodation: e.target.checked }))}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Btn onClick={() => setShowFilters(false)} className="flex-1">{t('s15_filter_apply')}</Btn>
-                <Btn 
-                  variant="secondary" 
-                  onClick={() => setFilters({ date:'', timeRange:'all', observance:'all', includesAccommodation:false, kosher:'all' })} 
-                >
-                  {t('s15_filter_reset')}
-                </Btn>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Detail sheet */}
-      {selected && (
-        <FamilySheet 
-          family={selected} 
-          onClose={() => setSelected(null)} 
-          onChat={(fam) => { 
-            setSelected(null); 
-            setActiveChatFamily(fam);
-            setChattingWith(fam); 
-          }} 
-        />
-      )}
-
-      {/* Chat Modal */}
-      {chattingWith && (
-        <ChatView 
-          family={chattingWith} 
-          onBack={() => setChattingWith(null)} 
-        />
-      )}
     </div>
   );
 }

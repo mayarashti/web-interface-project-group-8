@@ -40,9 +40,17 @@ const T = {
 
     /* S1 Welcome */
     s1_title: 'מארחי שבת', s1_subtitle: 'Shabbat Hosts',
-    s1_tagline: 'מצא ארוחת שישי חמה לידך',
-    s1_soldier: '🪖  אני חייל', s1_host: '🏡  אני משפחה מארחת',
-    s1_footer: 'מחברים חיילים עם משפחות מארחות לשישי ✨',
+    s1_tagline: 'הצטרף לקהילת האירוח שלנו',
+    s1_soldier: '🪖  הרשמה כחייל', s1_host: '🏡  הרשמה כמשפחה מארחת',
+    s1_footer: 'הצטרף לקהילה שמחברת חיילים עם משפחות מארחות ✨',
+    s1_login: 'כבר יש לך חשבון? התחברות',
+
+    /* S0 Login */
+    s0_title: 'התחברות', s0_subtitle: 'ברוך שובך!',
+    s0_email: 'כתובת אימייל', s0_email_placeholder: 'your@email.com',
+    s0_password: 'סיסמה', s0_password_placeholder: 'הזן סיסמה',
+    s0_remember: 'זכור אותי', s0_forgot: 'שכחתי סיסמה',
+    s0_login_button: 'התחבר', s0_back_to_register: 'חזרה להרשמה',
 
     /* S2 Explain (soldier) */
     s2_title: 'איך זה עובד?', s2_sub: 'כל מה שצריך לדעת לפני שמתחילים',
@@ -168,6 +176,15 @@ const T = {
     s15_new: '🍽  צור בקשת אירוח לשישי',
     s15_shab: 'שבת קרובה 🕯️', s15_friday: 'שישי,',
     s15_avail: (n) => `${n} משפחות זמינות באזורך`,
+    s15_map_title: 'משפחות שפתחו שולחן לשישי',
+    s15_map_sub: 'מצא משפחה חמה לשבת הקרובה שלך',
+    s15_tap_map: 'לחצו על בית במפה כדי לראות פרטים',
+    s15_talk_whatsapp: 'דברו בוואטסאפ',
+    s15_call: 'התקשרו',
+    s15_capacity: 'מקומות',
+    s15_sleep_available: 'לינה זמינה',
+    s15_open_table: 'שולחן פתוח',
+    s15_guests_title: 'חיילים כבר התארחו',
     s15_view: 'צפה בהתאמות', s15_rec: 'התאמות מומלצות 🏠',
     s15_past: 'אירוחים קודמים 📅',
     s15_no_past: 'עדיין לא היו לך אירוחים — בוא נחפש את הראשון שלך! 🎉',
@@ -291,9 +308,17 @@ const T = {
 
     /* S1 Welcome */
     s1_title: 'Shabbat Hosts', s1_subtitle: 'מארחי שבת',
-    s1_tagline: 'Find a warm Friday dinner near you',
-    s1_soldier: '🪖  I\'m a Soldier', s1_host: '🏡  I\'m a Host Family',
-    s1_footer: 'Connecting soldiers with host families for Shabbat ✨',
+    s1_tagline: 'Join our hosting community',
+    s1_soldier: '🪖  Register as Soldier', s1_host: '🏡  Register as Host Family',
+    s1_footer: 'Join the community connecting soldiers with host families ✨',
+    s1_login: 'Already have an account? Log in',
+
+    /* S0 Login */
+    s0_title: 'Login', s0_subtitle: 'Welcome back!',
+    s0_email: 'Email address', s0_email_placeholder: 'your@email.com',
+    s0_password: 'Password', s0_password_placeholder: 'Enter password',
+    s0_remember: 'Remember me', s0_forgot: 'Forgot password?',
+    s0_login_button: 'Log in', s0_back_to_register: 'Back to registration',
 
     /* S2 Explain */
     s2_title: 'How does it work?', s2_sub: 'Everything you need to know before getting started',
@@ -405,6 +430,15 @@ const T = {
     s15_new: '🍽  Create a Hosting Request',
     s15_shab: 'Upcoming Shabbat 🕯️', s15_friday: 'Friday,',
     s15_avail: (n) => `${n} families available in your area`,
+    s15_map_title: 'Families opening a Shabbat table for Friday',
+    s15_map_sub: 'Find a warm family near you for the coming Shabbat',
+    s15_tap_map: 'Tap a home on the map to see details',
+    s15_talk_whatsapp: 'Talk on WhatsApp',
+    s15_call: 'Call',
+    s15_capacity: 'Capacity',
+    s15_sleep_available: 'Sleep available',
+    s15_open_table: 'Open table',
+    s15_guests_title: 'soldiers already hosted',
     s15_view: 'View Matches', s15_rec: 'Recommended Matches 🏠',
     s15_past: 'Past Shabbat Meals 📅',
     s15_no_past: 'No meals yet — let\'s find your first one! 🎉',
