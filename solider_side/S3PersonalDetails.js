@@ -10,7 +10,6 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
     const e = {};
     if (!data.fullName?.trim()) e.fullName = t('v_name');
     if (!data.phone?.trim() || data.phone.replace(/\D/g, '').length < 9) e.phone = t('err_phone');
-    if (!data.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) e.email = t('err_email');
     if (!data.password || data.password.length < 6) e.password = t('err_pass');
     if (!data.docUploaded) e.doc = t('s6_pick_first');
     setErrors(e);
@@ -32,7 +31,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
       onBack={onBack}
       onNext={() => { if (validate()) onNext(); }}
       step={1}
-      total={6}
+      total={3}
       icon
       title={t('s3_title')}
       sub={t('s3_sub')}
