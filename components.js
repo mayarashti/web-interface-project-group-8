@@ -151,7 +151,7 @@ function SectionTitle({ icon, title, sub }) {
   );
 }
 
-function AppHeader({ eyebrow, title, actions, onBack }) {
+function AppHeader({ eyebrow, title, actions, onBack, profileAction }) {
   return (
     <header className="app-header">
       <div className="flex items-center gap-3 min-w-0">
@@ -162,9 +162,16 @@ function AppHeader({ eyebrow, title, actions, onBack }) {
             </svg>
           </button>
         )}
-        <div className="app-greeting">
-          {eyebrow && <span>{eyebrow}</span>}
-          <strong>{title}</strong>
+        <div className="flex items-center gap-3">
+          {profileAction && (
+            <div className="flex-shrink-0">
+              {profileAction}
+            </div>
+          )}
+          <div className="app-greeting">
+            {eyebrow && <span>{eyebrow}</span>}
+            <strong>{title}</strong>
+          </div>
         </div>
       </div>
       {actions && <div className="app-header-actions">{actions}</div>}

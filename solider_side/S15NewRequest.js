@@ -7,6 +7,11 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
   const initialRequest = data.editingRequest || {
     id: Date.now(),
     when: '',
+    startTime: '18:00',
+    endTime: '21:00',
+    guestCount: 1,
+    friendDietary: '',
+    petsComfort: 'ok',
     shabbat: data.shabbat === 'observant' || data.shabbat === 'traditional',
     kosher: data.kosher === 'kosher' || data.kosher === 'mehadrin',
     duration: 'dinner',
@@ -44,6 +49,60 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             value={request.when}
             onChange={(val) => handleChange('when', val)}
             required
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label={t('s15_start_time')}
+              type="time"
+              value={request.startTime}
+              onChange={(val) => handleChange('startTime', val)}
+              required
+            />
+            <Input 
+              label={t('s15_end_time')}
+              type="time"
+              value={request.endTime}
+              onChange={(val) => handleChange('endTime', val)}
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-warm-600 mb-1.5">
+              {t('s15_guest_count')}: {request.guestCount}
+            </label>
+            <input 
+              type="range" 
+              min="1" 
+              max="5" 
+              value={request.guestCount} 
+              onChange={(e) => handleChange('guestCount', parseInt(e.target.value))}
+              className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
+            />
+          </div>
+
+          {request.guestCount > 1 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-warm-600 mb-1.5">{t('s15_friend_dietary')}</label>
+              <textarea 
+                value={request.friendDietary} 
+                onChange={e => handleChange('friendDietary', e.target.value)}
+                placeholder={lang === 'he' ? 'למשל: צמחוני, רגישות לבוטנים...' : 'e.g. Vegetarian, nut allergy...'}
+                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+                rows={3}
+              />
+            </div>
+          )}
+
+          <RadioGroup 
+            label={t('s15_pets_comfort')}
+            value={request.petsComfort}
+            onChange={(val) => handleChange('petsComfort', val)}
+            options={[
+              { value: 'ok', label: t('s15_pets_ok') },
+              { value: 'no', label: t('s15_pets_no') }
+            ]}
           />
 
           <RadioGroup 

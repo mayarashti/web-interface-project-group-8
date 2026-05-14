@@ -224,6 +224,14 @@ const T = {
     s15_matches_found: (n) => `נמצאו ${n} משפחות מתאימות`,
     s15_edit_req: 'ערוך בקשה',
     s15_new_req: 'בקשה חדשה',
+    s15_time_range: 'טווח שעות האירוח',
+    s15_start_time: 'שעת התחלה',
+    s15_end_time: 'שעת סיום',
+    s15_guest_count: 'כמה אנשים תהיו?',
+    s15_friend_dietary: 'האם לחברים יש העדפות אוכל?',
+    s15_pets_comfort: 'מסתדרים עם בעלי חיים?',
+    s15_pets_ok: 'כן, בטח',
+    s15_pets_no: 'מעדיפים שלא',
 
     /* S18 Host Explain */
     s18_title:'איך זה עובד?', s18_sub:'כל מה שצריך לדעת לפני שמתחילים',

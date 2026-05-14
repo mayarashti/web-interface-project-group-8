@@ -10,6 +10,15 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
+        profileAction={(
+          <button onClick={onProfile} className="app-icon-btn" title={t('s15_landing_profile_title')} aria-label={t('s15_landing_profile_title')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+        )}
+        actions={<LangToggle variant="inline" />}
       />
 
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
@@ -89,21 +98,6 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
           {/* Decorative pattern */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
         </button>
-
-        <div className="flex justify-center">
-          <button 
-            onClick={onProfile}
-            className="w-full max-w-[200px] flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-200 transition-all group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-warm-50 flex items-center justify-center text-warm-600 mb-3 group-hover:scale-110 transition-transform">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <span className="text-sm font-bold text-gray-900">{t('s15_landing_profile_title')}</span>
-          </button>
-        </div>
       </div>
     </div>
   );
