@@ -321,7 +321,32 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
     Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000
   ).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
 
-  const filteredFamilies = MAP_FAMILIES;
+  // Matching Logic
+  const requests = data.requests || [];
+  const latestRequest = requests[0]; // Base matches on the most recent request
+
+  const filteredFamilies = latestRequest ? MAP_FAMILIES.filter(fam => {
+    // 1. Kashrut
+    if (latestRequest.kosher) {
+      if (fam.kosher === 'none' && latestRequest.kosher !== 'none') return false;
+      if (latestRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+    }
+    // 2. Shabbat
+    if (latestRequest.shabbat && fam.shabbat === 'secular') return false;
+    
+    // 3. Sleeping
+    if (latestRequest.needSleep && !fam.canSleep) return false;
+
+    // 4. Location simulation
+    // We match families that have the location string in their city name, or just show all for demo if no specific city matches
+    const locMatch = !latestRequest.location || fam.city.includes(latestRequest.location) || fam.name.includes(latestRequest.location);
+    // For demo purposes, we'll be lenient with location but strict with preferences
+    
+    return true;
+  }) : [];
+
+  const noRequests = requests.length === 0;
+  const noMatches = !noRequests && filteredFamilies.length === 0;
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
@@ -343,35 +368,62 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
       />
 
       <div className="px-5 mt-2 space-y-5 max-w-6xl mx-auto">
-        <FamilyStrip families={filteredFamilies} selectedId={selected?.id ?? null} onSelect={fam => setSelected(fam)} onHover={setHovered} />
-
-        <div>
-          <div className={clsx('map-detail-layout', selected && 'has-selection')}>
-            <div className="map-panel">
-              <MapView
-                families={filteredFamilies}
-                selectedId={selected?.id ?? null}
-                hoveredId={hovered?.id ?? null}
-                onSelect={fam => setSelected(fam)}
-              />
+        {noRequests ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center text-warm-400">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
             </div>
-            {selected && (
-              <FamilyInfoCard
-                family={selected}
-                onClose={() => setSelected(null)}
-              />
-            )}
+            <h2 className="text-xl font-bold text-gray-900">{t('s15_no_requests_title')}</h2>
+            <p className="text-warm-500 max-w-xs">{t('s15_no_requests_sub')}</p>
+            <Btn onClick={onNewRequest} className="max-w-xs">{t('s15_landing_new_req_title')}</Btn>
           </div>
-          <p className="text-xs text-center text-warm-400 mt-3">{t('s15_tap_map')}</p>
-        </div>
+        ) : noMatches ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <div className="w-20 h-20 rounded-full bg-brand-50 flex items-center justify-center text-brand-500">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">{t('s15_no_matches_title')}</h2>
+            <p className="text-warm-500 max-w-sm">{t('s15_no_matches_sub')}</p>
+            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{t('lang') === 'he' ? 'עדכון בקשה' : 'Update Request'}</Btn>
+          </div>
+        ) : (
+          <React.Fragment>
+            <FamilyStrip families={filteredFamilies} selectedId={selected?.id ?? null} onSelect={fam => setSelected(fam)} onHover={setHovered} />
 
-        <div className="rounded-xl bg-support-50 border border-support-100 p-4 text-center">
-          <p className="text-sm font-semibold text-support-600">{t('s15_open_table')} • {nextFriday}</p>
-          <p className="text-xs text-brand-500 mt-1">{t('s15_avail', filteredFamilies.length)}</p>
-        </div>
+            <div>
+              <div className={clsx('map-detail-layout', selected && 'has-selection')}>
+                <div className="map-panel">
+                  <MapView
+                    families={filteredFamilies}
+                    selectedId={selected?.id ?? null}
+                    hoveredId={hovered?.id ?? null}
+                    onSelect={fam => setSelected(fam)}
+                  />
+                </div>
+                {selected && (
+                  <FamilyInfoCard
+                    family={selected}
+                    onClose={() => setSelected(null)}
+                  />
+                )}
+              </div>
+              <p className="text-xs text-center text-warm-400 mt-3">{t('s15_tap_map')}</p>
+            </div>
+
+            <div className="rounded-xl bg-support-50 border border-support-100 p-4 text-center">
+              <p className="text-sm font-semibold text-support-600">{t('s15_open_table')} • {nextFriday}</p>
+              <p className="text-xs text-brand-500 mt-1">{t('s15_avail', filteredFamilies.length)}</p>
+            </div>
+          </React.Fragment>
+        )}
       </div>
-
-
     </div>
   );
 }
+

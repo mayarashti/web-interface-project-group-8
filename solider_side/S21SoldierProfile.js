@@ -38,14 +38,14 @@ function S21SoldierProfile({ data, setData, onBack }) {
       <div className="w-full max-w-md mx-auto px-5">
       <Card className="mb-4 space-y-4">
         <h2 className="section-label">פרטים אישיים</h2>
-        <Input label={t('s3_full')} value={form.fullName} onChange={setF('fullName')} />
+        <Input label={t('שם מלא')} value={form.fullName} onChange={setF('fullName')} />
         <Input label={t('s3_phone')} value={form.phone} onChange={setF('phone')} />
         <Input label={t('s3_email')} value={form.email} onChange={setF('email')} />
       </Card>
 
       <Card className="mb-4 space-y-4">
         <h2 className="section-label">העדפות אירוח</h2>
-        <RadioGroup label={t('s7_kosh_lev')} value={form.kosher} onChange={setF('kosher')}
+        <RadioGroup label={t('כשרות')} value={form.kosher} onChange={setF('kosher')}
           options={[
             { value:'mehadrin', label:t('s7_meh'),  sub:t('s7_meh_s') },
             { value:'kosher',   label:t('s7_kosh'), sub:t('s7_kosh_s') },
