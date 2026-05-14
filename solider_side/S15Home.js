@@ -311,7 +311,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 /* ════════════════════════════════════════
    S15Home — Soldier home screen
 ════════════════════════════════════════ */
-function S15Home({ data, onProfile }) {
+function S15Home({ data, onProfile, onNewRequest, onBack }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
@@ -328,6 +328,7 @@ function S15Home({ data, onProfile }) {
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
+        onBack={onBack}
         actions={(
           <React.Fragment>
             <LangToggle variant="inline" />

@@ -19,10 +19,17 @@ function App() {
         ]
       }
     ],
+    requests: [],
+    editingRequest: null,
     editingHostingId: null,
   });
 
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
+
+  const handleNewRequest = (requestToEdit = null) => {
+    setFormData(prev => ({ ...prev, editingRequest: requestToEdit }));
+    go(23);
+  };
 
   const demoSoldierData = {
     firstName: 'יונתן',
@@ -39,6 +46,7 @@ function App() {
     walkDistance: true,
     allergies: ['none'],
     preferWithSoldiers: true,
+    requests: [],
   };
 
   const demoHostData = {
@@ -63,7 +71,7 @@ function App() {
     }
 
     setFormData(prev => ({ ...prev, ...demoSoldierData }));
-    go(15);
+    go(24);
   };
 
   /* keep <html> dir + lang in sync */
@@ -86,16 +94,43 @@ function App() {
     10: <S10Prefs     data={formData} setData={setFormData} onNext={() => go(11)} onBack={() => go(9)} />,
     11: <S11Profile   data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(10)} />,
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => go(13)} onBack={() => go(11)} />,
-    13: <S13Pending   onHome={() => go(15)} autoApprove={() => go(14)} />,
-    14: <S14Success   onHome={() => go(15)} name={formData.fullName} />,
-    15: <S15Home      data={formData} onNewRequest={() => {}} onProfile={() => go(21)} />,
+    13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
+    14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
+    15: <S15Home      data={formData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} />,
+    23: <S15NewRequest 
+          data={formData} 
+          setData={setFormData} 
+          onBack={() => go(24)} 
+          onSubmit={(req) => { 
+            setFormData(prev => {
+              const requests = prev.requests || [];
+              const index = requests.findIndex(r => r.id === req.id);
+              if (index > -1) {
+                const newRequests = [...requests];
+                newRequests[index] = req;
+                return { ...prev, requests: newRequests, editingRequest: null };
+              }
+              return { ...prev, requests: [req, ...requests], editingRequest: null };
+            });
+            go(24); 
+          }} 
+          onCancel={(id) => {
+            setFormData(prev => ({
+              ...prev,
+              requests: (prev.requests || []).filter(r => r.id !== id),
+              editingRequest: null
+            }));
+            go(24);
+          }}
+        />,
+    24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onBrowse={() => go(15)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
     19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
     20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,
-    21: <S21SoldierProfile data={formData} setData={setFormData} onBack={() => go(15)} />,
+    21: <S21SoldierProfile data={formData} setData={setFormData} onBack={() => go(24)} />,
     22: <S22HostProfile data={formData} setData={setFormData} onBack={() => go(19)} />,
   };
 
