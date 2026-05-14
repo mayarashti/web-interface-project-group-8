@@ -33,7 +33,7 @@ const familyAvatarUrl = (bgColor, familyId) => {
 };
 
 /* ── Mock host-family data (neighbourhood-level coords for privacy) ── */
-const MAP_FAMILIES = [
+window.MAP_FAMILIES = [
   {
     id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
     lat: 32.7943, lng: 34.9890,
@@ -323,25 +323,22 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
 
   // Matching Logic
   const requests = data.requests || [];
-  const latestRequest = requests[0]; // Base matches on the most recent request
+  const activeRequest = data.selectedRequestId 
+    ? requests.find(r => r.id === data.selectedRequestId)
+    : requests[0]; // Fallback to most recent
 
-  const filteredFamilies = latestRequest ? MAP_FAMILIES.filter(fam => {
+  const filteredFamilies = activeRequest ? MAP_FAMILIES.filter(fam => {
     // 1. Kashrut
-    if (latestRequest.kosher) {
-      if (fam.kosher === 'none' && latestRequest.kosher !== 'none') return false;
-      if (latestRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+    if (activeRequest.kosher) {
+      if (fam.kosher === 'none' && activeRequest.kosher !== 'none') return false;
+      if (activeRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
     }
     // 2. Shabbat
-    if (latestRequest.shabbat && fam.shabbat === 'secular') return false;
+    if (activeRequest.shabbat && fam.shabbat === 'secular') return false;
     
     // 3. Sleeping
-    if (latestRequest.needSleep && !fam.canSleep) return false;
+    if (activeRequest.needSleep && !fam.canSleep) return false;
 
-    // 4. Location simulation
-    // We match families that have the location string in their city name, or just show all for demo if no specific city matches
-    const locMatch = !latestRequest.location || fam.city.includes(latestRequest.location) || fam.name.includes(latestRequest.location);
-    // For demo purposes, we'll be lenient with location but strict with preferences
-    
     return true;
   }) : [];
 

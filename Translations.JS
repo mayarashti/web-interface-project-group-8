@@ -219,6 +219,11 @@ const T = {
     s15_no_matches_sub: 'כרגע לא מצאנו משפחה שמתאימה בדיוק לבקשה שלך, אבל אל דאגה — אנחנו כבר מחפשים עבורך ומבטיחים לעדכן בקרוב!',
     s15_no_requests_title: 'עדיין אין לך בקשות אירוח',
     s15_no_requests_sub: 'כדי שנוכל למצוא לך משפחה, עליך ליצור בקשת אירוח חדשה.',
+    s15_open_requests: 'בקשות פתוחות',
+    s15_no_matches_found: 'לא נמצאו התאמות',
+    s15_matches_found: (n) => `נמצאו ${n} משפחות מתאימות`,
+    s15_edit_req: 'ערוך בקשה',
+    s15_new_req: 'בקשה חדשה',
 
     /* S18 Host Explain */
     s18_title:'איך זה עובד?', s18_sub:'כל מה שצריך לדעת לפני שמתחילים',
@@ -501,6 +506,11 @@ const T = {
     s15_past:'Past Shabbat Meals',
     s15_no_past:'No meals yet — let\'s find your first one!',
     s15_slots:'spots available',
+    s15_open_requests: 'Open Requests',
+    s15_no_matches_found: 'No matches found',
+    s15_matches_found: (n) => `${n} suitable families found`,
+    s15_edit_req: 'Edit Request',
+    s15_new_req: 'New Request',
 
     /* S18 Host Explain */
     s18_title:'How does it work?', s18_sub:'Everything you need to know before getting started',

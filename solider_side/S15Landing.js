@@ -1,6 +1,6 @@
 /* S15Landing — Landing screen for soldiers after login */
 
-function S15Landing({ onNewRequest, onBrowse, onProfile, data }) {
+function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, data }) {
   const { t, lang } = useLang();
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const hasRequests = data.requests && data.requests.length > 0;
@@ -20,19 +20,47 @@ function S15Landing({ onNewRequest, onBrowse, onProfile, data }) {
           {hasRequests ? (
             <div className="space-y-3">
               <p className="text-warm-500">{t('s15_landing_has_req_sub', data.requests.length)}</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {data.requests.map(req => (
-                  <button 
-                    key={req.id}
-                    onClick={() => onNewRequest(req)}
-                    className="px-4 py-2 bg-brand-50 text-brand-700 text-sm font-semibold rounded-full border border-brand-100 hover:bg-brand-100 transition-colors flex items-center gap-2"
-                  >
-                    <span>{req.when} - {req.location}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                    </svg>
-                  </button>
-                ))}
+              <div className="flex flex-col gap-3 max-w-sm mx-auto">
+                {data.requests.map(req => {
+                  const families = window.MAP_FAMILIES || [];
+                  const matchCount = families.filter(fam => {
+                    if (req.kosher) {
+                      if (fam.kosher === 'none' && req.kosher !== 'none') return false;
+                      if (req.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+                    }
+                    if (req.shabbat && fam.shabbat === 'secular') return false;
+                    if (req.needSleep && !fam.canSleep) return false;
+                    return true;
+                  }).length;
+
+                  return (
+                    <div key={req.id} className="flex items-center gap-2">
+                      <button 
+                        onClick={() => onViewMatches(req.id)}
+                        className="flex-1 px-5 py-3 bg-white text-gray-900 text-sm font-bold rounded-2xl border border-warm-200 shadow-sm hover:border-brand-200 transition-all flex items-center justify-between group/btn"
+                      >
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span>{req.when} - {req.location}</span>
+                          <span className={matchCount > 0 ? "text-brand-600 text-[11px] font-semibold" : "text-warm-400 text-[11px] font-medium"}>
+                            {matchCount === 0 ? t('s15_no_matches_found') : t('s15_matches_found', matchCount)}
+                          </span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500 group-hover/btn:translate-x-1 transition-transform rtl:group-hover/btn:-translate-x-1">
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => onEditRequest(req)}
+                        className="w-12 h-12 rounded-2xl bg-white border border-warm-200 text-warm-500 flex items-center justify-center hover:bg-brand-50 hover:text-brand-600 shadow-sm transition-colors"
+                        title={t('s15_edit_req')}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -62,23 +90,10 @@ function S15Landing({ onNewRequest, onBrowse, onProfile, data }) {
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
         </button>
 
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={onBrowse}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-200 transition-all group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-warm-50 flex items-center justify-center text-warm-600 mb-3 group-hover:scale-110 transition-transform">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
-              </svg>
-            </div>
-            <span className="text-sm font-bold text-gray-900">{t('s15_landing_browse_title')}</span>
-          </button>
-
+        <div className="flex justify-center">
           <button 
             onClick={onProfile}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-200 transition-all group"
+            className="w-full max-w-[200px] flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-200 transition-all group"
           >
             <div className="w-12 h-12 rounded-xl bg-warm-50 flex items-center justify-center text-warm-600 mb-3 group-hover:scale-110 transition-transform">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

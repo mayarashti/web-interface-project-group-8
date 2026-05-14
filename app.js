@@ -21,6 +21,7 @@ function App() {
     ],
     requests: [],
     editingRequest: null,
+    selectedRequestId: null,
     editingHostingId: null,
   });
 
@@ -29,6 +30,11 @@ function App() {
   const handleNewRequest = (requestToEdit = null) => {
     setFormData(prev => ({ ...prev, editingRequest: requestToEdit }));
     go(23);
+  };
+
+  const handleViewMatches = (requestId) => {
+    setFormData(prev => ({ ...prev, selectedRequestId: requestId }));
+    go(15);
   };
 
   const demoSoldierData = {
@@ -46,7 +52,10 @@ function App() {
     walkDistance: true,
     allergies: ['none'],
     preferWithSoldiers: true,
-    requests: [],
+    requests: [
+      { id: 10, when: '2026-06-22', kosher: true, shabbat: true, needSleep: false, location: 'חיפה' },
+      { id: 11, when: '2026-06-29', kosher: true, shabbat: true, needSleep: true, location: 'חיפה' },
+    ],
   };
 
   const demoHostData = {
@@ -123,14 +132,27 @@ function App() {
             go(24);
           }}
         />,
-    24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onBrowse={() => go(15)} onProfile={() => go(21)} />,
+    24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
     19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
     20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,
-    21: <S21SoldierProfile data={formData} setData={setFormData} onBack={() => go(24)} />,
+    21: <S21SoldierProfile 
+          data={formData} 
+          setData={setFormData} 
+          onBack={() => go(24)} 
+          onNewRequest={() => handleNewRequest()}
+          onEditRequest={(req) => handleNewRequest(req)}
+          onDeleteRequest={(id) => {
+            setFormData(prev => ({
+              ...prev,
+              requests: (prev.requests || []).filter(r => r.id !== id)
+            }));
+          }}
+          onViewMatches={handleViewMatches}
+        />,
     22: <S22HostProfile data={formData} setData={setFormData} onBack={() => go(19)} />,
   };
 
