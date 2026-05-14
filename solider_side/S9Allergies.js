@@ -31,16 +31,18 @@ function S9Allergies({ data, setData, onNext, onBack }) {
         values={data.allergies || []}
         onChange={val => set('allergies')(val)}
       />
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s9_note_label')}</label>
-        <textarea
-          value={data.allergyNote || ''}
-          onChange={e => set('allergyNote')(e.target.value)}
-          placeholder={t('s9_note_ph')}
-          className="w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 resize-none transition-all"
-          rows={3}
-        />
-      </div>
+      {(data.allergies || []).includes('other') && (
+        <div className="mb-5 animate-enter">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('s9_note_label')}</label>
+          <textarea
+            value={data.allergyNote || ''}
+            onChange={e => set('allergyNote')(e.target.value)}
+            placeholder={t('s9_note_ph')}
+            className="w-full px-4 py-3 rounded-xl border border-warm-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400 resize-none transition-all"
+            rows={3}
+          />
+        </div>
+      )}
     </ScreenLayout>
   );
 }

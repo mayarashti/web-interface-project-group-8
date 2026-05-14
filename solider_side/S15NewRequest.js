@@ -10,7 +10,8 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
     startTime: '18:00',
     endTime: '21:00',
     guestCount: 1,
-    friendDietary: '',
+    friendDietary: [],
+    friendDietaryOther: '',
     petsComfort: 'ok',
     shabbat: data.shabbat === 'observant' || data.shabbat === 'traditional',
     kosher: data.kosher === 'kosher' || data.kosher === 'mehadrin',
@@ -22,6 +23,17 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
   };
 
   const [request, setRequest] = useState(initialRequest);
+
+  const dietaryOpts = [
+    { value: 'gluten',     label: t('a_gluten')  },
+    { value: 'lactose',    label: t('a_lactose') },
+    { value: 'nuts',       label: t('a_nuts')    },
+    { value: 'peanuts',    label: t('a_peanuts') },
+    { value: 'vegetarian', label: t('a_veg')     },
+    { value: 'vegan',      label: t('a_vegan')   },
+    { value: 'fish',       label: t('a_fish')    },
+    { value: 'other',      label: t('a_other')   },
+  ];
 
   const handleChange = (field, value) => {
     setRequest(prev => ({ ...prev, [field]: value }));
@@ -83,15 +95,24 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
           </div>
 
           {request.guestCount > 1 && (
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-warm-600 mb-1.5">{t('s15_friend_dietary')}</label>
-              <textarea 
-                value={request.friendDietary} 
-                onChange={e => handleChange('friendDietary', e.target.value)}
-                placeholder={lang === 'he' ? 'למשל: צמחוני, רגישות לבוטנים...' : 'e.g. Vegetarian, nut allergy...'}
-                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
-                rows={3}
+            <div className="space-y-4">
+              <MultiCheck 
+                label={t('s15_friend_dietary')}
+                options={dietaryOpts}
+                values={request.friendDietary || []}
+                onChange={(val) => handleChange('friendDietary', val)}
               />
+              {(request.friendDietary || []).includes('other') && (
+                <div className="animate-enter">
+                  <textarea 
+                    value={request.friendDietaryOther} 
+                    onChange={e => handleChange('friendDietaryOther', e.target.value)}
+                    placeholder={lang === 'he' ? 'פרט כאן העדפות נוספות...' : 'Specify other preferences here...'}
+                    className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
           )}
 
