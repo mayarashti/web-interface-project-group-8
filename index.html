@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200..1000&family=Inter:wght@300;400;500;600;700;800;900;1000&display=swap" rel="stylesheet" />
 
   <!-- ── Design system (tokens, animations, components) ── -->
-  <link rel="stylesheet" href="design.css" />
+  <link rel="stylesheet" href="core/design.css" />
 
   <!-- ── Leaflet map ── -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -87,33 +87,30 @@
 
   <!--
     Load order (each file depends on the ones above it):
-      1. translations.js        — language strings + LangContext + LangToggle
-      2. components.js          — shared UI: Btn, Input, Card, Tag, …
-      3. solider_side/S*.js     — soldier screens S1–S15
-      4. family side/screens-host.js — host screens S16–S20
-      5. app.js                 — App router + ReactDOM.render
+      1. core/translations.js
+      2. core/components.js
+      3. auth/auth.js
+      4. soldier/soldier_registration.js
+      5. soldier/soldier_dashboard.js
+      6. host/host_registration.js
+      7. host/host_dashboard.js
+      8. core/app.js
   -->
-  <script type="text/babel" src="translations.js"></script>
-  <script type="text/babel" src="components.js"></script>
+  <script type="text/babel" src="core/translations.js"></script>
+  <script type="text/babel" src="core/components.js"></script>
 
-  <!-- Soldier screens -->
-  <script type="text/babel" src="solider_side/S0Login.js"></script>
-  <script type="text/babel" src="solider_side/S1Welcome.js"></script>
-  <script type="text/babel" src="solider_side/S2Explain.js"></script>
-  <script type="text/babel" src="solider_side/S7Preferences.js"></script>
-  <script type="text/babel" src="solider_side/S12Summary.js"></script>
-  <script type="text/babel" src="solider_side/S13S14.js"></script>
-  <script type="text/babel" src="solider_side/S15Landing.js"></script>
-  <script type="text/babel" src="solider_side/S15Home.js"></script>
-  <script type="text/babel" src="solider_side/S15NewRequest.js"></script>
-  <script type="text/babel" src="solider_side/S21SoldierProfile.js"></script>
-  <script type="text/babel" src="solider_side/S3PersonalDetails.js"></script>
+  <!-- Auth -->
+  <script type="text/babel" src="auth/auth.js"></script>
 
-  <!-- Host screens -->
-  <script type="text/babel" src="family side/screens-host.js"></script>
-  <script type="text/babel" src="family side/S22HostProfile.js"></script>
+  <!-- Soldier -->
+  <script type="text/babel" src="soldier/soldier_registration.js"></script>
+  <script type="text/babel" src="soldier/soldier_dashboard.js"></script>
+
+  <!-- Host -->
+  <script type="text/babel" src="host/host_registration.js"></script>
+  <script type="text/babel" src="host/host_dashboard.js"></script>
 
   <!-- App -->
-  <script type="text/babel" src="app.js"></script>
+  <script type="text/babel" src="core/app.js"></script>
 </body>
 </html>
