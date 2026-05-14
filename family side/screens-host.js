@@ -324,7 +324,7 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{new Date(h.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'short'})}</p>
-                        <p className="text-xs text-warm-500 mt-0.5">{h.time === 'friday_evening' ? t('s20_fri_time') : h.time === 'saturday_lunch' ? t('s20_sat_time') : h.customTime || t('s20_cust_time')}</p>
+                        <p className="text-xs text-warm-500 mt-0.5">{h.startTime} - {h.endTime}</p>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${isFull ? 'bg-red-50 text-red-700 border-red-100' : 'bg-support-50 text-support-600 border-support-100'}`}>
                         {guestCount} / {capacity} {t('s19_spots_taken')}
@@ -369,11 +369,19 @@ function S19HostHome({ data, setData, onNewHosting, onProfile }) {
    S20 — Create New Hosting
 ════════════════════════════════════════ */
 function S20NewHosting({ data, setData, onBack, onSubmit }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const editingHosting = data.hostings?.find(h => h.id === data.editingHostingId);
   const [form, setForm] = useState(() => {
-    if (editingHosting) return { ...editingHosting, images: editingHosting.images || [], soldiers: String(editingHosting.soldiers) };
-    return { date:'', time:'', customTime:'', soldiers:'', note:'', images:[] };
+    if (editingHosting) return { 
+      ...editingHosting, 
+      images: editingHosting.images || [], 
+      soldiers: String(editingHosting.soldiers),
+      cookDietary: editingHosting.cookDietary || [],
+      cookDietaryOther: editingHosting.cookDietaryOther || '',
+      startTime: editingHosting.startTime || '18:00',
+      endTime: editingHosting.endTime || '21:00'
+    };
+    return { date:'', startTime:'18:00', endTime:'21:00', soldiers:'', note:'', images:[], cookDietary: [], cookDietaryOther: '' };
   });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -394,18 +402,25 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
     return dates;
   })();
 
-  const TIME_OPTIONS = [
-    { value:'friday_evening', label:t('s20_fri_eve'), sub:t('s20_fri_eve_s') },
-    { value:'saturday_lunch', label:t('s20_sat_lun'), sub:t('s20_sat_lun_s') },
-    { value:'custom',         label:t('s20_custom'),  sub:t('s20_custom_s')  },
+  const dietaryOpts = [
+    { value: 'gluten',     label: t('a_gluten')  },
+    { value: 'lactose',    label: t('a_lactose') },
+    { value: 'nuts',       label: t('a_nuts')    },
+    { value: 'peanuts',    label: t('a_peanuts') },
+    { value: 'vegetarian', label: t('a_veg')     },
+    { value: 'vegan',      label: t('a_vegan')   },
+    { value: 'fish',       label: t('a_fish')    },
+    { value: 'other',      label: t('a_other')   },
   ];
+
   const SOLDIER_OPTS = ['1','2','3','4','5+'];
 
   const validate = () => {
     const e = {};
-    if (!form.date)    e.date    = t('v_date');
-    if (!form.time)    e.time    = t('v_time');
-    if (!form.soldiers) e.soldiers = t('v_sol');
+    if (!form.date)      e.date      = t('v_date');
+    if (!form.startTime) e.startTime = t('v_time');
+    if (!form.endTime)   e.endTime   = t('v_time');
+    if (!form.soldiers)  e.soldiers  = t('v_sol');
     setErrors(e); return Object.keys(e).length === 0;
   };
 
@@ -482,27 +497,45 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
       {/* Time */}
       <div className="mb-5">
         <p className="text-sm font-semibold text-gray-700 mb-2.5">{t('s20_time_label')}</p>
-        <div className="flex flex-col gap-2">
-          {TIME_OPTIONS.map(opt => (
-            <label key={opt.value} onClick={() => setF('time')(opt.value)}
-              className={clsx('flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150',
-                form.time === opt.value ? 'border-brand-300 bg-brand-50 shadow-xs' : 'border-warm-200 bg-white hover:border-brand-200 hover:bg-warm-50'
-              )}>
-              <div className={clsx('w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all', form.time === opt.value ? 'border-brand-500' : 'border-warm-300')}>
-                {form.time === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-500" />}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">{opt.label}</p>
-                <p className="text-xs text-warm-500">{opt.sub}</p>
-              </div>
-            </label>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          <Input 
+            label={t('s15_start_time')}
+            type="time"
+            value={form.startTime}
+            onChange={(val) => setF('startTime')(val)}
+            required
+          />
+          <Input 
+            label={t('s15_end_time')}
+            type="time"
+            value={form.endTime}
+            onChange={(val) => setF('endTime')(val)}
+            required
+          />
         </div>
-        {form.time === 'custom' && (
-          <input type="time" value={form.customTime} onChange={e => setF('customTime')(e.target.value)}
-            className="mt-3 w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 transition-all" />
+        {(errors.startTime || errors.endTime) && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.startTime || errors.endTime}</p>}
+      </div>
+
+      {/* Cooking Dietary */}
+      <div className="mb-5">
+        <MultiCheck 
+          label={t('s20_cook_dietary')}
+          options={dietaryOpts}
+          values={form.cookDietary || []}
+          onChange={(val) => setF('cookDietary')(val)}
+        />
+        <p className="text-xs text-warm-400 -mt-3 mb-3">{t('s20_cook_dietary_sub')}</p>
+        {(form.cookDietary || []).includes('other') && (
+          <div className="animate-enter">
+            <textarea 
+              value={form.cookDietaryOther} 
+              onChange={e => setF('cookDietaryOther')(e.target.value)}
+              placeholder={lang === 'he' ? 'פרט כאן באילו העדפות נוספות תוכלו לתמוך...' : 'Specify other dietary needs you can support...'}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+            />
+          </div>
         )}
-        {errors.time && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.time}</p>}
       </div>
 
       {/* Soldiers */}
@@ -554,7 +587,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
       </div>
 
       {/* Preview */}
-      {(form.date || form.time || form.soldiers) && (
+      {(form.date || form.startTime || form.soldiers) && (
         <Card className="mb-5 bg-warm-50 border-warm-200">
           <p className="section-label mb-2.5">{t('s20_prev_title')}</p>
           <div className="space-y-1.5">
@@ -564,11 +597,11 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
                 <span className="font-medium text-gray-800">{new Date(form.date).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'})}</span>
               </div>
             )}
-            {form.time && (
+            {form.startTime && (
               <div className="flex justify-between text-xs">
                 <span className="text-warm-500">{t('s20_prev_time')}</span>
                 <span className="font-medium text-gray-800">
-                  {form.time === 'friday_evening' ? t('s20_fri_time') : form.time === 'saturday_lunch' ? t('s20_sat_time') : form.customTime || t('s20_cust_time')}
+                  {form.startTime} - {form.endTime}
                 </span>
               </div>
             )}

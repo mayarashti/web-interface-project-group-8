@@ -4,6 +4,7 @@ const { useState, useEffect } = React;
 function App() {
   const [screen,   setScreen]   = useState(1);
   const [lang,     setLang]     = useState('he');
+  const [showInfo, setShowInfo] = useState(false);
   const [formData, setFormData] = useState({ 
     languages:['he'], 
     hostings: [
@@ -24,6 +25,9 @@ function App() {
     selectedRequestId: null,
     editingHostingId: null,
   });
+
+  const { t } = useLang(); // Note: App needs useLang if we want to get translation here, but App is outside provider. 
+  // Actually, I should probably put the Modal inside the provider.
 
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
 
@@ -93,9 +97,9 @@ function App() {
     /* login */
     0:  <S0Login      onBack={() => go(1)} onLogin={handleDemoLogin} />,
     /* soldier flow */
-    1:  <S1Welcome    onSoldier={() => go(2)} onHost={() => go(18)} onLogin={() => go(0)} />,
+    1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3Account    data={formData} setData={setFormData} onNext={() => go(5)}  onBack={() => go(2)} />,
+    3:  <S3Account    data={formData} setData={setFormData} onNext={() => go(5)}  onBack={() => go(1)} />,
     5:  <S5Service    data={formData} setData={setFormData} onNext={() => go(6)}  onBack={() => go(3)} />,
     6:  <S6Upload     data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(5)} />,
     7:  <S7Kosher     data={formData} setData={setFormData} onNext={() => go(9)}  onBack={() => go(6)} />,
@@ -135,7 +139,7 @@ function App() {
     24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(18)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(1)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
     19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
     20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,
@@ -159,10 +163,48 @@ function App() {
   return (
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
-        {![15, 19, 21, 24].includes(screen) && <LangToggle />}
+        {![15, 19, 21, 24].includes(screen) && (
+          <LangToggle onInfo={[3, 16].includes(screen) ? () => setShowInfo(true) : null} />
+        )}
         {screens[screen] || screens[1]}
+        
+        {/* Global Info Modal for Registration Screens */}
+        <InfoModal screen={screen} isOpen={showInfo} onClose={() => setShowInfo(false)} />
       </div>
     </LangContext.Provider>
+  );
+}
+
+function InfoModal({ screen, isOpen, onClose }) {
+  const { t } = useLang();
+  if (!isOpen) return null;
+
+  const isSoldier = screen === 3;
+  const isHost = screen === 16;
+  
+  const prefix = isSoldier ? 's2' : 's18';
+  const features = [
+    { title: t(`${prefix}_f1_t`), desc: t(`${prefix}_f1_d`) },
+    { title: t(`${prefix}_f2_t`), desc: t(`${prefix}_f2_d`) },
+    { title: t(`${prefix}_f3_t`), desc: t(`${prefix}_f3_d`) },
+    { title: t(`${prefix}_f4_t`), desc: t(`${prefix}_f4_d`) },
+  ];
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={t(`${prefix}_title`)}>
+      <p className="text-sm text-warm-500 mb-6">{t(`${prefix}_sub`)}</p>
+      <div className="space-y-3">
+        {features.map((f, index) => (
+          <Card key={f.title} className="flex gap-4 items-start p-4">
+            <span className="w-8 h-8 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">{f.title}</p>
+              <p className="text-xs text-warm-500 mt-0.5 leading-relaxed">{f.desc}</p>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </Modal>
   );
 }
 

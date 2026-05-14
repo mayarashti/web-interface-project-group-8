@@ -16,16 +16,30 @@ function useLang() {
   return { lang, setLang, t, isRTL: lang ==='he'};
 }
 
-function LangToggle({ variant ='fixed'} = {}) {
-  const { lang, setLang } = useLang();
+function LangToggle({ variant ='fixed', onInfo } = {}) {
+  const { lang, setLang, t } = useLang();
   return (
-    <button
-      onClick={() => setLang(lang ==='he'?'en':'he')}
-      className={`lang-toggle${variant ==='inline'?'lang-toggle-inline':''}`}
-      title={lang ==='he'?'Switch to English':'עבור לעברית'}
-    >
-      {lang ==='he'?'EN':'עב'}
-    </button>
+    <div className={variant === 'fixed' ? 'fixed top-6 right-6 z-50 flex gap-2' : 'flex gap-2'}>
+      <button
+        onClick={() => setLang(lang ==='he'?'en':'he')}
+        className={`lang-toggle ${variant ==='inline'?'lang-toggle-inline':''}`}
+        style={variant === 'fixed' ? { position: 'static' } : {}}
+        title={lang ==='he'?'Switch to English':'עבור לעברית'}
+      >
+        {lang ==='he'?'EN':'עב'}
+      </button>
+      {onInfo && (
+        <button 
+          onClick={onInfo}
+          className={`w-10 h-10 bg-white rounded-full shadow-sm border border-warm-200 flex items-center justify-center text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-all active:scale-95`}
+          title={t('info_btn_title')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -36,6 +50,8 @@ const T = {
   he: {
     back:'חזור',
     continue:'המשך ←',
+    close:'סגור',
+    info_btn_title: 'איך זה עובד?',
     step_label: (s, total) => `שלב ${s} מתוך ${total}`,
 
     /* S1 Welcome */
@@ -323,6 +339,8 @@ const T = {
     s20_submit:'פרסם אירוח',
     s20_done_title:'האירוח פורסם!',
     s20_done_sub:'חיילים באזורכם יוכלו לראות את האירוח ולבקש להצטרף',
+    s20_cook_dietary: 'לאילו העדפות אוכל אתם יכולים לבשל?',
+    s20_cook_dietary_sub: 'בחרו את כל האפשרויות שמתאימות לכם',
     v_date:'יש לבחור תאריך', v_time:'יש לבחור שעה', v_sol:'יש לבחור מספר חיילים',
 
     /* Shared labels */
@@ -347,6 +365,7 @@ const T = {
   en: {
     back:'Back',
     continue:'Continue →',
+    close:'Close',
     step_label: (s, total) => `Step ${s} of ${total}`,
 
     /* S1 Welcome */
