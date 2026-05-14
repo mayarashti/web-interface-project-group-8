@@ -56,14 +56,6 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
             error={errors.phone} 
           />
           <Input 
-            label={t('s3_email')} 
-            type="email" 
-            value={data.email || ''} 
-            onChange={set('email')} 
-            placeholder={t('s3_ph_email')} 
-            error={errors.email} 
-          />
-          <Input 
             label={t('s3_pass')} 
             type="password" 
             value={data.password || ''} 

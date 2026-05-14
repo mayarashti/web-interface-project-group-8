@@ -30,7 +30,6 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <p className="section-label mb-3">{t('s12_personal')}</p>
         <Row label={t('s12_full')}  value={data.fullName} />
         <Row label={t('s12_phone')} value={data.phone} />
-        <Row label={t('s12_email')} value={data.email} />
       </Card>
 
       <Card className="mb-4">
