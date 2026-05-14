@@ -1,60 +1,73 @@
 # Shabbat Dinner - Processes Sheet
 
-This document outlines the user flows and key processes for both the Soldier and Host Family sides of the application based on the existing codebase.
+This document outlines the user flows and key processes for both the Soldier and Host Family sides of the application, updated to reflect the new streamlined registration and smart-matching dashboards.
 
-## 🪖 Soldier Process (Screens 1-15)
-
-The soldier flow focuses on verifying identity and collecting precise preferences to find the best host family match.
-
-### Registration Flow
-1. **S1 Welcome:** Entry point. User selects "I am a Soldier".
-2. **S2 Explain:** Brief overview of how the matching process works.
-3. **S3 Account:** Collects basic info (First/Last name, Phone, Email, Password).
-4. **S4 Verify:** OTP (One-Time Password) phone verification.
-5. **S5 Service:** Collects military role (Combat, Combat Support, Home Front) and unit details.
-6. **S6 Upload:** Security verification (Upload Military ID / Hoger).
-7. **S7 Kosher:** Religious preferences (Mehadrin, Standard Kosher, No Preference).
-8. **S8 Location:** Target city where they need a meal.
-9. **S9 Allergies:** Dietary restrictions (Peanuts, Gluten, Dairy, etc.).
-10. **S10 Preferences:** Lifestyle needs (Smoking, Pets, Sleep accommodations).
-11. **S11 Profile:** Free-text bio and profile photo upload.
-12. **S12 Summary:** Review all inputted data before final submission.
-13. **S13 Pending:** System approval waiting screen.
-14. **S14 Success:** Confirmation of successful registration.
-
-### Soldier Home Dashboard
-- **S15 Home:** The main dashboard for approved soldiers.
-  - Features an interactive Map (Leaflet) showing nearby available hosts.
-  - Lists upcoming meals and status.
-  - Allows requesting new meals.
-  - **S21 Soldier Profile:** Accessible via the settings gear icon (⚙️) to edit personal details, kosher preferences, allergies, and bio after registration.
+## 🔐 Login Flow (Shared)
+- **Login:** Users log in using strictly their **Phone Number** and **Password**. No email is required or collected in the system.
 
 ---
 
-## 🏡 Host Family Process (Screens 16-20)
+## 🪖 Soldier Process
 
-The host flow is designed to build a detailed profile of the family's home environment and the types of meals they offer.
+The soldier flow focuses on a quick 3-step registration and an LLM-powered smart-matching dashboard.
 
 ### Registration Flow
-1. **S1 Welcome:** Entry point. User selects "I am a Host Family".
-2. **S18 Host Explain:** Brief overview of the responsibilities and benefits of hosting.
-3. **S16 Host Registration:** A wizard divided into 5 internal steps:
-   - **Step 1:** Personal Info (Family Name, Phone, Email).
-   - **Step 2:** Location (City / Address). *(Hosting Type moved to S20)*
-   - **Step 3:** Lifestyle (Shabbat Observance level, Kitchen Kosher level).
-   - **Step 4:** Services (Can offer a place to sleep, Can assist with transport).
-   - **Step 5:** Home Vibe (Tags like "Kids", "Quiet", "Singing"). *(Capacity moved to S20)*
-4. **S17 Host Success:** Confirmation of successful profile creation.
+*Note: Email has been completely removed from the registration and login process. Registration is now 3 focused steps.*
+1. **Step 1: Account & Verification:** Full Name, Phone Number (serves as the login ID), Password, and Soldier Identification (Hoger/Military ID).
+2. **Step 2: Preferences:** - Service Type: Regular or Reserve duty.
+   - Kosher Level: Don't care, Separates Meat/Dairy, or Kosher Kitchen.
+   - Shabbat Observance: Not observing, Traditional, or Keep Shabbat.
+   - Dietary/Allergies (Multi-select): Vegetarian, Vegan, Celiac (Gluten-Free), Lactose Intolerant, Nut Allergy, No Preferences.
+   - Pets: OK with pets? (Yes/No)
+3. **Step 3: Profile:** Upload a Profile Photo and a free-text "Tell me about yourself" bio. 
+
+### Soldier Home Dashboard
+- **Header:** Profile name, Settings gear (to edit profile details), and an EN/HE language toggle.
+- **Smart Map:** Automatically displays the profile of the *best-matched* host family based on LLM analysis of preferences. Includes an option to view additional family options if desired.
+- **Open New Hosting Search:** A modal/window to request a meal. *(Note: Personal preferences like kosher/pets are pulled from the profile and no longer asked here).*
+  - **Timing:** Dinner date and time.
+  - **Logistics:** Checkbox for pickup. Checkbox for an overnight stay (if checked, opens a calendar to select the specific dates/number of nights).
+  - **Location:** Current address / map pin, and a slider/input for how far they are willing to travel (radius).
+  - **Come with Friends:** A count slider. If friends are added (>0), the following dynamic fields appear for the group:
+    - Kosher needed? (Checkbox)
+    - Shabbat observant? (Checkbox)
+    - Allergies? (Multi-select: Vegetarian, Vegan, Celiac, Lactose, Nuts)
+    - Notes: (Free text box)
+  - **Action:** "Create Search" button.
+- **Search Status:** A list displaying active searches with specific system states:
+  - **States:** - *Searching:* Looking for a match.
+    - *Matched:* Family assigned (Shows the matched family name).
+    - *Canceled:* Search aborted by the soldier.
+  - **Matched State Actions:** Tapping a matched search opens a bottom-up sheet with the family's full details, a link to their map location, a WhatsApp message link, and a **"Rematch" button**. Clicking "Rematch" opens a prompt/box for the soldier to fill in a reason for canceling the current match before initiating a new search.
+  - **Management:** Options to edit or cancel the search entirely.
+
+---
+
+## 🏡 Host Family Process
+
+The host flow focuses on capturing the home's vibe and capabilities in 3 steps, paired with a proactive dashboard for finding guests.
+
+### Registration Flow
+*Note: Email has been completely removed from the registration and login process.*
+1. **Step 1: Account & Location:** Full Name, Phone Number (serves as the login ID), Password, and Address (includes an option to pin the exact location on the map).
+2. **Step 2: Lifestyle & Accommodation:** - Kosher Level: No kosher keeping, Separates Meat/Dairy, or Kosher Kitchen.
+   - Shabbat Observance: Not observing, Traditional, or Keep Shabbat.
+   - Home Environment: Pets in the house? (If yes, a free-text box opens to specify the animal due to allergies).
+   - Cooking Capabilities (Multi-select): Can accommodate Vegetarian, Vegan, Celiac (Gluten-Free), Lactose Intolerant, Nut Allergy.
+3. **Step 3: Home Vibe:** A free-text area to describe the atmosphere of the house and a Profile Photo upload.
 
 ### Host Home Dashboard & Management
-- **S19 Host Home:** The unified dashboard for families.
-  - **S22 Host Profile:** Accessible via the settings gear icon (⚙️) to edit family details and home environment post-registration.
-  - **My Hostings:** A centralized list of all hostings created by the family.
-    - **Auto-Join:** When a soldier requests to join, they are automatically added to the guest list (no manual approval required). The family can see the soldier's name and unit directly in the hosting card.
-    - **Capacity Tracking:** Displays real-time spots taken vs. total capacity.
-    - **Edit Details:** Families can edit an existing hosting (change date, time, capacity) without having to delete and recreate it.
-    - **Cancel Hosting:** Families can cancel a hosting entirely.
-- **S20 New Hosting / Edit Hosting:** Form to open a new hosting slot or edit an existing one.
-  - Select Date (Upcoming Fridays) and Time (Friday Evening, Saturday Lunch, Custom).
-  - Select Capacity (Maximum number of soldiers for *this specific meal*).
-  - Add free-text notes and upload photos of the home/table.
+- **Header:** Profile name, Settings gear (to edit profile details), and an EN/HE language toggle.
+- **Smart Alerts:** A notification system alerting the family if a soldier is within a specific radius looking for a host for the upcoming Shabbat. 
+- **Matching:** System utilizes an LLM based on lifestyle preferences, home vibe, and the history of both families and soldiers to suggest the best fits.
+- **Open New Hosting:** A modal/window to open a meal slot. *(Note: Photo uploads are removed from this step; the system relies on the profile photo).*
+  - **Details:** Dinner date and time, Capacity (number of guests).
+  - **Logistics:** Checkboxes to indicate if the family can host for the night or provide a pickup.
+  - **Notes:** Free text box for specific meal details.
+  - **Action:** "Create Hosting" button.
+- **Hostings Status:** A list of the family's active/upcoming hostings with specific system states:
+  - **States:**
+    - *Open:* Spots available for soldiers.
+    - *Full:* Capacity reached.
+    - *Canceled:* Hosting canceled by the family.
+  - **Guest Details:** Tapping on a specific hosting opens a bottom-up sheet showing the full details of the matched soldiers. Includes a direct button to send a WhatsApp message to each soldier.
