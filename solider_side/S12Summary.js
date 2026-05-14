@@ -20,8 +20,8 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       onBack={onBack}
       onNext={onSubmit}
       nextLabel={t('s12_submit')}
-      step={8}
-      total={8}
+      step={6}
+      total={6}
       icon
       title={t('s12_title')}
       sub={t('s12_sub')}

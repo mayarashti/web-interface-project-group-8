@@ -99,10 +99,8 @@ function App() {
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3Account    data={formData} setData={setFormData} onNext={() => go(5)}  onBack={() => go(1)} />,
-    5:  <S5Service    data={formData} setData={setFormData} onNext={() => go(6)}  onBack={() => go(3)} />,
-    6:  <S6Upload     data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(5)} />,
-    7:  <S7Kosher     data={formData} setData={setFormData} onNext={() => go(9)}  onBack={() => go(6)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} />,
+    7:  <S7Kosher     data={formData} setData={setFormData} onNext={() => go(9)}  onBack={() => go(3)} />,
     9:  <S9Allergies  data={formData} setData={setFormData} onNext={() => go(10)} onBack={() => go(7)} />,
     10: <S10Prefs     data={formData} setData={setFormData} onNext={() => go(11)} onBack={() => go(9)} />,
     11: <S11Profile   data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(10)} />,

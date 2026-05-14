@@ -17,8 +17,8 @@ function S10Prefs({ data, setData, onNext, onBack }) {
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!data.withSoldiers || !data.pets}
-      step={6}
-      total={8}
+      step={4}
+      total={6}
       icon
       title={t('s10_title')}
       sub={t('s10_sub')}

@@ -17,8 +17,8 @@ function S11Profile({ data, setData, onNext, onBack }) {
     <ScreenLayout
       onBack={onBack}
       onNext={onNext}
-      step={7}
-      total={8}
+      step={5}
+      total={6}
       icon
       title={t('s11_title')}
       sub={t('s11_sub')}

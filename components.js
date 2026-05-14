@@ -3,7 +3,8 @@
 ───────────────────────────────────────── */
 
 const { useState, useEffect, useRef } = React;
-const clsx = (...args) => args.filter(Boolean).join(' ');
+window.clsx = (...args) => args.filter(Boolean).join(' ');
+const clsx = window.clsx;
 
 function ProgressBar({ step, total }) {
   const { t } = useLang();
