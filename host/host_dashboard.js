@@ -3,7 +3,7 @@
 var { useState } = React;
 
 function S19HostHome({ data, setData, onEditProfile }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const hostings = data.hostings || [];
   const [selectedHosting, setSelectedHosting] = useState(null);
 
@@ -21,7 +21,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
     if (confirm(t('s19_confirm_cancel'))) {
       setData(prev => ({
         ...prev,
-        hostings: prev.hostings.filter(h => h.id !== id)
+        hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h)
       }));
     }
   };
@@ -52,18 +52,24 @@ function S19HostHome({ data, setData, onEditProfile }) {
 
         {/* Smart Alerts Section */}
         <div className="mb-6">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{t('s19_smart_alerts')}</h2>
-          <Card className="p-4 bg-amber-50 border-amber-200">
-            <div className="flex gap-3 items-start">
-              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-lg">🔔</span>
+          <p className="section-label mb-3">{t('s19_smart_alerts')}</p>
+          {data.hasSoldierNearby ? (
+            <Card className="p-4 bg-amber-50 border-amber-200">
+              <div className="flex gap-3 items-start">
+                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">🔔</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{t('s19_alert_title')}</p>
+                  <p className="text-xs text-warm-600 mt-1 leading-relaxed">{t('s19_alert_desc')}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{t('s19_alert_title')}</p>
-                <p className="text-xs text-warm-600 mt-1 leading-relaxed">{t('s19_alert_desc')}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="p-4 border-dashed text-center">
+              <p className="text-sm text-warm-400">{lang === 'he' ? 'אין התראות חדשות' : 'No new alerts'}</p>
+            </Card>
+          )}
         </div>
 
         {/* My Hostings Header */}
@@ -94,10 +100,11 @@ function S19HostHome({ data, setData, onEditProfile }) {
             {hostings.map(h => {
               const guests = h.guests || [];
               const capacity = parseInt(h.soldiers) || 0;
-              const isFull = guests.length >= capacity && capacity > 0;
+              const isCanceled = h.status === 'canceled';
+              const isFull = !isCanceled && guests.length >= capacity && capacity > 0;
 
               return (
-                <Card key={h.id} className="p-0 overflow-hidden">
+                <Card key={h.id} className={`p-0 overflow-hidden${isCanceled ? ' opacity-60' : ''}`}>
                   {/* Hosting Info */}
                   <div
                     className="p-4 border-b border-warm-100 cursor-pointer hover:bg-warm-50 transition-colors"
@@ -106,14 +113,19 @@ function S19HostHome({ data, setData, onEditProfile }) {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold text-gray-900 text-sm">
-                          {new Date(h.date).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'short' })}
+                          {new Date(h.date).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
                         </p>
                         <p className="text-xs text-warm-500 mt-0.5">
                           {h.time === 'friday_evening' ? t('s20_fri_eve') : h.time === 'saturday_lunch' ? t('s20_sat_lun') : h.customTime || h.time}
                         </p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${isFull ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
-                        {guests.length}/{capacity} {t('s19_spots_taken')}
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                        isCanceled ? 'bg-warm-100 text-warm-500' :
+                        isFull ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
+                      }`}>
+                        {isCanceled
+                          ? (lang === 'he' ? 'בוטל' : 'Canceled')
+                          : `${guests.length}/${capacity} ${t('s19_spots_taken')}`}
                       </span>
                     </div>
                     {h.note && <p className="text-xs text-warm-400 mt-2 leading-relaxed line-clamp-1">"{h.note}"</p>}
@@ -121,25 +133,36 @@ function S19HostHome({ data, setData, onEditProfile }) {
 
                   {/* Actions */}
                   <div className="px-4 py-3 bg-warm-50 flex justify-end gap-3">
-                    <button
-                      onClick={() => handleCancel(h.id)}
-                      className="text-xs font-semibold text-warm-500 hover:text-red-600 transition-colors py-1"
-                    >
-                      {t('s19_cancel')}
-                    </button>
-                    <button
-                      onClick={() => handleEdit(h.id)}
-                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
-                    >
-                      {t('s19_edit')}
-                    </button>
-                    {guests.length > 0 && (
+                    {isCanceled ? (
                       <button
-                        onClick={() => setSelectedHosting(h)}
-                        className="text-xs font-semibold bg-white border border-warm-200 rounded-lg px-3 py-1 text-gray-700 shadow-xs hover:bg-warm-50 transition-colors"
+                        onClick={() => setData(prev => ({ ...prev, hostings: prev.hostings.map(h2 => h2.id === h.id ? { ...h2, status: 'open' } : h2) }))}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
                       >
-                        {t('s19_view_guests')} ({guests.length})
+                        {lang === 'he' ? 'שחזר אירוח' : 'Restore'}
                       </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleCancel(h.id)}
+                          className="text-xs font-semibold text-warm-500 hover:text-red-600 transition-colors py-1"
+                        >
+                          {t('s19_cancel')}
+                        </button>
+                        <button
+                          onClick={() => handleEdit(h.id)}
+                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
+                        >
+                          {t('s19_edit')}
+                        </button>
+                        {guests.length > 0 && (
+                          <button
+                            onClick={() => setSelectedHosting(h)}
+                            className="text-xs font-semibold bg-white border border-warm-200 rounded-lg px-3 py-1 text-gray-700 shadow-xs hover:bg-warm-50 transition-colors"
+                          >
+                            {t('s19_view_guests')} ({guests.length})
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </Card>

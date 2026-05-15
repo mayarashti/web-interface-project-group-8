@@ -77,26 +77,23 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
           )}
         </div>
         
-        <button 
+        {/* New Request CTA — clean premium card, no decorative noise */}
+        <button
           onClick={() => onNewRequest()}
-          className="w-full text-right p-8 rounded-3xl bg-brand-500 text-white shadow-lg hover:bg-brand-600 transition-all group relative overflow-hidden"
+          className="w-full text-start p-5 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-300 hover:shadow-md transition-all group flex items-center gap-4"
         >
-          <div className="flex items-center gap-5 relative z-10">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-            </div>
-            <div className="flex-1 text-left rtl:text-right">
-              <h2 className="text-xl font-bold">{t('s15_landing_new_req_title')}</h2>
-              <p className="text-brand-100 text-sm opacity-90">{t('s15_form_sub')}</p>
-            </div>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
-              <path d="M9 18l6-6-6-6"/>
+          <div className="w-12 h-12 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-500 group-hover:bg-brand-500 group-hover:text-white transition-colors flex-shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14"/>
             </svg>
           </div>
-          {/* Decorative pattern */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-gray-900">{t('s15_landing_new_req_title')}</p>
+            <p className="text-xs text-warm-500 mt-0.5">{t('s15_form_sub')}</p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-warm-400 group-hover:text-brand-500 transition-colors flex-shrink-0">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -492,7 +489,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
             <h2 className="text-xl font-bold text-gray-900">{t('s15_no_matches_title')}</h2>
             <p className="text-warm-500 max-w-sm">{t('s15_no_matches_sub')}</p>
-            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{t('lang') === 'he' ? '×¢×“×›×•×Ÿ ×‘×§×©×”' : 'Update Request'}</Btn>
+            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{lang === 'he' ? 'עדכון בקשה' : 'Update Request'}</Btn>
           </div>
         ) : (
           <React.Fragment>
@@ -645,6 +642,25 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                   />
                 </div>
               )}
+              {/* Group kosher & shabbat — required by processes_sheet for guestCount > 1 */}
+              <RadioGroup
+                label={lang === 'he' ? 'חברים זקוקים לכשרות?' : 'Do friends need kosher food?'}
+                value={request.friendKosher || 'no'}
+                onChange={(val) => handleChange('friendKosher', val)}
+                options={[
+                  { value: 'yes', label: t('s15_yes') },
+                  { value: 'no',  label: t('s15_no')  },
+                ]}
+              />
+              <RadioGroup
+                label={lang === 'he' ? 'חברים שומרי שבת?' : 'Are friends Shabbat observant?'}
+                value={request.friendShabbat || 'no'}
+                onChange={(val) => handleChange('friendShabbat', val)}
+                options={[
+                  { value: 'yes', label: t('s15_yes') },
+                  { value: 'no',  label: t('s15_no')  },
+                ]}
+              />
             </div>
           )}
 
@@ -681,11 +697,15 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
           <RadioGroup 
             label={t('s15_duration')}
             value={request.duration}
-            onChange={(val) => handleChange('duration', val)}
+            onChange={(val) => {
+              handleChange('duration', val);
+              if (val === 'full' || val === 'weekend') handleChange('needSleep', true);
+              else handleChange('needSleep', false);
+            }}
             options={[
-              { value: 'dinner', label: t('s15_duration_dinner') },
-              { value: 'full', label: t('s15_duration_full') },
-              { value: 'weekend', label: t('s15_duration_weekend') }
+              { value: 'dinner',  label: t('s15_duration_dinner') },
+              { value: 'full',    label: t('s15_duration_full'),    sub: lang === 'he' ? 'כולל לינה' : 'Includes overnight' },
+              { value: 'weekend', label: t('s15_duration_weekend'), sub: lang === 'he' ? 'שישי–שבת' : 'Fri–Sat' },
             ]}
           />
 
@@ -711,7 +731,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
           <div className="mb-4">
             <label className="block text-sm font-semibold text-warm-600 mb-1.5">
-              {t('s15_travel_dist')}: {request.travelDistance}
+              {t('s15_travel_dist')}: {request.travelDistance} km
             </label>
             <input 
               type="range" 
@@ -858,6 +878,18 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
                         <span className={matchCount > 0 ? "text-brand-600 text-xs font-semibold" : "text-warm-400 text-xs"}>
                           {matchCount === 0 ? t('s15_no_matches_found') : t('s15_matches_found', matchCount)}
                         </span>
+                        {req.status && (
+                          <span className={clsx(
+                            'mt-0.5 inline-flex text-[11px] font-bold px-2 py-0.5 rounded-full w-fit border',
+                            req.status === 'matched'   && 'bg-support-50 text-support-600 border-support-100',
+                            req.status === 'searching' && 'bg-brand-50 text-brand-600 border-brand-100',
+                            req.status === 'canceled'  && 'bg-warm-100 text-warm-500 border-warm-200',
+                          )}>
+                            {req.status === 'matched'   && (lang === 'he' ? '✓ שויך' : '✓ Matched')}
+                            {req.status === 'searching' && (lang === 'he' ? '⟳ מחפש' : '⟳ Searching')}
+                            {req.status === 'canceled'  && (lang === 'he' ? '✕ בוטל' : '✕ Canceled')}
+                          </span>
+                        )}
                       </div>
                       <div className="w-10 h-10 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center group-hover/btn:bg-brand-500 group-hover/btn:text-white transition-colors">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
