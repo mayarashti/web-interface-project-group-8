@@ -764,7 +764,6 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
   const [form, setForm] = useState({
     fullName: data.fullName || '',
     phone: data.phone || '',
-    email: data.email || '',
     bio: data.bio || '',
     kosher: data.kosher || 'kosher',
     shabbat: data.shabbat || 'no',
@@ -902,7 +901,6 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
           <h2 className="section-label">{t('s12_personal')}</h2>
           <Input label={t('s3_first')} value={form.fullName} onChange={setF('fullName')} />
           <Input label={t('s3_phone')} value={form.phone} onChange={setF('phone')} />
-          <Input label={t('s3_email')} value={form.email} onChange={setF('email')} />
         </Card>
 
         {/* Preferences Section */}

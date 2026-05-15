@@ -1,8 +1,8 @@
-/* S3PersonalDetails â€” Combined personal details and verification document */
+﻿/* S3PersonalDetails — Combined personal details and verification document */
 var { useState } = React;
 
 function S3PersonalDetails({ data, setData, onNext, onBack }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
 
@@ -10,6 +10,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
     const e = {};
     if (!data.fullName?.trim()) e.fullName = t('v_name');
     if (!data.phone?.trim() || data.phone.replace(/\D/g, '').length < 9) e.phone = t('err_phone');
+    if (!data.soldierId?.trim()) e.soldierId = lang === 'he' ? 'נדרש מספר אישי' : 'Soldier ID required';
     if (!data.password || data.password.length < 6) e.password = t('err_pass');
     if (!data.docUploaded) e.doc = t('s6_pick_first');
     setErrors(e);
@@ -32,7 +33,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
       onNext={() => { if (validate()) onNext(); }}
       step={1}
       total={3}
-      icon
+      icon="🪶"
       title={t('s3_title')}
       sub={t('s3_sub')}
     >
@@ -53,6 +54,13 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
             onChange={set('phone')} 
             placeholder="050-1234567" 
             error={errors.phone} 
+          />
+          <Input
+            label={lang === 'he' ? 'מספר אישי / ת״ז' : 'Soldier ID / Personal Number'}
+            value={data.soldierId || ''}
+            onChange={set('soldierId')}
+            placeholder={lang === 'he' ? '1234567' : '1234567'}
+            error={errors.soldierId}
           />
           <Input 
             label={t('s3_pass')} 
@@ -103,7 +111,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
                 onClick={() => set('docUploaded')(false)}
                 className="mr-auto text-xs text-warm-500 underline"
               >
-                ×¢×¨×•×š
+                {lang === 'he' ? 'ערוך' : 'Edit'}
               </button>
             </Card>
           )}
@@ -115,11 +123,11 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
   );
 }
 
-/* S7Preferences â€” Consolidated preferences page */
+/* S7Preferences — Consolidated preferences page */
 var { useState } = React;
 
 function S7Preferences({ data, setData, onNext, onBack }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
@@ -143,7 +151,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
   ];
 
   const validate = () => {
-    return data.kosher && data.shabbatKeeps && data.withSoldiers && data.pets;
+    return data.kosher && data.shabbatKeeps && data.withSoldiers && data.pets && data.serviceType;
   };
 
   return (
@@ -152,11 +160,22 @@ function S7Preferences({ data, setData, onNext, onBack }) {
       onNext={() => { if (validate()) onNext(); }}
       step={2}
       total={3}
-      icon
+      icon="🍽️"
       title={t('s7_title')}
       sub={t('s7_sub')}
     >
       <div className="space-y-8 pb-10">
+        {/* Service Type Section */}
+        <RadioGroup
+          label={lang === 'he' ? 'סוג שירות' : 'Service Type'}
+          value={data.serviceType || ''}
+          onChange={set('serviceType')}
+          options={[
+            { value: 'regular', label: t('map_reg') },
+            { value: 'reserve', label: t('map_res') },
+          ]}
+        />
+
         {/* Kosher Section */}
         <RadioGroup
           label={t('s7_kosh')}
@@ -189,7 +208,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
             onChange={val => set('allergies')(val)}
           />
           {(data.allergies || []).includes('other') && (
-            <div className="mt-3 animate-enter">
+            <div className="mt-3">
               <textarea
                 value={data.allergyNote || ''}
                 onChange={e => set('allergyNote')(e.target.value)}
@@ -236,7 +255,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
         {/* Profile Section (Bio & Photo) */}
         <div className="pt-6 border-t border-warm-200">
           <p className="text-sm font-semibold text-warm-600 mb-4">{t('s11_title')}</p>
-          
+
           <div className="flex justify-center mb-6">
             <div onClick={() => {
               const colors = ['#b86442', '#6f8f72', '#687076', '#d59f83', '#5e7b61'];
@@ -270,14 +289,14 @@ function S7Preferences({ data, setData, onNext, onBack }) {
             rows={4}
             maxLength={300}
           />
-          <p className="text-[10px] text-warm-400 mt-1 text-left">{(data.bio || '').length}/300</p>
+          <p className="text-[10px] text-warm-400 mt-1 text-start">{(data.bio || '').length}/300</p>
         </div>
       </div>
     </ScreenLayout>
   );
 }
 
-/* S12Summary â€” Registration summary & submit */
+/* S12Summary — Registration summary & submit */
 
 function S12Summary({ data, onEdit, onSubmit, onBack }) {
   const { t } = useLang();
@@ -285,11 +304,11 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
   const Row = ({ label, value }) => value ? (
     <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
       <span className="text-xs text-warm-500 font-medium w-32 flex-shrink-0">{label}</span>
-      <span className="text-sm text-gray-800 text-left flex-1 mr-2">{value}</span>
+      <span className="text-sm text-gray-800 text-start flex-1 ms-2">{value}</span>
     </div>
   ) : null;
 
-  const svc  = { regular: t('map_reg'), reserve: t('map_res'), career: t('map_car') };
+  const svc  = { regular: t('map_reg'), reserve: t('map_res') };
   const kosh = { none: t('map_none'), kosher: t('map_kosh'), mehadrin: t('map_meh') };
   const pets = { ok: t('map_pets_ok'), notok: t('map_pets_no'), allergy: t('map_pets_al') };
   const sol  = { yes: t('map_sol_yes'), no: t('map_sol_no'), dontmind: t('map_sol_dm') };
@@ -301,7 +320,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       nextLabel={t('s12_submit')}
       step={3}
       total={3}
-      icon
+      icon="📋"
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
@@ -315,15 +334,13 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <p className="section-label mb-3">{t('s12_mil')}</p>
         <Row label={t('s12_stype')} value={svc[data.serviceType]} />
         <Row label={t('s12_unit')}  value={data.unit} />
-        <Row label={t('s12_doc')}   value={data.docUploaded ? t('s12_uploaded') : 'â€”'} />
+        <Row label={t('s12_doc')}   value={data.docUploaded ? t('s12_uploaded') : '—'} />
       </Card>
 
       <Card className="mb-4">
         <p className="section-label mb-3">{t('s12_prefs')}</p>
         <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
         <Row label={t('s12_shab')}   value={data.shabbatKeeps === 'yes' ? t('s7_yes') : data.shabbatKeeps === 'no' ? t('s7_no') : null} />
-        <Row label={t('s12_sleep')}  value={data.needSleep    ? t('map_sleep') : null} />
-        <Row label={t('s12_walk')}   value={data.walkDistance ? t('map_walk')  : null} />
         <Row label={t('s12_allerg')} value={(data.allergies || []).join(', ') || t('s12_no_allerg')} />
         <Row label={t('s12_pets')}   value={pets[data.pets]} />
         <Row label={t('s12_sol')}    value={sol[data.withSoldiers]} />
@@ -343,19 +360,19 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
   );
 }
 
-/* S13Pending â€” Profile under review (auto-advances after 3.5s) */
-var { useState, useEffect } = React;
+/* S13Pending — Profile under review (auto-advances after 3.5s) */
+var { useState: useStateS13, useEffect: useEffectS13 } = React;
 
 function S13Pending({ onHome, autoApprove }) {
   const { t } = useLang();
-  const [approved, setApproved] = useState(false);
+  const [approved, setApproved] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const tm = setTimeout(() => setApproved(true), 3500);
     return () => clearTimeout(tm);
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (approved) {
       const tm = setTimeout(() => autoApprove(), 1200);
       return () => clearTimeout(tm);
@@ -394,8 +411,7 @@ function S13Pending({ onHome, autoApprove }) {
   );
 }
 
-
-/* S14Success â€” Registration complete, welcome screen */
+/* S14Success — Registration complete, welcome screen */
 
 function S14Success({ onHome, name }) {
   const { t } = useLang();

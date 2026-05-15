@@ -232,20 +232,42 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, onProfile }) {
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }) {
+  const { lang } = useLang();
   return (
     <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-warm-200">
-      <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h1>
-        {onProfile && (
-          <button 
-            onClick={onProfile}
-            className="w-10 h-10 rounded-full bg-brand-50 border border-brand-100 text-brand-700 flex items-center justify-center hover:bg-brand-100 transition-colors active:scale-95"
-            aria-label="Profile Settings"
-          >
-            <span className="text-xl leading-none">⚙️</span>
-          </button>
-        )}
+      <div className="max-w-md mx-auto px-5 h-16 flex items-center justify-between gap-3">
+        {/* Start side: optional back btn + title */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="app-icon-btn flex-shrink-0"
+              aria-label={lang === 'he' ? 'חזור' : 'Back'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d={lang === 'he' ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'}/>
+              </svg>
+            </button>
+          )}
+          <div className="min-w-0">
+            {eyebrow && <p className="text-xs font-semibold text-brand-600 truncate leading-none mb-0.5">{eyebrow}</p>}
+            <h1 className="text-lg font-bold text-gray-900 tracking-tight truncate leading-tight">{title}</h1>
+          </div>
+        </div>
+        {/* End side: extra actions + profile/settings btn */}
+        <div className="app-header-actions flex-shrink-0">
+          {actions}
+          {profileAction || (onProfile && (
+            <button
+              onClick={onProfile}
+              className="app-icon-btn"
+              aria-label={lang === 'he' ? 'הגדרות' : 'Settings'}
+            >
+              <span className="text-base leading-none">⚙️</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

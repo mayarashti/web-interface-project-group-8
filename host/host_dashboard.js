@@ -368,7 +368,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 ───────────────────────────────────────── */
 
 function S22HostProfile({ data, setData, onBack }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const [form, setForm] = useState({
     hostName:          data.hostName || data.hostFullName || '',
@@ -401,18 +401,25 @@ function S22HostProfile({ data, setData, onBack }) {
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-12">
-      <AppHeader title={t('s16_sum_name') || 'פרופיל'} onProfile={onBack} />
+      <AppHeader
+        title={lang === 'he' ? 'הגדרות פרופיל' : 'Profile Settings'}
+        onBack={onBack}
+      />
 
       <div className="max-w-md mx-auto px-5 pt-6 space-y-5">
         <Card className="p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">פרטי המשפחה</h2>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
+            {lang === 'he' ? 'פרטי המשפחה' : 'Family Details'}
+          </h2>
           <Input label={t('s16_name')} value={form.hostName} onChange={setF('hostName')} />
           <Input label={t('s16_phone')} type="tel" value={form.hostPhone} onChange={setF('hostPhone')} />
           <Input label={t('s16_city')} value={form.hostCity} onChange={setF('hostCity')} />
         </Card>
 
         <Card className="p-5 space-y-5">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">אורח חיים</h2>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
+            {lang === 'he' ? 'אורח חיים' : 'Lifestyle'}
+          </h2>
           <div>
             <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_shabbat')}</p>
             <RadioGroup options={shabbatOpts} value={form.hostShabbat} onChange={setF('hostShabbat')} />
@@ -424,7 +431,9 @@ function S22HostProfile({ data, setData, onBack }) {
         </Card>
 
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>
-          {saved ? '✓ נשמר בהצלחה' : 'שמור שינויים'}
+          {saved
+            ? (lang === 'he' ? '✓ נשמר בהצלחה' : '✓ Saved successfully')
+            : (lang === 'he' ? 'שמור שינויים' : 'Save Changes')}
         </Btn>
       </div>
     </div>

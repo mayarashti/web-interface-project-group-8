@@ -46,7 +46,6 @@ function App() {
     lastName: 'כהן',
     fullName: 'יונתן כהן',
     phone: '052-1234567',
-    email: 'soldier@example.com',
     unit: 'גולני',
     serviceType: 'regular',
     languages: ['he'],
@@ -57,15 +56,14 @@ function App() {
     allergies: ['none'],
     preferWithSoldiers: true,
     requests: [
-      { id: 10, when: '2026-06-22', kosher: true, shabbat: true, needSleep: false, location: 'חיפה' },
-      { id: 11, when: '2026-06-29', kosher: true, shabbat: true, needSleep: true, location: 'חיפה' },
+      { id: 10, when: '2026-06-22', kosher: true, shabbat: true, needSleep: false, location: 'חיפה', status: 'searching' },
+      { id: 11, when: '2026-06-29', kosher: true, shabbat: true, needSleep: true,  location: 'חיפה', status: 'matched' },
     ],
   };
 
   const demoHostData = {
-    hostFullName: 'משפחת כהן',
+    hostName: 'משפחת כהן',
     hostPhone: '052-7654321',
-    hostEmail: 'family@example.com',
     hostCity: 'חיפה',
     hostKosher: 'kosher',
     hostShabbat: 'traditional',
@@ -74,6 +72,7 @@ function App() {
     hostCanTransport: false,
     hostCapacity: 4,
     hostVibeTags: ['kids', 'shabbat_atm'],
+    hasSoldierNearby: true,
   };
 
   const handleDemoLogin = (role) => {

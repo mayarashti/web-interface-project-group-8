@@ -3,11 +3,12 @@ var { useState } = React;
 /* S0Login — Login screen */
 
 function S0Login({ onBack, onLogin }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,7 +30,8 @@ function S0Login({ onBack, onLogin }) {
   };
 
   const handleForgotPassword = () => {
-    alert('Password reset functionality coming soon!');
+    setForgotSent(true);
+    setTimeout(() => setForgotSent(false), 4000);
   };
 
   return (
@@ -83,7 +85,7 @@ function S0Login({ onBack, onLogin }) {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 text-brand-600 bg-white border-warm-300 rounded focus:ring-brand-500 focus:ring-2"
               />
-              <span className="ml-2 text-sm text-gray-600">{t('s0_remember')}</span>
+              <span className="ms-2 text-sm text-gray-600">{t('s0_remember')}</span>
             </label>
             <button
               type="button"
@@ -94,16 +96,26 @@ function S0Login({ onBack, onLogin }) {
             </button>
           </div>
 
+          {forgotSent && (
+            <p className="text-xs text-center text-support-600 font-medium animate-fade-in">
+              {lang === 'he' ? 'קישור לאיפוס סיסמא נשלח ✓' : 'Password reset link sent ✓'}
+            </p>
+          )}
+
           {/* Login Button */}
           <Btn type="submit" className="mt-6">
             {t('s0_login_button')}
           </Btn>
         </form>
 
+        <p className="mt-5 text-xs text-center text-warm-400 leading-relaxed">
+          {lang === 'he' ? 'דמו: הזן גרשא “חייל” לחייל או “משפחה” למשפחת אירוח' : 'Demo: enter חייל for soldier or משפחה for host'}
+        </p>
+
         {/* Back to Registration */}
         <button
           onClick={onBack}
-          className="w-full mt-6 text-sm text-warm-500 hover:text-warm-600 font-semibold transition-colors text-center"
+          className="w-full mt-3 text-sm text-warm-500 hover:text-warm-600 font-semibold transition-colors text-center"
         >
           {t('s0_back_to_register')}
         </button>
