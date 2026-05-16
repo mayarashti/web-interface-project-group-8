@@ -617,14 +617,14 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
           <div className="grid grid-cols-2 gap-4">
             <Input 
-              label={t('s15_start_time')}
+              label={t('start_time')}
               type="time"
               value={request.startTime}
               onChange={(val) => handleChange('startTime', val)}
               required
             />
             <Input 
-              label={t('s15_end_time')}
+              label={t('end_time')}
               type="time"
               value={request.endTime}
               onChange={(val) => handleChange('endTime', val)}
@@ -732,7 +732,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
           <div className="mb-4">
             <label className="block text-sm font-semibold text-warm-600 mb-1.5">
-              {t('s15_travel_dist')}: {request.travelDistance} km
+              {t('s15_travel_dist')}: {request.travelDistance} {t('km_unit')}
             </label>
             <input 
               type="range" 
@@ -893,8 +893,8 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
                     >
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-bold text-gray-900">{formatDate(req.when)}</span>
-                        <span className={matchCount > 0 ? "text-brand-600 text-xs font-semibold" : "text-warm-400 text-xs"}>
-                          {matchCount === 0 ? t('s15_no_matches_found') : t('s15_matches_found', matchCount)}
+                        <span className={req.status === 'matched' ? "text-support-600 text-xs font-semibold" : "text-brand-600 text-xs font-semibold"}>
+                          {req.status === 'matched' ? t('s15_match_success') : t('s15_searching_sub')}
                         </span>
                         {req.status && (
                           <span className={clsx(
@@ -990,6 +990,9 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
         <Btn onClick={handleSave} className="text-base py-4 shadow-lg">
           {saved ? t('saved_success') : t('save_changes')}
+        </Btn>
+        <Btn onClick={() => window.setScreen(1)} variant="danger" className="text-base py-4 shadow-sm mb-6">
+          {t('logout')}
         </Btn>
       </div>
     </div>

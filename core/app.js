@@ -20,7 +20,7 @@ function App() {
         date: new Date(Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000).toISOString().split('T')[0], 
         time: 'friday_evening', 
         soldiers: 4, 
-        note: 'נשמח לארח חיילים אצלנו!',
+        note: '',
         guests: [
           { id: 101, name: 'יונתן כ.', unit: 'גולני' },
           { id: 102, name: 'דניאל מ.', unit: 'חי"ר' }
@@ -82,7 +82,7 @@ function App() {
     hostVibeTags: ['kids', 'shabbat_atm'],
     hasSoldierNearby: true,
     hostings: [
-      { id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, guests: [{ id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df' }], note: '\u05d0\u05d9\u05e8\u05d5\u05d7 \u05d7\u05d2\u05d9\u05d2\u05d9 \u05e2\u05dd \u05e9\u05d9\u05e8\u05d4', status: 'open' },
+      { id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, guests: [{ id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df' }], note: '', status: 'open' },
       { id: 102, date: '2026-07-04', time: 'friday_evening', soldiers: 2, guests: [], note: '', status: 'canceled' },
     ],
   };

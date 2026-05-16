@@ -76,9 +76,8 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
       totalSteps={TOTAL_STEPS}
       icon={icons[step]}
       title={titles[step]}
-      sub={subtitles[step]}
     >
-      <div className="space-y-6">
+      <div className="space-y-6 pb-32">
         {/* ── Step 1: Account & Location ── */}
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">

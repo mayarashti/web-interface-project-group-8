@@ -33,9 +33,8 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
       total={3}
       icon="🪶"
       title={t('s3_title')}
-      sub={t('s3_sub')}
     >
-      <div className="space-y-6">
+      <div className="space-y-6 pb-32">
         {/* Personal Details Section */}
         <div className="space-y-4">
           <Input 
@@ -156,8 +155,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
       title={t('s7_title')}
       sub={t('s7_sub')}
     >
-      <div className="space-y-8 pb-10">
-
+      <div className="space-y-8 pb-32">
 
         {/* Kosher Section */}
         <RadioGroup
@@ -307,7 +305,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <p className="section-label mb-3">{t('s12_prefs')}</p>
         <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
         <Row label={t('s12_shab')}   value={data.shabbatKeeps === 'yes' ? t('s7_yes') : data.shabbatKeeps === 'no' ? t('s7_no') : null} />
-        <Row label={t('s12_allerg')} value={(data.allergies || []).join(', ') || t('s12_no_allerg')} />
+        <Row label={t('s12_allerg')} value={(data.allergies || []).map(a => a === 'other' ? t('a_other') : t('a_' + a)).join(', ') || t('s12_no_allerg')} />
         <Row label={t('s12_pets')}   value={pets[data.pets]} />
       </Card>
 

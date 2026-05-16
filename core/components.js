@@ -50,7 +50,7 @@ function Input({ label, value, onChange, placeholder, type = 'text', hint, error
   return (
     <div className={clsx("w-full mb-5", className)}>
       {label && (
-        <label className="block text-sm font-semibold text-gray-800 mb-1.5 flex justify-between items-baseline">
+        <label className="block text-sm font-semibold text-gray-800 mb-1.5 flex flex-wrap justify-between items-baseline gap-1">
           <span>{label} {required && <span className="text-red-500">*</span>}</span>
           {hint && <span className="text-xs font-normal text-warm-500">{hint}</span>}
         </label>
@@ -311,17 +311,35 @@ function MultiCheck({ options, values, onChange, label }) {
   return (
     <div>
       {label && <p className="text-sm font-semibold text-gray-800 mb-3">{label}</p>}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
         {options.map(opt => {
           const optId = opt.id ?? opt.value;
+          const isSel = values.includes(optId);
           return (
-            <CheckRow 
+            <label 
               key={optId}
-              label={opt.label}
-              sub={opt.sub}
-              checked={values.includes(optId)}
-              onChange={() => toggle(optId)}
-            />
+              className={clsx(
+                'cursor-pointer select-none px-4 py-2.5 rounded-xl border transition-all duration-200 active:scale-95 flex flex-col items-center justify-center text-center flex-1 min-w-[120px]',
+                isSel
+                  ? 'bg-brand-50 border-brand-400 shadow-sm'
+                  : 'bg-white border-warm-200 hover:border-brand-200 hover:bg-warm-50'
+              )}
+            >
+              <input 
+                type="checkbox" 
+                className="sr-only" 
+                checked={isSel} 
+                onChange={() => toggle(optId)} 
+              />
+              <span className={clsx('block text-sm font-semibold', isSel ? 'text-brand-900' : 'text-gray-700')}>
+                {opt.label}
+              </span>
+              {opt.sub && (
+                <span className={clsx('block text-[11px] mt-0.5 leading-tight', isSel ? 'text-brand-700' : 'text-warm-500')}>
+                  {opt.sub}
+                </span>
+              )}
+            </label>
           );
         })}
       </div>

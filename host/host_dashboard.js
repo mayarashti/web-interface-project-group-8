@@ -415,6 +415,9 @@ function S22HostProfile({ data, setData, onBack }) {
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>
           {saved ? t('saved_success') : t('save_changes')}
         </Btn>
+        <Btn onClick={() => window.setScreen(1)} variant="danger" className="mt-2 mb-6">
+          {t('logout')}
+        </Btn>
       </div>
     </div>
   );
