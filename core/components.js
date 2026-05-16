@@ -73,6 +73,112 @@ function Input({ label, value, onChange, placeholder, type = 'text', hint, error
   );
 }
 
+function LocationInput({ label, value, onChange, onMapPin, placeholder, error, required = false, hint }) {
+  const { t } = useLang();
+  return (
+    <div className="w-full mb-5">
+      <Input 
+        label={label} 
+        value={value} 
+        onChange={onChange} 
+        placeholder={placeholder} 
+        error={error} 
+        required={required} 
+        hint={hint}
+      />
+      <div className="flex justify-end -mt-3">
+        <button 
+          type="button" 
+          onClick={onMapPin}
+          className="text-xs font-bold text-brand-600 flex items-center gap-1.5 hover:text-brand-700 transition-colors py-1 px-2 rounded-lg hover:bg-brand-50"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          {t('map_pin_btn')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MapPinModal({ isOpen, onClose, onConfirm, initialLat, initialLng }) {
+  const { t, lang } = useLang();
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const [tempPos, setTempPos] = useState(null);
+  const [address, setAddress] = useState('');
+
+  useEffect(() => {
+    if (isOpen && !mapRef.current) {
+      // Small delay to ensure modal is rendered
+      setTimeout(() => {
+        const center = [initialLat || 32.0853, initialLng || 34.7818]; // Default to Tel Aviv
+        const map = L.map('map-pin-container').setView(center, 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        mapRef.current = map;
+
+        const marker = L.marker(center, { draggable: true }).addTo(map);
+        markerRef.current = marker;
+
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          setTempPos(pos);
+          reverseGeocode(pos);
+        });
+
+        map.on('click', (e) => {
+          marker.setLatLng(e.latlng);
+          setTempPos(e.latlng);
+          reverseGeocode(e.latlng);
+        });
+      }, 100);
+    }
+    return () => {
+      if (!isOpen && mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [isOpen]);
+
+  const reverseGeocode = async (pos) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`);
+      const data = await res.json();
+      setAddress(data.display_name);
+    } catch (e) {
+      setAddress('');
+    }
+  };
+
+  const handleConfirm = () => {
+    if (tempPos) onConfirm(tempPos, address);
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={t('map_pin_btn')}>
+      <div className="space-y-4">
+        <div id="map-pin-container" className="w-full h-64 rounded-xl border border-warm-200 overflow-hidden z-0" />
+        {address && (
+          <div className="bg-brand-50 border border-brand-100 p-3 rounded-xl">
+            <p className="text-xs text-brand-700 font-medium">{t('map_pin_set')}:</p>
+            <p className="text-sm text-gray-800 leading-snug mt-1">{address}</p>
+          </div>
+        )}
+        <Btn onClick={handleConfirm} disabled={!tempPos}>
+          {t('map_pin_confirm')}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 function Card({ children, className = '', onClick }) {
   const isClickable = !!onClick;
   return (
@@ -349,3 +455,5 @@ window.SectionTitle = SectionTitle;
 window.AppHeader = AppHeader;
 window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
+window.LocationInput = LocationInput;
+window.MapPinModal = MapPinModal;

@@ -1,6 +1,14 @@
 var { useState, useEffect } = React;
 
+
 function App() {
+  const { 
+    S0Login, S1Welcome, S2Explain, S3PersonalDetails, S7Preferences,
+    S12Summary, S13Pending, S14Success, S15Home, S15NewRequest, S15Landing,
+    S18HostExplain, S16HostRegistration, S17HostSuccess, S19HostHome,
+    S20NewHosting, S21SoldierProfile, S22HostProfile,
+    LangContext, LangToggle, Modal, Card, Btn, useLang
+  } = window;
   const [screen,   setScreen]   = useState(1);
   const [lang,     setLang]     = useState('he');
   const [showInfo, setShowInfo] = useState(false);
@@ -174,6 +182,7 @@ function App() {
 }
 
 function InfoModal({ screen, isOpen, onClose }) {
+  const { useLang, Modal, Card } = window;
   const { t } = useLang();
   if (!isOpen) return null;
 

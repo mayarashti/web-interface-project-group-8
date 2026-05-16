@@ -1,7 +1,8 @@
 /* S15Landing â€” Landing screen for soldiers after login */
 
-function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, data }) {
+function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, data, setData }) {
   const { t, lang } = useLang();
+  const [activeRequest, setActiveRequest] = useState(null);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const hasRequests = data.requests && data.requests.length > 0;
 
@@ -45,10 +46,10 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
                   return (
                     <div key={req.id} className="flex items-center gap-2">
                       <button 
-                        onClick={() => onViewMatches(req.id)}
+                        onClick={() => setActiveRequest(req)}
                         className="flex-1 px-5 py-3 bg-white text-gray-900 text-sm font-bold rounded-2xl border border-warm-200 shadow-sm hover:border-brand-200 transition-all flex items-center justify-between group/btn"
                       >
-                        <div className="flex flex-col items-start gap-0.5">
+                        <div className="flex flex-col items-start gap-0.5 text-right">
                           <span>{req.when} - {req.location}</span>
                           <span className={matchCount > 0 ? "text-brand-600 text-[11px] font-semibold" : "text-warm-400 text-[11px] font-medium"}>
                             {matchCount === 0 ? t('s15_no_matches_found') : t('s15_matches_found', matchCount)}
@@ -77,7 +78,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
           )}
         </div>
         
-        {/* New Request CTA — clean premium card, no decorative noise */}
+        {/* New Request CTA */}
         <button
           onClick={() => onNewRequest()}
           className="w-full text-start p-5 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-300 hover:shadow-md transition-all group flex items-center gap-4"
@@ -87,7 +88,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
               <path d="M12 5v14M5 12h14"/>
             </svg>
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-right">
             <p className="text-base font-bold text-gray-900">{t('s15_landing_new_req_title')}</p>
             <p className="text-xs text-warm-500 mt-0.5">{t('s15_form_sub')}</p>
           </div>
@@ -95,6 +96,20 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
             <path d="M9 18l6-6-6-6"/>
           </svg>
         </button>
+
+        <SearchStatusSheet 
+          request={activeRequest}
+          soldierName={soldierName}
+          onClose={() => setActiveRequest(null)}
+          onEdit={() => { setActiveRequest(null); onEditRequest(activeRequest); }}
+          onCancel={(id) => { setActiveRequest(null); data.requests = data.requests.filter(r => r.id !== id); setData({...data}); }}
+          onRematch={(req, reason) => {
+            // Mock rematch logic
+            req.status = 'searching';
+            setData({...data});
+          }}
+          onViewMap={() => { setActiveRequest(null); onViewMatches(activeRequest.id); }}
+        />
       </div>
     </div>
   );
@@ -431,20 +446,27 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
     ? requests.find(r => r.id === data.selectedRequestId)
     : requests[0]; // Fallback to most recent
 
-  const filteredFamilies = activeRequest ? MAP_FAMILIES.filter(fam => {
-    // 1. Kashrut
-    if (activeRequest.kosher) {
-      if (fam.kosher === 'none' && activeRequest.kosher !== 'none') return false;
-      if (activeRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
-    }
-    // 2. Shabbat
-    if (activeRequest.shabbat && fam.shabbat === 'secular') return false;
-    
-    // 3. Sleeping
-    if (activeRequest.needSleep && !fam.canSleep) return false;
+  let filteredFamilies = [];
+  if (activeRequest) {
+    if (activeRequest.status === 'matched') {
+      filteredFamilies = [MAP_FAMILIES[0]].filter(Boolean); // Mocking the matched family
+    } else {
+      filteredFamilies = MAP_FAMILIES.filter(fam => {
+        // 1. Kashrut
+        if (activeRequest.kosher) {
+          if (fam.kosher === 'none' && activeRequest.kosher !== 'none') return false;
+          if (activeRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+        }
+        // 2. Shabbat
+        if (activeRequest.shabbat && fam.shabbat === 'secular') return false;
+        
+        // 3. Sleeping
+        if (activeRequest.needSleep && !fam.canSleep) return false;
 
-    return true;
-  }) : [];
+        return true;
+      });
+    }
+  }
 
   const noRequests = requests.length === 0;
   const noMatches = !noRequests && filteredFamilies.length === 0;
@@ -531,13 +553,12 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
 var { useState } = React;
 
 function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
-  const { t, lang } = useLang();
-  
+  const { t } = useLang();
   const initialRequest = data.editingRequest || {
     id: Date.now(),
     when: '',
-    startTime: '18:00',
-    endTime: '21:00',
+    startTime: '19:00',
+    endTime: '22:00',
     guestCount: 1,
     friendDietary: [],
     friendDietaryOther: '',
@@ -548,10 +569,12 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
     transport: false,
     needSleep: data.needsSleep || false,
     travelDistance: 10,
-    location: data.unit || ''
+    location: data.unit || '',
+    status: 'searching'
   };
 
   const [request, setRequest] = useState(initialRequest);
+  const [showMap, setShowMap] = useState(false);
 
   const dietaryOpts = [
     { value: 'gluten',     label: t('a_gluten')  },
@@ -642,57 +665,35 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                   />
                 </div>
               )}
-              {/* Group kosher & shabbat — required by processes_sheet for guestCount > 1 */}
-              <RadioGroup
-                label={t('friends_kosher')}
-                value={request.friendKosher || 'no'}
-                onChange={(val) => handleChange('friendKosher', val)}
+              <RadioGroup 
+                label={t('s15_shabbat')}
+                value={request.shabbat ? 'yes' : 'no'}
+                onChange={(val) => handleChange('shabbat', val === 'yes')}
                 options={[
                   { value: 'yes', label: t('s15_yes') },
-                  { value: 'no',  label: t('s15_no')  },
+                  { value: 'no', label: t('s15_no') }
                 ]}
               />
-              <RadioGroup
-                label={t('friends_shabbat')}
-                value={request.friendShabbat || 'no'}
-                onChange={(val) => handleChange('friendShabbat', val)}
+              <RadioGroup 
+                label={t('s15_kosher')}
+                value={request.kosher ? 'yes' : 'no'}
+                onChange={(val) => handleChange('kosher', val === 'yes')}
                 options={[
                   { value: 'yes', label: t('s15_yes') },
-                  { value: 'no',  label: t('s15_no')  },
+                  { value: 'no', label: t('s15_no') }
+                ]}
+              />
+              <RadioGroup 
+                label={t('s15_pets_comfort')}
+                value={request.petsComfort}
+                onChange={(val) => handleChange('petsComfort', val)}
+                options={[
+                  { value: 'ok', label: t('s15_pets_ok') },
+                  { value: 'no', label: t('s15_pets_no') }
                 ]}
               />
             </div>
           )}
-
-          <RadioGroup 
-            label={t('s15_pets_comfort')}
-            value={request.petsComfort}
-            onChange={(val) => handleChange('petsComfort', val)}
-            options={[
-              { value: 'ok', label: t('s15_pets_ok') },
-              { value: 'no', label: t('s15_pets_no') }
-            ]}
-          />
-
-          <RadioGroup 
-            label={t('s15_shabbat')}
-            value={request.shabbat ? 'yes' : 'no'}
-            onChange={(val) => handleChange('shabbat', val === 'yes')}
-            options={[
-              { value: 'yes', label: t('s15_yes') },
-              { value: 'no', label: t('s15_no') }
-            ]}
-          />
-
-          <RadioGroup 
-            label={t('s15_kosher')}
-            value={request.kosher ? 'yes' : 'no'}
-            onChange={(val) => handleChange('kosher', val === 'yes')}
-            options={[
-              { value: 'yes', label: t('s15_yes') },
-              { value: 'no', label: t('s15_no') }
-            ]}
-          />
 
           <RadioGroup 
             label={t('s15_duration')}
@@ -743,12 +744,26 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             />
           </div>
 
-          <Input 
+          <LocationInput 
             label={t('s15_location')}
             placeholder={t('s15_location_ph')}
             value={request.location}
             onChange={(val) => handleChange('location', val)}
+            onMapPin={() => setShowMap(true)}
             required
+            hint={request.lat ? t('map_pin_set') : null}
+          />
+
+          <MapPinModal 
+            isOpen={showMap}
+            onClose={() => setShowMap(false)}
+            onConfirm={(pos, addr) => {
+              handleChange('lat', pos.lat);
+              handleChange('lng', pos.lng);
+              if (addr) handleChange('location', addr.split(',')[0]); // Take city part
+            }}
+            initialLat={request.lat}
+            initialLng={request.lng}
           />
 
           <div className="pt-4 space-y-3">
@@ -828,8 +843,11 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
   return (
     <div className="screen-enter min-h-screen flex flex-col pb-12 bg-warm-50">
-      <AppHeader title={t('s15_landing_profile_title')} onBack={onBack} />
-
+      <AppHeader 
+        title={t('s15_landing_profile_title')} 
+        onBack={onBack} 
+        actions={<LangToggle variant="inline" />}
+      />
       <div className="w-full max-w-md mx-auto px-5 space-y-6">
         
         {/* Open Requests Section */}
@@ -979,7 +997,104 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 }
 
 
+function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName }) {
+  const { t, lang } = useLang();
+  const [view, setView] = useState('status'); // 'status' or 'rematch'
+  const [rematchReason, setRematchReason] = useState('');
+
+  if (!request) return null;
+
+  const statusKey = request.status ? ('search_status_' + request.status) : 'search_status_searching';
+  const matchedFamily = window.MAP_FAMILIES?.[0]; // Mocking first family as match for demo
+
+  const handleRematchSubmit = () => {
+    onRematch(request, rematchReason);
+    setView('status');
+    setRematchReason('');
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)}>
+      <div className="space-y-6">
+        {view === 'status' ? (
+          <>
+            {request.status === 'searching' && (
+              <div className="text-center py-4">
+                <div className="flex justify-center gap-1.5 mb-4">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+                <p className="text-sm text-warm-500">{t('s15_searching_sub')}</p>
+              </div>
+            )}
+
+            {request.status === 'matched' && matchedFamily && (
+              <div className="space-y-6 animate-enter">
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-brand-50 border border-brand-100">
+                  <img src={matchedFamily.image} className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 truncate">{matchedFamily.name}</h3>
+                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.location}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Btn onClick={() => {
+                    const msg = t('whatsapp_msg', soldierName, request.when);
+                    window.open(`https://wa.me/${matchedFamily.phone}?text=${encodeURIComponent(msg)}`);
+                  }} variant="outline" className="flex items-center justify-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
+                    WhatsApp
+                  </Btn>
+                  <Btn onClick={onViewMap} variant="outline" className="flex items-center justify-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {t('view_map')}
+                  </Btn>
+                </div>
+
+                <div className="pt-4 border-t border-warm-100">
+                  <button 
+                    onClick={() => setView('rematch')}
+                    className="w-full py-3 text-sm font-semibold text-warm-500 hover:text-brand-600 transition-colors"
+                  >
+                    {t('request_rematch')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 flex flex-col gap-3">
+              <Btn onClick={onEdit} variant="outline">{t('edit_request')}</Btn>
+              <button onClick={() => onCancel(request.id)} className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-6 animate-enter">
+            <div>
+              <label className="block text-sm font-semibold text-warm-700 mb-2">{t('rematch_reason_label')}</label>
+              <textarea 
+                value={rematchReason}
+                onChange={e => setRematchReason(e.target.value)}
+                placeholder={t('rematch_reason_ph')}
+                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Btn onClick={() => setView('status')} variant="outline" className="flex-1">{t('s16_back')}</Btn>
+              <Btn onClick={handleRematchSubmit} className="flex-1">{t('s16_submit')}</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 window.S15Landing = S15Landing;
 window.S15Home = S15Home;
 window.S15NewRequest = S15NewRequest;
 window.S21SoldierProfile = S21SoldierProfile;
+window.SearchStatusSheet = SearchStatusSheet;

@@ -6,6 +6,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
   const { t } = useLang();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
+  const [showMap, setShowMap] = useState(false);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
@@ -108,14 +109,27 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
               error={errors.hostPassword}
               required
             />
-            <Input
+            <LocationInput
               label={t('s16_city')}
               value={data.hostCity || ''}
               onChange={set('hostCity')}
+              onMapPin={() => setShowMap(true)}
               placeholder={t('s16_city_ph')}
-              hint={t('s16_city_hint')}
+              hint={data.hostLat ? t('map_pin_set') : t('s16_city_hint')}
               error={errors.hostCity}
               required
+            />
+
+            <MapPinModal 
+              isOpen={showMap}
+              onClose={() => setShowMap(false)}
+              onConfirm={(pos, addr) => {
+                set('hostLat')(pos.lat);
+                set('hostLng')(pos.lng);
+                if (addr) set('hostCity')(addr.split(',')[0]); // Take city part
+              }}
+              initialLat={data.hostLat}
+              initialLng={data.hostLng}
             />
           </div>
         )}

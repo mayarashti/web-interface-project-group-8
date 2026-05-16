@@ -237,7 +237,7 @@ const T = {
     s15_no_requests_sub: 'כדי שנוכל למצוא לך משפחה, עליך ליצור בקשת אירוח חדשה.',
     s15_open_requests: 'בקשות פתוחות',
     s15_no_matches_found: 'לא נמצאו התאמות',
-    s15_matches_found: (n) => `נמצאו ${n} משפחות מתאימות`,
+    s15_matches_found: 'מצאנו לך משפחה מתאימה',
     s15_edit_req: 'ערוך בקשה',
     s15_new_req: 'בקשה חדשה',
     s15_time_range: 'טווח שעות האירוח',
@@ -535,7 +535,7 @@ const T = {
     s15_slots:'spots available',
     s15_open_requests: 'Open Requests',
     s15_no_matches_found: 'No matches found',
-    s15_matches_found: (n) => `${n} suitable families found`,
+    s15_matches_found: 'We found you a matching family',
     s15_edit_req: 'Edit Request',
     s15_new_req: 'New Request',
 

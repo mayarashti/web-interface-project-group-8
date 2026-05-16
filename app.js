@@ -26,9 +26,6 @@ function App() {
     editingHostingId: null,
   });
 
-  const { t } = useLang(); // Note: App needs useLang if we want to get translation here, but App is outside provider. 
-  // Actually, I should probably put the Modal inside the provider.
-
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
 
   const handleNewRequest = (requestToEdit = null) => {

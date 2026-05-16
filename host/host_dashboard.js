@@ -225,27 +225,6 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 
   const setF = (key) => (val) => setFormState(prev => ({ ...prev, [key]: val }));
 
-  const upcomingDates = (() => {
-    const dates = [];
-    let d = new Date();
-    d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
-    for (let i = 0; i < 4; i++) {
-      const fri = new Date(d);
-      dates.push({
-        value: fri.toISOString().split('T')[0],
-        label: fri.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })
-      });
-      d.setDate(d.getDate() + 7);
-    }
-    return dates;
-  })();
-
-  const TIME_OPTIONS = [
-    { id: 'friday_evening', label: t('s20_fri_eve'), sub: t('s20_fri_eve_s') },
-    { id: 'saturday_lunch', label: t('s20_sat_lun'), sub: t('s20_sat_lun_s') },
-    { id: 'custom',         label: t('s20_custom'),  sub: t('s20_custom_s') },
-  ];
-
   const SOLDIER_OPTS = ['1', '2', '3', '4', '5+'];
 
   const validate = () => {
@@ -291,43 +270,23 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         </div>
 
         <div className="space-y-6">
-          {/* Date Picker */}
-          <div>
-            <p className="text-sm font-semibold text-gray-800 mb-2">{t('s20_date_label')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {upcomingDates.map(d => (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => setF('date')(d.value)}
-                  className={`p-3 rounded-xl border text-center transition-all duration-150 text-sm ${
-                    form.date === d.value
-                      ? 'border-brand-400 bg-brand-50 shadow-sm text-brand-700 font-bold'
-                      : 'border-warm-200 bg-white text-gray-700 hover:border-warm-300'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-            {errors.date && <p className="mt-1.5 text-xs text-red-500">{errors.date}</p>}
-          </div>
+          <Input 
+            label={t('s20_date_free')}
+            type="date"
+            value={form.date}
+            onChange={setF('date')}
+            error={errors.date}
+            required
+          />
 
-          {/* Time */}
-          <div>
-            <p className="text-sm font-semibold text-gray-800 mb-2">{t('s20_time_label')}</p>
-            <RadioGroup
-              options={TIME_OPTIONS}
-              value={form.time}
-              onChange={setF('time')}
-            />
-            {form.time === 'custom' && (
-              <div className="mt-3">
-                <Input type="time" value={form.customTime} onChange={setF('customTime')} />
-              </div>
-            )}
-            {errors.time && <p className="mt-1.5 text-xs text-red-500">{errors.time}</p>}
-          </div>
+          <Input 
+            label={t('s20_time_free')}
+            type="time"
+            value={form.time}
+            onChange={setF('time')}
+            error={errors.time}
+            required
+          />
 
           {/* Soldier count */}
           <div>

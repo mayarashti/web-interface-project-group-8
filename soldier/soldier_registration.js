@@ -1,4 +1,4 @@
-﻿/* S3PersonalDetails — Combined personal details and verification document */
+/* S3PersonalDetails — Combined personal details and verification document */
 var { useState } = React;
 
 function S3PersonalDetails({ data, setData, onNext, onBack }) {
@@ -10,9 +10,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
     const e = {};
     if (!data.fullName?.trim()) e.fullName = t('v_name');
     if (!data.phone?.trim() || data.phone.replace(/\D/g, '').length < 9) e.phone = t('err_phone');
-    if (!data.soldierId?.trim()) e.soldierId = lang === 'he' ? 'נדרש מספר אישי' : 'Soldier ID required';
     if (!data.password || data.password.length < 6) e.password = t('err_pass');
-    if (!data.docUploaded) e.doc = t('s6_pick_first');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -55,13 +53,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
             placeholder="050-1234567" 
             error={errors.phone} 
           />
-          <Input
-            label={lang === 'he' ? 'מספר אישי / ת״ז' : 'Soldier ID / Personal Number'}
-            value={data.soldierId || ''}
-            onChange={set('soldierId')}
-            placeholder={lang === 'he' ? '1234567' : '1234567'}
-            error={errors.soldierId}
-          />
+
           <Input 
             label={t('s3_pass')} 
             type="password" 
@@ -151,7 +143,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
   ];
 
   const validate = () => {
-    return data.kosher && data.shabbatKeeps && data.withSoldiers && data.pets && data.serviceType;
+    return data.kosher && data.shabbatKeeps && data.pets;
   };
 
   return (
@@ -165,16 +157,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
       sub={t('s7_sub')}
     >
       <div className="space-y-8 pb-10">
-        {/* Service Type Section */}
-        <RadioGroup
-          label={lang === 'he' ? 'סוג שירות' : 'Service Type'}
-          value={data.serviceType || ''}
-          onChange={set('serviceType')}
-          options={[
-            { value: 'regular', label: t('map_reg') },
-            { value: 'reserve', label: t('map_res') },
-          ]}
-        />
+
 
         {/* Kosher Section */}
         <RadioGroup
@@ -220,17 +203,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           )}
         </div>
 
-        {/* With Soldiers Section */}
-        <RadioGroup
-          label={t('s10_sol')}
-          value={data.withSoldiers || ''}
-          onChange={set('withSoldiers')}
-          options={[
-            { value: 'yes',      label: t('s10_sol_yes') },
-            { value: 'no',       label: t('s10_sol_no')  },
-            { value: 'dontmind', label: t('s10_sol_dm')  },
-          ]}
-        />
+
 
         {/* Languages Section */}
         <MultiCheck
@@ -308,10 +281,8 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
     </div>
   ) : null;
 
-  const svc  = { regular: t('map_reg'), reserve: t('map_res') };
   const kosh = { none: t('map_none'), kosher: t('map_kosh'), mehadrin: t('map_meh') };
   const pets = { ok: t('map_pets_ok'), notok: t('map_pets_no'), allergy: t('map_pets_al') };
-  const sol  = { yes: t('map_sol_yes'), no: t('map_sol_no'), dontmind: t('map_sol_dm') };
 
   return (
     <ScreenLayout
@@ -330,12 +301,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <Row label={t('s12_phone')} value={data.phone} />
       </Card>
 
-      <Card className="mb-4">
-        <p className="section-label mb-3">{t('s12_mil')}</p>
-        <Row label={t('s12_stype')} value={svc[data.serviceType]} />
-        <Row label={t('s12_unit')}  value={data.unit} />
-        <Row label={t('s12_doc')}   value={data.docUploaded ? t('s12_uploaded') : '—'} />
-      </Card>
+
 
       <Card className="mb-4">
         <p className="section-label mb-3">{t('s12_prefs')}</p>
@@ -343,7 +309,6 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <Row label={t('s12_shab')}   value={data.shabbatKeeps === 'yes' ? t('s7_yes') : data.shabbatKeeps === 'no' ? t('s7_no') : null} />
         <Row label={t('s12_allerg')} value={(data.allergies || []).join(', ') || t('s12_no_allerg')} />
         <Row label={t('s12_pets')}   value={pets[data.pets]} />
-        <Row label={t('s12_sol')}    value={sol[data.withSoldiers]} />
       </Card>
 
       {data.bio && (
