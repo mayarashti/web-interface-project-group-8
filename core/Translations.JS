@@ -81,7 +81,7 @@ const T = {
     s2_btn:'התחל הרשמה ←',
 
     /* S3 Account */
-    s3_title:'יצירת חשבון', s3_sub:'כמה פרטים קטנים ואתה בפנים!',
+    s3_title:'יצירת חשבון', s3_sub:'כמה פרטים קטנים ואת/ה בפנים!',
     s3_first:'שם פרטי', s3_last:'שם משפחה',
     s3_phone:'מספר טלפון', s3_email:'אימייל',
     s3_pass:'סיסמה', s3_pass_ph:'לפחות 6 תווים', s3_pass_hint:'הסיסמה שמורה בצורה מאובטחת',
@@ -127,8 +127,8 @@ const T = {
     s7_no:'לא שומר/ת שבת', s7_no_s:'מתאים לי גם בית לא דתי',
 
     /* S8 Hosting Options */
-    s8_title:'צרכי אירוח', s8_sub:'ספר לנו מה אתה צריך — נמצא משפחה שתתאים בדיוק',
-    s8_section:'מה אתה צריך לשישי?', s8_multi:'אפשר לסמן יותר מאפשרות אחת',
+    s8_title:'צרכי אירוח', s8_sub:'ספר/י לנו מה את/ה צריך/ה — נמצא משפחה שתתאים בדיוק',
+    s8_section:'מה את/ה צריך/ה לשישי?', s8_multi:'אפשר לסמן יותר מאפשרות אחת',
     s8_sleep:'צריך/ה מקום לישון', s8_sleep_s:'אשאר לישון אצל המשפחה בשבת',
     s8_walk:'צריך/ה מרחק הליכה מהבסיס', s8_walk_s:'אני לא נוסע בשבת, המשפחה צריכה להיות קרובה',
     s8_tip:'אם לא סימנת כלום — נמצא לך משפחה לארוחה בלבד. תמיד אפשר לעדכן בפרופיל שלך.',
@@ -151,7 +151,7 @@ const T = {
     s10_pets_ok:'נוח עם חיות', s10_pets_no:'לא נוח', s10_pets_al:'יש לי אלרגיה לחיות',
 
     /* S11 Profile */
-    s11_title:'הפרופיל שלך', s11_sub:'פרופיל עשיר עוזר למשפחות להכיר אותך לפני שמגיע שישי',
+    s11_title:'הפרופיל שלך', s11_sub:'פרופיל עשיר עוזר למשפחות להכיר אותך לפני שבת',
     s11_photo:'לחץ לבחירת תמונה (אופציונלי)',
     s11_bio:'ספר לנו עליך',
     s11_bio_ph:'היי, אני דניאל, משרת באזור חיפה ומחפש ארוחת שישי חמה כשאני יוצא מהבסיס.',
@@ -168,7 +168,7 @@ const T = {
 
     /* S13 Pending */
     s13_title:'הפרופיל שלך בבדיקה',
-    s13_sub:'לאחר אישור, תוכל ליצור בקשת אירוח ולהתחבר למשפחות מארחות בכל הארץ',
+    s13_sub:'לאחר אישור, תוכל/י ליצור בקשת אירוח ולהתחבר למשפחות מארחות בכל הארץ',
     s13_eta:'בדרך כלל לוקח פחות מדקה',
     s13_done:'האימות הושלם בהצלחה!', s13_redir:'מעביר אותך לדף הבית...',
 
@@ -252,6 +252,33 @@ const T = {
     s15_pets_comfort: 'מסתדרים עם בעלי חיים?',
     s15_pets_ok: 'כן, בטח',
     s15_pets_no: 'מעדיפים שלא',
+
+    /* Shared UI labels */
+    settings_label: 'הגדרות',
+    close_label: 'סגור',
+    save_changes: 'שמור שינויים',
+    saved_success: '✓ נשמר בהצלחה',
+    update_request: 'עדכן בקשה',
+    edit_request: 'ערוך בקשה',
+    cancel_request: 'בטל בקשה',
+    canceled_label: 'בוטל',
+    restore_hosting: 'שחזר אירוח',
+    includes_overnight: 'כולל לינה',
+    fri_sat_label: 'שישי–שבת',
+    friends_kosher: 'חברים זקוקים לכשרות?',
+    friends_shabbat: 'חברים שומרי שבת?',
+    other_prefs_ph: 'פרט כאן העדפות נוספות...',
+    profile_settings: 'הגדרות פרופיל',
+    family_details_label: 'פרטי המשפחה',
+    lifestyle_label: 'אורח חיים',
+    kashrut_label: 'כשרות',
+    no_new_alerts: 'אין התראות חדשות',
+    demo_hint: 'כניסת דמו: הקלד "חייל" לחייל או "משפחה" למשפחה מארחת',
+    status_matched: '✓ שויך',
+    status_searching: '⟳ מחפש',
+    status_canceled: '✕ בוטל',
+    confirm_delete: 'האם למחוק את הבקשה?',
+    delete_request: 'מחק בקשה',
 
     /* S18 Host Explain */
     s18_title:'איך זה עובד?', s18_sub:'כל מה שצריך לדעת לפני שמתחילים',
@@ -373,10 +400,13 @@ const T = {
 
     /* S0 Login */
     s0_title:'Login', s0_subtitle:'Welcome back!',
+    s0_phone:'Phone Number', s0_phone_placeholder:'050-0000000',
     s0_email:'Email address', s0_email_placeholder:'your@email.com',
     s0_password:'Password', s0_password_placeholder:'Enter password',
     s0_remember:'Remember me', s0_forgot:'Forgot password?',
     s0_login_button:'Log in', s0_back_to_register:'Back to registration',
+    s0_login_demo_error:'Wrong credentials. Demo: enter "חייל" (soldier) or "משפחה" (host) in the phone field.',
+    info_btn_title:'How does it work?',
 
     /* S2 Explain */
     s2_title:'How does it work?', s2_sub:'Everything you need to know before getting started',
@@ -468,7 +498,7 @@ const T = {
     s12_mil:'Military Service', s12_stype:'Service Type', s12_unit:'Unit', s12_doc:'Document',
     s12_uploaded:'Uploaded',
     s12_prefs:'Preferences', s12_kosh:'Kashrut', s12_shab:'Shabbat',
-    s12_sleep:'Sleep', s12_walk:'Walk Distance', s12_allerg:'Allergies',
+    s12_sleep:'Overnight Stay', s12_walk:'Walk Distance', s12_allerg:'Allergies',
     s12_no_allerg:'None', s12_pets:'Pets', s12_sol:'With soldiers',
     s12_bio:'Personal Bio', s12_submit:'Submit Profile', s12_edit:'Edit Details',
 
@@ -524,7 +554,7 @@ const T = {
     s15_capacity:'Capacity',
     s15_sleep_available:'Sleep available',
     s15_open_table:'Open table',
-    s15_guests_title:'soldiers already hosted',
+    s15_guests_title:'Soldiers Hosted',
     s15_view:'View Matches', s15_rec:'Recommended Matches',
     s15_past:'Past Shabbat Meals',
     s15_no_past:'No meals yet — let\'s find your first one!',
@@ -534,6 +564,33 @@ const T = {
     s15_matches_found: (n) => `${n} suitable families found`,
     s15_edit_req: 'Edit Request',
     s15_new_req: 'New Request',
+
+    /* Shared UI labels */
+    settings_label: 'Settings',
+    close_label: 'Close',
+    save_changes: 'Save Changes',
+    saved_success: '✓ Saved successfully',
+    update_request: 'Update Request',
+    edit_request: 'Edit Request',
+    cancel_request: 'Cancel Request',
+    canceled_label: 'Canceled',
+    restore_hosting: 'Restore',
+    includes_overnight: 'Includes overnight',
+    fri_sat_label: 'Fri–Sat',
+    friends_kosher: 'Do friends need kosher food?',
+    friends_shabbat: 'Are friends Shabbat observant?',
+    other_prefs_ph: 'Specify other preferences here...',
+    profile_settings: 'Profile Settings',
+    family_details_label: 'Family Details',
+    lifestyle_label: 'Lifestyle',
+    kashrut_label: 'Kashrut',
+    no_new_alerts: 'No new alerts',
+    demo_hint: 'Demo login: enter "חייל" for soldier or "משפחה" for host family',
+    status_matched: '✓ Matched',
+    status_searching: '⟳ Searching',
+    status_canceled: '✕ Canceled',
+    confirm_delete: 'Delete this request?',
+    delete_request: 'Delete Request',
 
     /* S18 Host Explain */
     s18_title:'How does it work?', s18_sub:'Everything you need to know before getting started',

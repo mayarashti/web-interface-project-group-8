@@ -67,7 +67,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
             </Card>
           ) : (
             <Card className="p-4 border-dashed text-center">
-              <p className="text-sm text-warm-400">{lang === 'he' ? 'אין התראות חדשות' : 'No new alerts'}</p>
+              <p className="text-sm text-warm-400">{t('no_new_alerts')}</p>
             </Card>
           )}
         </div>
@@ -124,7 +124,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                         isFull ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
                       }`}>
                         {isCanceled
-                          ? (lang === 'he' ? 'בוטל' : 'Canceled')
+                          ? t('canceled_label')
                           : `${guests.length}/${capacity} ${t('s19_spots_taken')}`}
                       </span>
                     </div>
@@ -138,7 +138,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                         onClick={() => setData(prev => ({ ...prev, hostings: prev.hostings.map(h2 => h2.id === h.id ? { ...h2, status: 'open' } : h2) }))}
                         className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
                       >
-                        {lang === 'he' ? 'שחזר אירוח' : 'Restore'}
+                        {t('restore_hosting')}
                       </button>
                     ) : (
                       <>
@@ -425,14 +425,14 @@ function S22HostProfile({ data, setData, onBack }) {
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-12">
       <AppHeader
-        title={lang === 'he' ? 'הגדרות פרופיל' : 'Profile Settings'}
+        title={t('profile_settings')}
         onBack={onBack}
       />
 
       <div className="max-w-md mx-auto px-5 pt-6 space-y-5">
         <Card className="p-5 space-y-4">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
-            {lang === 'he' ? 'פרטי המשפחה' : 'Family Details'}
+            {t('family_details_label')}
           </h2>
           <Input label={t('s16_name')} value={form.hostName} onChange={setF('hostName')} />
           <Input label={t('s16_phone')} type="tel" value={form.hostPhone} onChange={setF('hostPhone')} />
@@ -441,7 +441,7 @@ function S22HostProfile({ data, setData, onBack }) {
 
         <Card className="p-5 space-y-5">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
-            {lang === 'he' ? 'אורח חיים' : 'Lifestyle'}
+            {t('lifestyle_label')}
           </h2>
           <div>
             <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_shabbat')}</p>
@@ -454,9 +454,7 @@ function S22HostProfile({ data, setData, onBack }) {
         </Card>
 
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>
-          {saved
-            ? (lang === 'he' ? '✓ נשמר בהצלחה' : '✓ Saved successfully')
-            : (lang === 'he' ? 'שמור שינויים' : 'Save Changes')}
+          {saved ? t('saved_success') : t('save_changes')}
         </Btn>
       </div>
     </div>

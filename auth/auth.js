@@ -98,7 +98,7 @@ function S0Login({ onBack, onLogin }) {
 
           {forgotSent && (
             <p className="text-xs text-center text-support-600 font-medium animate-fade-in">
-              {lang === 'he' ? 'קישור לאיפוס סיסמא נשלח ✓' : 'Password reset link sent ✓'}
+              {lang === 'he' ? 'קישור לאיפוס סיסמה נשלח ✓' : 'Password reset link sent ✓'}
             </p>
           )}
 
@@ -109,7 +109,7 @@ function S0Login({ onBack, onLogin }) {
         </form>
 
         <p className="mt-5 text-xs text-center text-warm-400 leading-relaxed">
-          {lang === 'he' ? 'דמו: הזן גרשא “חייל” לחייל או “משפחה” למשפחת אירוח' : 'Demo: enter חייל for soldier or משפחה for host'}
+          {t('demo_hint')}
         </p>
 
         {/* Back to Registration */}

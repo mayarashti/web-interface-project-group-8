@@ -192,7 +192,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
               <div className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors">
                 <span className="text-3xl mb-2">📷</span>
                 <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
-                <p className="text-xs text-warm-400 mt-1">JPG, PNG — max 5MB</p>
+                <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
               </div>
             </div>
           </div>

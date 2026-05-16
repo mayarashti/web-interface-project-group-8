@@ -24,7 +24,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            {hasRequests ? t('s15_landing_title') : (lang === 'he' ? '×‘×•× × ×ž×¦× ×œ×š ×‘×™×ª ×œ×©×‘×ª' : 'Let\'s find you a home for Shabbat')}
+            {hasRequests ? t('s15_landing_title') : t('s15_landing_no_req_title')}
           </h1>
           {hasRequests ? (
             <div className="space-y-3">
@@ -102,7 +102,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
 
 
 
-/* S15Home â€” Soldier home screen with interactive host-family map
+/* S15Home — Soldier home screen with interactive host-family map
    Includes: MAP_FAMILIES data, FamilyInfoCard, FamilyStrip, MapView (Leaflet)
 */
 var { useState, useEffect, useRef } = React;
@@ -136,87 +136,87 @@ const familyAvatarUrl = (bgColor, familyId) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
-/* â”€â”€ Mock host-family data (neighbourhood-level coords for privacy) â”€â”€ */
+/* —— Mock host-family data (neighbourhood-level coords for privacy) —— */
 window.MAP_FAMILIES = [
   {
-    id: 1, name: '×ž×©×¤×—×ª ×œ×•×™', city: '×—×™×¤×” â€” ×”×›×¨×ž×œ',
+    id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
     lat: 32.7943, lng: 34.9890,
     kosher: 'kosher', shabbat: 'traditional', capacity: 3,
     canSleep: false, canTransport: true,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'singing'],
     rating: 4.9,
-    shortDescription: '××™×¨×•×— ×—× ×¢× × ×•×£ ×œ×™× ×•×§×¦×ª ×©×™×¨×” ×ž×©×•×ª×¤×ª',
+    shortDescription: 'אירוח חם עם נוף לים וקצת שירה משותפת',
     hostedCount: 18,
     phoneDisplay: '+972528765432',
     waDigits: '972528765432',
     imageColor: '#fdeedd',
   },
   {
-    id: 2, name: '×ž×©×¤×—×ª ×›×”×Ÿ', city: '×§×¨×™×™×ª ××ª×',
+    id: 2, name: 'משפחת כהן', city: 'קריית אתא',
     lat: 32.8072, lng: 35.1073,
     kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
     canSleep: true, canTransport: false,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['quiet', 'shabbat_atm'],
     rating: 4.7,
-    shortDescription: '×‘×™×ª ×ž×©×¤×—×ª×™ ×¨×’×•×¢ ×¢× ×ž× ×”×’×™ ×©×‘×ª ×ž×¡×•×¨×ª×™×™×',
+    shortDescription: 'בית משפחתי רגוע עם מנהגי שבת מסורתיים',
     hostedCount: 24,
     phoneDisplay: '+972528123987',
     waDigits: '972528123987',
     imageColor: '#f7d1b5',
   },
   {
-    id: 3, name: '×ž×©×¤×—×ª ×’×•×œ×Ÿ', city: '× ×©×¨',
+    id: 3, name: 'משפחת גולן', city: 'נשר',
     lat: 32.7730, lng: 35.0460,
     kosher: 'none', shabbat: 'secular', capacity: 4,
     canSleep: false, canTransport: true,
     hostingTypes: ['friday_dinner'],
     tags: ['food', 'spacious'],
     rating: 4.8,
-    shortDescription: '×‘×™×ª ×¤×ª×•×— ×¢× ×ž×˜×‘×— ×’×“×•×œ ×•×¢×•×’×ª ×©×‘×ª ×˜×¢×™×ž×”',
+    shortDescription: 'בית פתוח עם מטבח גדול ועוגת שבת טעימה',
     hostedCount: 12,
     phoneDisplay: '+972523456789',
     waDigits: '972523456789',
     imageColor: '#fff1e5',
   },
   {
-    id: 4, name: '×ž×©×¤×—×ª ××‘×¨×”×', city: '×—×™×¤×” â€” × ×•×•×” ×©×× ×Ÿ',
+    id: 4, name: 'משפחת אברהם', city: 'חיפה — נווה שאנן',
     lat: 32.8021, lng: 35.0018,
     kosher: 'kosher', shabbat: 'traditional', capacity: 3,
     canSleep: true, canTransport: false,
     hostingTypes: ['shabbat_lunch'],
     tags: ['multilingual', 'spacious'],
     rating: 4.6,
-    shortDescription: '××™×¨×•×— ×ž×©×¤×—×ª×™ ×‘×©×¤×” ×¢×‘×¨×™×ª ×•×× ×’×œ×™×ª',
+    shortDescription: 'אירוח משפחתי בשפה עברית ואנגלית',
     hostedCount: 9,
     phoneDisplay: '+972527654321',
     waDigits: '972527654321',
     imageColor: '#f9efe4',
   },
   {
-    id: 5, name: '×ž×©×¤×—×ª ×©×ž×™×¨', city: '×§×¨×™×™×ª ×‘×™××œ×™×§',
+    id: 5, name: 'משפחת שמיר', city: 'קריית ביאליק',
     lat: 32.8350, lng: 35.0850,
     kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
     canSleep: false, canTransport: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'shabbat_atm'],
     rating: 5.0,
-    shortDescription: '×‘×™×ª ×©×ž×— ×¢× ××•×•×™×¨×” ×ž×©×¤×—×ª×™×ª ×•×—×œ×‘×™×ª',
+    shortDescription: 'בית שמח עם אווירה משפחתית וחלבית',
     hostedCount: 21,
     phoneDisplay: '+972527890123',
     waDigits: '972527890123',
     imageColor: '#f1dcc8',
   },
   {
-    id: 6, name: '×ž×©×¤×—×ª ×¤×¨×¥', city: '×˜×™×¨×ª ×›×¨×ž×œ',
+    id: 6, name: 'משפחת פרץ', city: 'טירת כרמל',
     lat: 32.7608, lng: 34.9700,
     kosher: 'kosher', shabbat: 'traditional', capacity: 5,
     canSleep: true, canTransport: true,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['food', 'pets', 'spacious'],
     rating: 4.5,
-    shortDescription: '×‘×™×ª ×’×“×•×œ ×•×ž×¡×‘×™×¨ ×¤× ×™× ×¢× ×ž×§×•× ×œ×ž× ×•×—×” ××—×¨×™ ×”××¨×•×—×”',
+    shortDescription: 'בית גדול ומסביר פנים עם מקום למנוחה אחרי הארוחה',
     hostedCount: 31,
     phoneDisplay: '+972523210987',
     waDigits: '972523210987',
@@ -225,9 +225,9 @@ window.MAP_FAMILIES = [
 ];
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   FamilyInfoCard â€” compact details beside the map
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ——————————————————————————————————————————— 
+   FamilyInfoCard — compact details beside the map
+————————————————————————————————————————————— */
 function FamilyInfoCard({ family, onClose }) {
   const { t } = useLang();
 
@@ -256,7 +256,7 @@ function FamilyInfoCard({ family, onClose }) {
         <button
           onClick={onClose}
           className="family-info-card-close"
-          aria-label="Close family details"
+          aria-label={t('close_label')}
         >&times;</button>
       </div>
 
@@ -272,7 +272,7 @@ function FamilyInfoCard({ family, onClose }) {
 
       <div className="family-info-grid">
         <div>
-          <span>{t('map_kosh')}</span>
+          <span>{t('kashrut_label')}</span>
           <strong>{koshLabel}</strong>
         </div>
         <div>
@@ -299,9 +299,9 @@ function FamilyInfoCard({ family, onClose }) {
   );
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MapView â€” Leaflet map with fuzzy markers
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ——————————————————————————————————————————— 
+   MapView — Leaflet map with fuzzy markers
+————————————————————————————————————————————— */
 function FamilyStrip({ families, selectedId, onSelect, onHover }) {
   return (
     <div className="family-strip overflow-x-auto pb-3 -mx-5 px-5">
@@ -412,9 +412,9 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   S15Home â€” Soldier home screen
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ——————————————————————————————————————————— 
+   S15Home — Soldier home screen
+————————————————————————————————————————————— */
 function S15Home({ data, onProfile, onNewRequest, onBack }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
@@ -456,7 +456,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
         title={soldierName}
         onBack={onBack}
         profileAction={(
-          <button onClick={onProfile} className="app-icon-btn" title="×”×’×“×¨×•×ª" aria-label="×”×’×“×¨×•×ª">
+          <button onClick={onProfile} className="app-icon-btn" title={t('settings_label')} aria-label={t('settings_label')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" />
@@ -489,7 +489,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
             <h2 className="text-xl font-bold text-gray-900">{t('s15_no_matches_title')}</h2>
             <p className="text-warm-500 max-w-sm">{t('s15_no_matches_sub')}</p>
-            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{lang === 'he' ? 'עדכון בקשה' : 'Update Request'}</Btn>
+            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{t('update_request')}</Btn>
           </div>
         ) : (
           <React.Fragment>
@@ -516,7 +516,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
 
             <div className="rounded-xl bg-support-50 border border-support-100 p-4 text-center">
-              <p className="text-sm font-semibold text-support-600">{t('s15_open_table')} â€¢ {nextFriday}</p>
+              <p className="text-sm font-semibold text-support-600">{t('s15_open_table')} • {nextFriday}</p>
               <p className="text-xs text-brand-500 mt-1">{t('s15_avail', filteredFamilies.length)}</p>
             </div>
           </React.Fragment>
@@ -527,7 +527,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
 }
 
 
-/* S15NewRequest â€” Form for soldiers to request accommodation */
+/* S15NewRequest — Form for soldiers to request accommodation */
 var { useState } = React;
 
 function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
@@ -576,7 +576,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-10">
       <AppHeader 
-        title={data.editingRequest ? (lang === 'he' ? '×¢×¨×™×›×ª ×‘×§×©×”' : 'Edit Request') : t('s15_form_title')} 
+        title={data.editingRequest ? t('edit_request') : t('s15_form_title')} 
         onBack={onBack}
       />
       
@@ -636,7 +636,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                   <textarea 
                     value={request.friendDietaryOther} 
                     onChange={e => handleChange('friendDietaryOther', e.target.value)}
-                    placeholder={lang === 'he' ? '×¤×¨×˜ ×›××Ÿ ×”×¢×“×¤×•×ª × ×•×¡×¤×•×ª...' : 'Specify other preferences here...'}
+                    placeholder={t('other_prefs_ph')}
                     className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
                     rows={3}
                   />
@@ -644,7 +644,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
               )}
               {/* Group kosher & shabbat — required by processes_sheet for guestCount > 1 */}
               <RadioGroup
-                label={lang === 'he' ? 'חברים זקוקים לכשרות?' : 'Do friends need kosher food?'}
+                label={t('friends_kosher')}
                 value={request.friendKosher || 'no'}
                 onChange={(val) => handleChange('friendKosher', val)}
                 options={[
@@ -653,7 +653,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                 ]}
               />
               <RadioGroup
-                label={lang === 'he' ? 'חברים שומרי שבת?' : 'Are friends Shabbat observant?'}
+                label={t('friends_shabbat')}
                 value={request.friendShabbat || 'no'}
                 onChange={(val) => handleChange('friendShabbat', val)}
                 options={[
@@ -704,8 +704,8 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             }}
             options={[
               { value: 'dinner',  label: t('s15_duration_dinner') },
-              { value: 'full',    label: t('s15_duration_full'),    sub: lang === 'he' ? 'כולל לינה' : 'Includes overnight' },
-              { value: 'weekend', label: t('s15_duration_weekend'), sub: lang === 'he' ? 'שישי–שבת' : 'Fri–Sat' },
+              { value: 'full',    label: t('s15_duration_full'),    sub: t('includes_overnight') },
+              { value: 'weekend', label: t('s15_duration_weekend'), sub: t('fri_sat_label') },
             ]}
           />
 
@@ -753,7 +753,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
           <div className="pt-4 space-y-3">
             <Btn type="submit">
-              {data.editingRequest ? (lang === 'he' ? '×©×ž×•×¨ ×©×™× ×•×™×™×' : 'Save Changes') : t('s15_submit_request')}
+              {data.editingRequest ? t('save_changes') : t('s15_submit_request')}
             </Btn>
             
             {data.editingRequest && (
@@ -762,7 +762,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                 onClick={() => onCancel(request.id)}
                 className="w-full py-4 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors"
               >
-                {lang === 'he' ? '×‘×˜×œ ×‘×§×©×”' : 'Cancel Request'}
+                {t('cancel_request')}
               </button>
             )}
           </div>
@@ -774,7 +774,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
 
 
-/* S21SoldierProfile â€” Soldier profile and request dashboard */
+/* S21SoldierProfile — Soldier profile and request dashboard */
 var { useState } = React;
 
 function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest, onDeleteRequest, onViewMatches }) {
@@ -885,9 +885,9 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
                             req.status === 'searching' && 'bg-brand-50 text-brand-600 border-brand-100',
                             req.status === 'canceled'  && 'bg-warm-100 text-warm-500 border-warm-200',
                           )}>
-                            {req.status === 'matched'   && (lang === 'he' ? '✓ שויך' : '✓ Matched')}
-                            {req.status === 'searching' && (lang === 'he' ? '⟳ מחפש' : '⟳ Searching')}
-                            {req.status === 'canceled'  && (lang === 'he' ? '✕ בוטל' : '✕ Canceled')}
+                            {req.status === 'matched'   && t('status_matched')}
+                            {req.status === 'searching' && t('status_searching')}
+                            {req.status === 'canceled'  && t('status_canceled')}
                           </span>
                         )}
                       </div>
@@ -911,9 +911,9 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
                         </svg>
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); if(confirm(lang==='he'?'×”×× ×œ×ž×—×•×§ ××ª ×”×‘×§×©×”?':'Delete this request?')) onDeleteRequest(req.id); }}
+                        onClick={(e) => { e.stopPropagation(); if(confirm(t('confirm_delete'))) onDeleteRequest(req.id); }}
                         className="w-10 h-10 rounded-xl bg-white text-warm-500 border border-warm-200 flex items-center justify-center hover:bg-red-50 hover:text-red-600 shadow-sm transition-colors"
-                        title={lang === 'he' ? '×ž×—×§ ×‘×§×©×”' : 'Delete Request'}
+                        title={t('delete_request')}
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"></polyline>
@@ -971,7 +971,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         </Card>
 
         <Btn onClick={handleSave} className="text-base py-4 shadow-lg">
-          {saved ? (lang === 'he' ? '× ×©×ž×¨ ×‘×”×¦×œ×—×”! âœ“' : 'Saved successfully! âœ“') : (lang === 'he' ? '×©×ž×•×¨ ×©×™× ×•×™×™×' : 'Save Changes')}
+          {saved ? t('saved_success') : t('save_changes')}
         </Btn>
       </div>
     </div>
