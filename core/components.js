@@ -381,6 +381,7 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
         </div>
         {/* End side: extra actions + profile/settings btn */}
         <div className="app-header-actions flex-shrink-0">
+          <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain me-1" />
           {actions}
           {profileAction || (onProfile && (
             <button

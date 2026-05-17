@@ -19,7 +19,7 @@ function useLang() {
 function LangToggle({ variant ='fixed', onInfo } = {}) {
   const { lang, setLang, t } = useLang();
   return (
-    <div className={variant === 'fixed' ? 'fixed top-6 right-6 z-50 flex gap-2' : 'flex gap-2'}>
+    <div className={variant === 'fixed' ? 'fixed top-4 right-4 z-50 flex gap-2 items-center' : 'flex gap-2 items-center'}>
       <button
         onClick={() => setLang(lang ==='he'?'en':'he')}
         className={`lang-toggle ${variant ==='inline'?'lang-toggle-inline':''}`}
@@ -29,7 +29,7 @@ function LangToggle({ variant ='fixed', onInfo } = {}) {
         {lang ==='he'?'EN':'עב'}
       </button>
       {onInfo && (
-        <button 
+        <button
           onClick={onInfo}
           className={`w-10 h-10 bg-white rounded-full shadow-sm border border-warm-200 flex items-center justify-center text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-all active:scale-95`}
           title={t('info_btn_title')}
@@ -38,6 +38,9 @@ function LangToggle({ variant ='fixed', onInfo } = {}) {
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
         </button>
+      )}
+      {variant === 'fixed' && (
+        <img src="MEMULAIM.png" alt="מימולאים" className="h-10 w-auto object-contain" />
       )}
     </div>
   );

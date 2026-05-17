@@ -132,6 +132,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
             <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
           </div>
           <div className="flex gap-2 items-center">
+            <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
             <LangToggle variant="inline" />
             <button
               onClick={onEditProfile}
