@@ -217,12 +217,12 @@ function InfoModal({ screen, isOpen, onClose }) {
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t(`${prefix}_title`)}>
-      <p className="text-sm text-warm-500 mb-6">{t(`${prefix}_sub`)}</p>
-      <div className="space-y-3">
+    <Modal isOpen={isOpen} onClose={onClose} title={t(`${prefix}_title`)} className="max-w-xl">
+      <p className="text-sm text-warm-500 mb-3">{t(`${prefix}_sub`)}</p>
+      <div className="grid grid-cols-2 gap-2">
         {features.map((f, index) => (
-          <Card key={f.title} className="flex gap-4 items-start p-4">
-            <span className="w-8 h-8 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
+          <Card key={f.title} className="flex gap-3 items-start p-3">
+            <span className="w-7 h-7 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
             <div>
               <p className="font-semibold text-gray-800 text-sm">{f.title}</p>
               <p className="text-xs text-warm-500 mt-0.5 leading-relaxed">{f.desc}</p>
