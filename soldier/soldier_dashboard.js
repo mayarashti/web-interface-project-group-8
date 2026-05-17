@@ -51,8 +51,8 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
                       >
                         <div className="flex flex-col items-start gap-0.5 text-right">
                           <span>{req.when} - {req.location}</span>
-                          <span className={matchCount > 0 ? "text-brand-600 text-[11px] font-semibold" : "text-warm-400 text-[11px] font-medium"}>
-                            {matchCount === 0 ? t('s15_no_matches_found') : t('s15_matches_found', matchCount)}
+                          <span className={req.status === 'matched' ? "text-support-600 text-[11px] font-semibold" : "text-brand-600 text-[11px] font-medium"}>
+                            {req.status === 'matched' ? t('s15_match_success') : t('s15_searching_sub')}
                           </span>
                         </div>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500 group-hover/btn:translate-x-1 transition-transform rtl:group-hover/btn:-translate-x-1">
@@ -104,9 +104,9 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
           onEdit={() => { setActiveRequest(null); onEditRequest(activeRequest); }}
           onCancel={(id) => { setActiveRequest(null); data.requests = data.requests.filter(r => r.id !== id); setData({...data}); }}
           onRematch={(req, reason) => {
-            // Mock rematch logic
-            req.status = 'searching';
-            setData({...data});
+            // Mock rematch logic: update request status correctly for React
+            const newRequests = data.requests.map(r => r.id === req.id ? { ...r, status: 'searching' } : r);
+            setData({ ...data, requests: newRequests });
           }}
           onViewMap={() => { setActiveRequest(null); onViewMatches(activeRequest.id); }}
         />
@@ -1086,8 +1086,8 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               />
             </div>
             <div className="flex gap-3">
-              <Btn onClick={() => setView('status')} variant="outline" className="flex-1">{t('s16_back')}</Btn>
-              <Btn onClick={handleRematchSubmit} className="flex-1">{t('s16_submit')}</Btn>
+              <Btn onClick={() => setView('status')} variant="outline" className="flex-1">{t('back')}</Btn>
+              <Btn onClick={handleRematchSubmit} className="flex-1">{t('rematch_submit')}</Btn>
             </div>
           </div>
         )}
