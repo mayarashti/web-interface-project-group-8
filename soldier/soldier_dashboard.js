@@ -1028,7 +1028,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
 
 function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName }) {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
 
@@ -1044,11 +1044,27 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     onClose();
   };
 
+  // Build tags the same way as FamilyInfoCard
+  const familyTags = matchedFamily ? (() => {
+    const tags = [];
+    if (matchedFamily.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+    else if (matchedFamily.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+    if (matchedFamily.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+    else if (matchedFamily.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+    if (matchedFamily.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
+    return tags;
+  })() : [];
+
+  const shabLabel = matchedFamily
+    ? (matchedFamily.shabbat === 'observant' ? t('map_obs') : matchedFamily.shabbat === 'traditional' ? t('map_trad') : t('map_sec'))
+    : '';
+
   return (
-    <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)}>
-      <div className="space-y-6">
+    <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)} className="max-w-md max-h-[93vh]">
+      <div className="space-y-3">
         {view === 'status' ? (
           <>
+            {/* Searching state */}
             {request.status === 'searching' && (
               <div className="text-center py-4">
                 <div className="flex justify-center gap-1.5 mb-4">
@@ -1060,51 +1076,75 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               </div>
             )}
 
+            {/* Matched state — family card */}
             {request.status === 'matched' && matchedFamily && (
-              <div className="space-y-6 animate-enter">
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-brand-50 border border-brand-100">
-                  <img src={matchedFamily.image} className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate">{matchedFamily.name}</h3>
-                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.location}</p>
+              <div className="space-y-2 animate-enter">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border border-warm-200" style={{ backgroundColor: matchedFamily.imageColor }}>
+                    <img src={familyAvatarUrl(matchedFamily.imageColor, matchedFamily.id)} alt={matchedFamily.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-gray-900 text-base leading-tight">{matchedFamily.name}</h3>
+                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city} · {shabLabel}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Btn onClick={() => {
-                    const msg = t('whatsapp_msg', soldierName, request.when);
-                    window.open(`https://wa.me/${matchedFamily.phone}?text=${encodeURIComponent(msg)}`);
-                  }} variant="outline" className="flex items-center justify-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
-                    WhatsApp
-                  </Btn>
-                  <Btn onClick={onViewMap} variant="outline" className="flex items-center justify-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    {t('view_map')}
-                  </Btn>
-                </div>
+                {/* Short description */}
+                <p className="text-sm text-warm-600 leading-relaxed">{matchedFamily.shortDescription}</p>
 
-                <div className="pt-4 border-t border-warm-100">
-                  <button 
-                    onClick={() => setView('rematch')}
-                    className="w-full py-3 text-sm font-semibold text-warm-500 hover:text-brand-600 transition-colors"
-                  >
-                    {t('request_rematch')}
-                  </button>
+                {/* Tags */}
+                {familyTags.length > 0 && (
+                  <div className="family-info-tags">
+                    {familyTags.map(tag => (
+                      <span key={tag.label} className={`family-info-tag ${tag.cls}`}>
+                        {tag.icon} {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Vibe quote */}
+                {matchedFamily.vibe && (
+                  <p className="family-info-vibe">"{matchedFamily.vibe}"</p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Btn onClick={() => {
+                      const msg = t('whatsapp_msg', soldierName, request.when);
+                      window.open(`https://wa.me/${matchedFamily.waDigits}?text=${encodeURIComponent(msg)}`);
+                    }} className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
+                      {t('s15_talk_whatsapp')}
+                    </Btn>
+                    <Btn onClick={onViewMap} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {t('view_map')}
+                    </Btn>
+                  </div>
+                  <Btn onClick={() => setView('rematch')} variant="outline" className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
+                  <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
+                  <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
                 </div>
               </div>
             )}
 
-            <div className="pt-4 flex flex-col gap-3">
-              <Btn onClick={onEdit} variant="outline">{t('edit_request')}</Btn>
-              <button onClick={() => onCancel(request.id)} className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
-            </div>
+            {/* Searching state actions */}
+            {request.status === 'searching' && (
+              <div className="flex flex-col gap-3 pt-2">
+                <Btn onClick={onEdit} variant="outline">{t('edit_request')}</Btn>
+                <button onClick={() => onCancel(request.id)} className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
+              </div>
+            )}
           </>
         ) : (
+          /* Rematch view */
           <div className="space-y-6 animate-enter">
             <div>
               <label className="block text-sm font-semibold text-warm-700 mb-2">{t('rematch_reason_label')}</label>
-              <textarea 
+              <textarea
                 value={rematchReason}
                 onChange={e => setRematchReason(e.target.value)}
                 placeholder={t('rematch_reason_ph')}

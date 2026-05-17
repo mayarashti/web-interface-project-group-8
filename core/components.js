@@ -397,25 +397,25 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }
   );
 }
 
-function Modal({ isOpen, onClose, title, children }) {
+function Modal({ isOpen, onClose, title, children, className }) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" 
+      <div
+        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up">
-        <div className="px-6 py-5 border-b border-warm-100 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div className={`relative w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up ${className || ''}`}>
+        <div className="px-5 py-4 border-b border-warm-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-          <button 
+          <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-warm-50 text-gray-500 hover:bg-warm-100 hover:text-gray-800 transition-colors"
           >
             ✕
           </button>
         </div>
-        <div className="p-6 overflow-y-auto overscroll-contain">
+        <div className="px-5 py-4 overflow-y-auto overscroll-contain">
           {children}
         </div>
       </div>
