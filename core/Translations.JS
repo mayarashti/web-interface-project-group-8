@@ -172,6 +172,11 @@ const T = {
     s12_sleep:'לינה', s12_walk:'מרחק הליכה', s12_allerg:'אלרגיות',
     s12_no_allerg:'ללא', s12_pets:'חיות מחמד', s12_sol:'עם חיילים',
     s12_bio:'תיאור אישי', s12_submit:'שלח פרופיל', s12_edit:'ערוך פרטים',
+    guest_group_solo:'מגיע לבד',
+    guest_group_with: (n) => `מגיע עם ${n} חייל${n > 1 ? 'ים' : ''} נוסף${n > 1 ? 'ים' : ''}`,
+    guest_logistics:'לוגיסטיקה',
+    guest_needs_transport:'צריך הסעה',
+    guest_walk_dist:'מרחק הליכה מהבסיס',
 
     /* S13 Pending */
     s13_title:'הפרופיל שלך בבדיקה',
@@ -618,6 +623,11 @@ const T = {
     s12_sleep:'Overnight Stay', s12_walk:'Walk Distance', s12_allerg:'Allergies',
     s12_no_allerg:'None', s12_pets:'Pets', s12_sol:'With soldiers',
     s12_bio:'Personal Bio', s12_submit:'Submit Profile', s12_edit:'Edit Details',
+    guest_group_solo:'Coming alone',
+    guest_group_with: (n) => `Coming with ${n} more soldier${n > 1 ? 's' : ''}`,
+    guest_logistics:'Logistics',
+    guest_needs_transport:'Needs transportation',
+    guest_walk_dist:'Walking distance from base',
 
     /* S13 Pending */
     s13_title:'Your Profile is Under Review',

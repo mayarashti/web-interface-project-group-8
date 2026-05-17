@@ -82,7 +82,25 @@ function App() {
     hostVibeTags: ['kids', 'shabbat_atm'],
     hasSoldierNearby: true,
     hostings: [
-      { id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, guests: [{ id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df' }], note: '', status: 'open' },
+      {
+        id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, note: '', status: 'open',
+        guests: [
+          {
+            id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df', unit: '\u05d2\u05d5\u05dc\u05e0\u05d9', phone: '052-1234567',
+            groupSize: 2, kosher: 'kosher', allergies: ['lactose'],
+            needsSleep: false, needsTransport: true, walkDistance: false,
+            bio: '\u05d9\u05d5\u05e6\u05d0 \u05de\u05d4\u05d1\u05e1\u05d9\u05e1 \u05d1\u05db\u05dc \u05e9\u05d9\u05e9\u05d9 \u05e9\u05d0\u05e4\u05e9\u05e8. \u05e9\u05de\u05d7 \u05dc\u05d1\u05d5\u05d0 \u05e2\u05dd \u05d7\u05d1\u05e8 \u05de\u05d4\u05d9\u05d7\u05d9\u05d3\u05d4.',
+            avatarColor: '#6f8f72',
+          },
+          {
+            id: 2, name: '\u05d3\u05e0\u05d9\u05d0\u05dc \u05de.', unit: '\u05d7\u05d9"\u05e8', phone: '052-9876543',
+            groupSize: 1, kosher: 'mehadrin', allergies: ['gluten'],
+            needsSleep: true, needsTransport: false, walkDistance: true,
+            bio: '',
+            avatarColor: '#b86442',
+          },
+        ],
+      },
       { id: 102, date: '2026-07-04', time: 'friday_evening', soldiers: 2, guests: [], note: '', status: 'canceled' },
     ],
   };
