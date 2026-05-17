@@ -126,9 +126,8 @@ function S19HostHome({ data, setData, onEditProfile }) {
     <div className="screen-enter min-h-screen bg-warm-50 pb-20">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-warm-200">
-        <div dir="ltr" className="max-w-md mx-auto px-5 h-16 flex items-center justify-between">
+        <div dir="ltr" className="max-w-md mx-auto px-5 h-16 grid grid-cols-3 items-center">
           <div className="flex gap-2 items-center">
-            <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
             <LangToggle variant="inline" />
             <button
               onClick={onEditProfile}
@@ -153,7 +152,10 @@ function S19HostHome({ data, setData, onEditProfile }) {
               </svg>
             </button>
           </div>
-          <div>
+          <div className="flex justify-center">
+            <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
+          </div>
+          <div className="text-end">
             <p className="text-xs font-semibold text-brand-600">{t('s19_greeting')} {data.hostName || 'משפחה'}</p>
             <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
           </div>
