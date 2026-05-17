@@ -356,11 +356,11 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }) {
-  const { lang } = useLang();
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout }) {
+  const { lang, t } = useLang();
   return (
     <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-warm-200">
-      <div className="max-w-md mx-auto px-5 h-16 flex items-center justify-between gap-3">
+      <div dir="ltr" className="max-w-md mx-auto px-5 h-16 flex items-center justify-between gap-3">
         {/* Start side: optional back btn + title */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {onBack && (
@@ -386,11 +386,28 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }
             <button
               onClick={onProfile}
               className="app-icon-btn"
-              aria-label={lang === 'he' ? 'הגדרות' : 'Settings'}
+              aria-label={lang === 'he' ? 'פרופיל' : 'Profile'}
             >
-              <span className="text-base leading-none">⚙️</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
             </button>
           ))}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="app-icon-btn"
+              aria-label={t('logout')}
+              title={t('logout')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>

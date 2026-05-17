@@ -502,6 +502,7 @@ const T = {
      ENGLISH
   ══════════════════════════════════════════ */
   en: {
+    logout: 'Log out',
     back:'Back',
     continue:'Continue →',
     close:'Close',
