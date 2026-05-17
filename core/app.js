@@ -5,7 +5,7 @@ function App() {
   const { 
     S0Login, S1Welcome, S2Explain, S3PersonalDetails, S7Preferences,
     S12Summary, S13Pending, S14Success, S15Home, S15NewRequest, S15Landing,
-    S18HostExplain, S16HostRegistration, S17HostSuccess, S19HostHome,
+    S18HostExplain, S16HostRegistration, S17HostSummary, S17HostSuccess, S19HostHome,
     S20NewHosting, S21SoldierProfile, S22HostProfile,
     LangContext, LangToggle, Modal, Card, Btn, useLang
   } = window;
@@ -145,7 +145,8 @@ function App() {
     24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(1)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} />,
+    25: <S17HostSummary data={formData} onEdit={() => go(16)} onSubmit={() => go(17)} onBack={() => go(16)} />,
     17: <S17HostSuccess onNext={() => go(19)} />,
     19: <S19HostHome    data={formData} setData={setFormData} onEditProfile={() => go(22)} />,
     20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,

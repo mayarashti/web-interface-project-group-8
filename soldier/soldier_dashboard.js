@@ -157,11 +157,12 @@ window.MAP_FAMILIES = [
     id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
     lat: 32.7943, lng: 34.9890,
     kosher: 'kosher', shabbat: 'traditional', capacity: 3,
-    canSleep: false, canTransport: true,
+    canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'singing'],
     rating: 4.9,
     shortDescription: 'אירוח חם עם נוף לים וקצת שירה משותפת',
+    vibe: 'אנחנו משפחה חמה שאוהבת לארח ולשיר סביב שולחן שישי. תמיד יש מקום לעוד אחד!',
     hostedCount: 18,
     phoneDisplay: '+972528765432',
     waDigits: '972528765432',
@@ -171,11 +172,12 @@ window.MAP_FAMILIES = [
     id: 2, name: 'משפחת כהן', city: 'קריית אתא',
     lat: 32.8072, lng: 35.1073,
     kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
-    canSleep: true, canTransport: false,
+    canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['quiet', 'shabbat_atm'],
     rating: 4.7,
     shortDescription: 'בית משפחתי רגוע עם מנהגי שבת מסורתיים',
+    vibe: 'בית שקט ומסורתי עם קידוש, זמירות ושולחן שבת מלא אהבה. שמחים לתת לכם בית בשישי.',
     hostedCount: 24,
     phoneDisplay: '+972528123987',
     waDigits: '972528123987',
@@ -185,11 +187,12 @@ window.MAP_FAMILIES = [
     id: 3, name: 'משפחת גולן', city: 'נשר',
     lat: 32.7730, lng: 35.0460,
     kosher: 'none', shabbat: 'secular', capacity: 4,
-    canSleep: false, canTransport: true,
+    canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['food', 'spacious'],
     rating: 4.8,
     shortDescription: 'בית פתוח עם מטבח גדול ועוגת שבת טעימה',
+    vibe: 'מטבח גדול, אוכל בשפע ושולחן פתוח לכולם. לא דתיים אבל הלב גדול ותמיד שמחים לארח.',
     hostedCount: 12,
     phoneDisplay: '+972523456789',
     waDigits: '972523456789',
@@ -199,11 +202,12 @@ window.MAP_FAMILIES = [
     id: 4, name: 'משפחת אברהם', city: 'חיפה — נווה שאנן',
     lat: 32.8021, lng: 35.0018,
     kosher: 'kosher', shabbat: 'traditional', capacity: 3,
-    canSleep: true, canTransport: false,
+    canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['shabbat_lunch'],
     tags: ['multilingual', 'spacious'],
     rating: 4.6,
     shortDescription: 'אירוח משפחתי בשפה עברית ואנגלית',
+    vibe: 'דוברי עברית ואנגלית, בית מרווח ואווירה נינוחה. תמיד מקום לעוד חייל סביב השולחן.',
     hostedCount: 9,
     phoneDisplay: '+972527654321',
     waDigits: '972527654321',
@@ -213,11 +217,12 @@ window.MAP_FAMILIES = [
     id: 5, name: 'משפחת שמיר', city: 'קריית ביאליק',
     lat: 32.8350, lng: 35.0850,
     kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
-    canSleep: false, canTransport: false,
+    canSleep: false, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'shabbat_atm'],
     rating: 5.0,
     shortDescription: 'בית שמח עם אווירה משפחתית וחלבית',
+    vibe: 'בית שמח עם ילדים קטנים ואווירת שבת מלאה. שרים, מספרים סיפורים ואוהבים לארח חיילים.',
     hostedCount: 21,
     phoneDisplay: '+972527890123',
     waDigits: '972527890123',
@@ -227,11 +232,12 @@ window.MAP_FAMILIES = [
     id: 6, name: 'משפחת פרץ', city: 'טירת כרמל',
     lat: 32.7608, lng: 34.9700,
     kosher: 'kosher', shabbat: 'traditional', capacity: 5,
-    canSleep: true, canTransport: true,
+    canSleep: true, canTransport: true, hasPets: true,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['food', 'pets', 'spacious'],
     rating: 4.5,
     shortDescription: 'בית גדול ומסביר פנים עם מקום למנוחה אחרי הארוחה',
+    vibe: 'בית גדול ומסביר פנים עם כלב חמוד ושולחן ארוך. יש מקום לכולם — מרחק הליכה מהבסיס.',
     hostedCount: 31,
     phoneDisplay: '+972523210987',
     waDigits: '972523210987',
@@ -258,6 +264,13 @@ function FamilyInfoCard({ family, onClose }) {
     window.location.href = `tel:${family.phoneDisplay}`;
   };
 
+  const tags = [];
+  if (family.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+  else if (family.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+  if (family.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+  else if (family.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+  if (family.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
+
   return (
     <aside className="family-info-card">
       <div className="family-info-card-header">
@@ -276,6 +289,20 @@ function FamilyInfoCard({ family, onClose }) {
       </div>
 
       <p className="family-info-card-description">{family.shortDescription}</p>
+
+      {tags.length > 0 && (
+        <div className="family-info-tags">
+          {tags.map(tag => (
+            <span key={tag.label} className={`family-info-tag ${tag.cls}`}>
+              {tag.icon} {tag.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {family.vibe && (
+        <p className="family-info-vibe">"{family.vibe}"</p>
+      )}
 
       <div className="family-info-card-status">
         <div>

@@ -453,6 +453,12 @@ const T = {
     s16_sum_shab:'שבת', s16_sum_cap:'קיבולת', s16_sum_tags:'תגיות',
     s16_cap_unit: (n) => `עד ${n} חיילים`,
     s16_submit:'השלם ורשום פרופיל',
+    s16_sum_kosh:'כשרות',
+    s16_sum_pets_label:'חיות מחמד',
+    s16_sum_pets_yes:'כן',
+    s16_sum_pets_no:'לא',
+    s16_sum_cooking:'בישול',
+    s16_sum_vibe:'אופי הבית',
     s17_hi:'ברוכים הבאים!', s17_ok:'ההרשמה הושלמה בהצלחה',
     s17_desc:'אתם עכשיו חלק ממשפחת מארחי שבת.\nחיילים יוכלו למצוא אתכם ולבקש אירוח לשישי!',
     s17_home:'לעמוד הבית',
@@ -772,8 +778,18 @@ const T = {
     v_city:'Please enter a city or address', v_shab:'Please select your Shabbat observance level',
     v_kosh:'Please select a kashrut level', v_pets:'Please specify the pets', v_bio:'Please enter a short bio',
 
+    /* S17 Host Summary */
+    s16_sum_title:'Registration Summary',
+    s16_sum_name:'Name', s16_sum_city:'City',
+    s16_sum_shab:'Shabbat',
+    s16_sum_kosh:'Kashrut',
+    s16_sum_pets_label:'Pets',
+    s16_sum_pets_yes:'Yes',
+    s16_sum_pets_no:'No',
+    s16_sum_cooking:'Cooking',
+    s16_sum_vibe:'Home Vibe',
+    s16_submit:'Complete Registration',
 
-    /* S17 Host Success */
     /* S17 Host Success */
     s17_hi:'Welcome!', s17_ok:'Registration complete!',
     s17_title:'Registration Successful!', s17_btn:'Go to Dashboard',
