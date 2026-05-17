@@ -91,6 +91,7 @@ const T = {
     s3_title:'יצירת חשבון', s3_sub:'כמה פרטים קטנים ואת/ה בפנים!',
     s3_first:'שם פרטי', s3_last:'שם משפחה',
     s3_phone:'מספר טלפון', s3_email:'אימייל',
+    s3_age:'גיל', s3_age_ph:'למשל 21', s3_age_err:'נא להזין גיל בין 18 ל-35',
     s3_pass:'סיסמה', s3_pass_ph:'לפחות 6 תווים', s3_pass_hint:'הסיסמה שמורה בצורה מאובטחת',
     s3_terms_pre:'אני מאשר/ת את', s3_terms_link1:'תנאי השימוש',
     s3_terms_and:'ו', s3_terms_link2:'מדיניות הפרטיות',
@@ -165,7 +166,7 @@ const T = {
 
     /* S12 Summary */
     s12_title:'סיכום הרשמה', s12_sub:'בדוק שהכל נכון לפני השליחה',
-    s12_personal:'פרטים אישיים', s12_full:'שם מלא', s12_phone:'טלפון', s12_email:'אימייל',
+    s12_personal:'פרטים אישיים', s12_full:'שם מלא', s12_phone:'טלפון', s12_age:'גיל', s12_email:'אימייל',
     s12_mil:'שירות צבאי', s12_stype:'סוג שירות', s12_unit:'יחידה', s12_doc:'מסמך',
     s12_uploaded:'הועלה',
     s12_prefs:'העדפות', s12_kosh:'כשרות', s12_shab:'שמירת שבת',
@@ -542,6 +543,7 @@ const T = {
     s3_title:'Create Account', s3_sub:'Just a few details and you\'re in!',
     s3_first:'First Name', s3_last:'Last Name',
     s3_phone:'Phone Number', s3_email:'Email',
+    s3_age:'Age', s3_age_ph:'e.g. 21', s3_age_err:'Please enter an age between 18 and 35',
     s3_pass:'Password', s3_pass_ph:'At least 6 characters', s3_pass_hint:'Your password is stored securely',
     s3_terms_pre:'I agree to the', s3_terms_link1:'Terms of Service',
     s3_terms_and:'and', s3_terms_link2:'Privacy Policy',
@@ -616,7 +618,7 @@ const T = {
 
     /* S12 Summary */
     s12_title:'Registration Summary', s12_sub:'Check everything is correct before submitting',
-    s12_personal:'Personal Details', s12_full:'Full Name', s12_phone:'Phone', s12_email:'Email',
+    s12_personal:'Personal Details', s12_full:'Full Name', s12_phone:'Phone', s12_age:'Age', s12_email:'Email',
     s12_mil:'Military Service', s12_stype:'Service Type', s12_unit:'Unit', s12_doc:'Document',
     s12_uploaded:'Uploaded',
     s12_prefs:'Preferences', s12_kosh:'Kashrut', s12_shab:'Shabbat',

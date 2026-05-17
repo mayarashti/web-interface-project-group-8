@@ -39,7 +39,9 @@ function SoldierProfileModal({ guest, onClose }) {
             {(guest.name || '?')[0]}
           </div>
           <div>
-            {guest.unit && <p className="text-xs text-warm-500">{guest.unit}</p>}
+            <p className="text-xs text-warm-500">
+              {[guest.unit, guest.age ? t('s3_age') + ' ' + guest.age : null].filter(Boolean).join(' · ')}
+            </p>
             <p className="text-sm font-medium text-gray-800 mt-0.5">
               <span className="me-1">👥</span>
               {(guest.groupSize || 1) > 1
