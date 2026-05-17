@@ -1080,7 +1080,7 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-gray-900 text-base leading-tight">{matchedFamily.name}</h3>
-                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city} · {shabLabel}</p>
+                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city} | {shabLabel}</p>
                   </div>
                 </div>
 
