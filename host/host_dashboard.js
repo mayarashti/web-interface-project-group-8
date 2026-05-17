@@ -127,10 +127,6 @@ function S19HostHome({ data, setData, onEditProfile }) {
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-warm-200">
         <div dir="ltr" className="max-w-md mx-auto px-5 h-16 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-brand-600">{t('s19_greeting')} {data.hostName || 'משפחה'}</p>
-            <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
-          </div>
           <div className="flex gap-2 items-center">
             <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
             <LangToggle variant="inline" />
@@ -156,6 +152,10 @@ function S19HostHome({ data, setData, onEditProfile }) {
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </button>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-brand-600">{t('s19_greeting')} {data.hostName || 'משפחה'}</p>
+            <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
           </div>
         </div>
       </div>
