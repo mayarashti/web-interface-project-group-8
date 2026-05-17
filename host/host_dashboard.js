@@ -210,7 +210,8 @@ function S19HostHome({ data, setData, onEditProfile }) {
               const guests = h.guests || [];
               const capacity = parseInt(h.soldiers) || 0;
               const isCanceled = h.status === 'canceled';
-              const isFull = !isCanceled && guests.length >= capacity && capacity > 0;
+              const totalGuests = guests.reduce((sum, g) => sum + (g.groupSize || 1), 0);
+              const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
 
               return (
                 <Card key={h.id} className={`p-0 overflow-hidden${isCanceled ? ' opacity-60' : ''}`}>
@@ -234,7 +235,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                       }`}>
                         {isCanceled
                           ? t('canceled_label')
-                          : `${guests.length}/${capacity} ${t('s19_spots_taken')}`}
+                          : `${totalGuests}/${capacity} ${t('s19_spots_taken')}`}
                       </span>
                     </div>
                     {h.note && <p className="text-xs text-warm-400 mt-2 leading-relaxed line-clamp-1">"{h.note}"</p>}
@@ -268,7 +269,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                             onClick={() => setSelectedHosting(h)}
                             className="text-xs font-semibold bg-white border border-warm-200 rounded-lg px-3 py-1 text-gray-700 shadow-xs hover:bg-warm-50 transition-colors"
                           >
-                            {t('s19_view_guests')} ({guests.length})
+                            {t('s19_view_guests')} ({totalGuests})
                           </button>
                         )}
                       </>
