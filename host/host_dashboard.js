@@ -2,10 +2,106 @@
 
 var { useState } = React;
 
+/* ── Soldier profile card modal ── */
+function SoldierProfileModal({ guest, onClose }) {
+  const { t } = useLang();
+  if (!guest) return null;
+
+  const allergyMap = {
+    gluten: t('a_gluten'), lactose: t('a_lactose'), nuts: t('a_nuts'),
+    peanuts: t('a_peanuts'), veg: t('a_veg'), vegan: t('a_vegan'),
+    fish: t('a_fish'), other: t('a_other'),
+  };
+  const allergyList = (guest.allergies || []).map(a => allergyMap[a]).filter(Boolean).join(', ') || t('s12_no_allerg');
+  const koshMap = { mehadrin: t('map_meh'), kosher: t('map_kosh'), none: t('map_none') };
+  const logisticsItems = [
+    guest.needsSleep      && t('s12_sleep'),
+    guest.needsTransport  && t('guest_needs_transport'),
+    guest.walkDistance    && t('guest_walk_dist'),
+  ].filter(Boolean);
+
+  const Row = ({ label, value }) => (
+    <div className="flex justify-between items-start py-2 border-b border-warm-100 last:border-0">
+      <span className="text-xs text-warm-500 font-medium w-28 flex-shrink-0">{label}</span>
+      <span className="text-sm text-gray-800 text-start flex-1 ms-2">{value}</span>
+    </div>
+  );
+
+  return (
+    <Modal isOpen={!!guest} onClose={onClose} title={guest.name} className="max-w-md max-h-[93vh]">
+      <div className="space-y-3">
+        {/* Avatar + unit + group — compact horizontal row */}
+        <div className="flex items-center gap-3 pb-3 border-b border-warm-100">
+          <div
+            className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-sm"
+            style={{ background: guest.avatarColor || '#6f8f72' }}
+          >
+            {(guest.name || '?')[0]}
+          </div>
+          <div>
+            <p className="text-xs text-warm-500">
+              {[guest.unit, guest.age ? t('s3_age') + ' ' + guest.age : null].filter(Boolean).join(' · ')}
+            </p>
+            <p className="text-sm font-medium text-gray-800 mt-0.5">
+              <span className="me-1">👥</span>
+              {(guest.groupSize || 1) > 1
+                ? t('guest_group_with', (guest.groupSize || 1) - 1)
+                : t('guest_group_solo')}
+            </p>
+          </div>
+        </div>
+
+        {/* Dietary preferences */}
+        <div>
+          <p className="section-label mb-1.5">{t('s12_prefs')}</p>
+          <Row label={t('s12_kosh')}   value={koshMap[guest.kosher] || t('map_none')} />
+          <Row label={t('s12_allerg')} value={allergyList} />
+        </div>
+
+        {/* Logistics */}
+        {logisticsItems.length > 0 && (
+          <div>
+            <p className="section-label mb-1.5">{t('guest_logistics')}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {logisticsItems.map(item => (
+                <span key={item} className="px-3 py-1 bg-brand-50 border border-brand-100 text-brand-700 text-xs font-semibold rounded-full">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Bio */}
+        {guest.bio && (
+          <p className="text-sm text-warm-600 italic leading-relaxed border-s-2 border-brand-200 ps-3">
+            "{guest.bio}"
+          </p>
+        )}
+
+        {/* WhatsApp */}
+        {guest.phone && (
+          <a
+            href={`https://wa.me/972${guest.phone.replace(/\D/g, '').replace(/^0/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-2.5 rounded-xl text-sm font-bold hover:bg-[#1ebd5b] transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
+            WhatsApp
+          </a>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function S19HostHome({ data, setData, onEditProfile }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
-  const [selectedHosting, setSelectedHosting] = useState(null);
+  const [selectedHosting,     setSelectedHosting]     = useState(null);
+  const [selectedGuest,       setSelectedGuest]       = useState(null);
+  const [guestSourceHosting,  setGuestSourceHosting]  = useState(null);
 
   const handleNewHosting = () => {
     setData(prev => ({ ...prev, editingHostingId: null }));
@@ -30,20 +126,38 @@ function S19HostHome({ data, setData, onEditProfile }) {
     <div className="screen-enter min-h-screen bg-warm-50 pb-20">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-warm-200">
-        <div className="max-w-md mx-auto px-5 h-16 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-brand-600">{t('s19_greeting')} {data.hostName || 'משפחה'}</p>
-            <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
-          </div>
+        <div dir="ltr" className="max-w-md mx-auto px-5 h-16 grid grid-cols-3 items-center">
           <div className="flex gap-2 items-center">
-            <LangToggle />
+            <LangToggle variant="inline" />
             <button
               onClick={onEditProfile}
-              className="w-10 h-10 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center hover:bg-brand-100 transition-colors active:scale-95"
-              aria-label="Settings"
+              className="app-icon-btn"
+              aria-label={t('profile_settings')}
             >
-              <span className="text-lg">⚙️</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
             </button>
+            <button
+              onClick={() => window.setScreen(1)}
+              className="app-icon-btn"
+              aria-label={t('logout')}
+              title={t('logout')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
+          <div className="flex justify-center">
+            <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
+          </div>
+          <div className="text-end">
+            <p className="text-xs font-semibold text-brand-600">{t('s19_greeting')} {data.hostName || 'משפחה'}</p>
+            <p className="text-[11px] text-warm-500">{t('s19_status')}</p>
           </div>
         </div>
       </div>
@@ -101,7 +215,8 @@ function S19HostHome({ data, setData, onEditProfile }) {
               const guests = h.guests || [];
               const capacity = parseInt(h.soldiers) || 0;
               const isCanceled = h.status === 'canceled';
-              const isFull = !isCanceled && guests.length >= capacity && capacity > 0;
+              const totalGuests = guests.reduce((sum, g) => sum + (g.groupSize || 1), 0);
+              const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
 
               return (
                 <Card key={h.id} className={`p-0 overflow-hidden${isCanceled ? ' opacity-60' : ''}`}>
@@ -125,7 +240,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                       }`}>
                         {isCanceled
                           ? t('canceled_label')
-                          : `${guests.length}/${capacity} ${t('s19_spots_taken')}`}
+                          : `${totalGuests}/${capacity} ${t('s19_spots_taken')}`}
                       </span>
                     </div>
                     {h.note && <p className="text-xs text-warm-400 mt-2 leading-relaxed line-clamp-1">"{h.note}"</p>}
@@ -159,7 +274,7 @@ function S19HostHome({ data, setData, onEditProfile }) {
                             onClick={() => setSelectedHosting(h)}
                             className="text-xs font-semibold bg-white border border-warm-200 rounded-lg px-3 py-1 text-gray-700 shadow-xs hover:bg-warm-50 transition-colors"
                           >
-                            {t('s19_view_guests')} ({guests.length})
+                            {t('s19_view_guests')} ({totalGuests})
                           </button>
                         )}
                       </>
@@ -171,6 +286,12 @@ function S19HostHome({ data, setData, onEditProfile }) {
           </div>
         )}
       </div>
+
+      {/* Soldier profile card */}
+      <SoldierProfileModal
+        guest={selectedGuest}
+        onClose={() => { setSelectedGuest(null); setSelectedHosting(guestSourceHosting); setGuestSourceHosting(null); }}
+      />
 
       {/* Guest Details Modal */}
       {selectedHosting && (
@@ -185,16 +306,27 @@ function S19HostHome({ data, setData, onEditProfile }) {
             ) : (
               selectedHosting.guests.map(g => (
                 <Card key={g.id} className="p-3 bg-warm-50">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{g.name}</p>
-                      {g.unit && <p className="text-xs text-warm-500 mt-0.5">{t('s19_unit')} {g.unit}</p>}
-                    </div>
+                  <div className="flex justify-between items-center gap-3">
+                    <button
+                      onClick={() => { setGuestSourceHosting(selectedHosting); setSelectedHosting(null); setSelectedGuest(g); }}
+                      className="flex items-center gap-2.5 min-w-0 flex-1 text-start group"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold"
+                        style={{ background: g.avatarColor || '#6f8f72' }}
+                      >
+                        {(g.name || '?')[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-brand-600 text-sm group-hover:underline underline-offset-2 truncate">{g.name}</p>
+                        {g.unit && <p className="text-xs text-warm-500 mt-0.5">{t('s19_unit')} {g.unit}</p>}
+                      </div>
+                    </button>
                     <a
                       href={`https://wa.me/972${(g.phone || '').replace(/\D/g, '').replace(/^0/, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-[#1ebd5b] transition-colors"
+                      className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-[#1ebd5b] transition-colors flex-shrink-0"
                     >
                       <span>💬</span> WhatsApp
                     </a>

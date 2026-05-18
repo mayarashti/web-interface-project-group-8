@@ -5,7 +5,7 @@ function App() {
   const { 
     S0Login, S1Welcome, S2Explain, S3PersonalDetails, S7Preferences,
     S12Summary, S13Pending, S14Success, S15Home, S15NewRequest, S15Landing,
-    S18HostExplain, S16HostRegistration, S17HostSuccess, S19HostHome,
+    S18HostExplain, S16HostRegistration, S17HostSummary, S17HostSuccess, S19HostHome,
     S20NewHosting, S21SoldierProfile, S22HostProfile,
     LangContext, LangToggle, Modal, Card, Btn, useLang
   } = window;
@@ -82,7 +82,25 @@ function App() {
     hostVibeTags: ['kids', 'shabbat_atm'],
     hasSoldierNearby: true,
     hostings: [
-      { id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, guests: [{ id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df' }], note: '', status: 'open' },
+      {
+        id: 101, date: '2026-06-27', time: 'friday_evening', soldiers: 3, note: '', status: 'open',
+        guests: [
+          {
+            id: 1, name: '\u05d9\u05d5\u05e0\u05ea\u05df \u05db\u05d4\u05df', unit: '\u05d2\u05d5\u05dc\u05e0\u05d9', phone: '052-1234567', age: 21,
+            groupSize: 2, kosher: 'kosher', allergies: ['lactose'],
+            needsSleep: false, needsTransport: true, walkDistance: false,
+            bio: '\u05d9\u05d5\u05e6\u05d0 \u05de\u05d4\u05d1\u05e1\u05d9\u05e1 \u05d1\u05db\u05dc \u05e9\u05d9\u05e9\u05d9 \u05e9\u05d0\u05e4\u05e9\u05e8. \u05e9\u05de\u05d7 \u05dc\u05d1\u05d5\u05d0 \u05e2\u05dd \u05d7\u05d1\u05e8 \u05de\u05d4\u05d9\u05d7\u05d9\u05d3\u05d4.',
+            avatarColor: '#6f8f72',
+          },
+          {
+            id: 2, name: '\u05d3\u05e0\u05d9\u05d0\u05dc \u05de.', unit: '\u05d7\u05d9"\u05e8', phone: '052-9876543', age: 23,
+            groupSize: 1, kosher: 'mehadrin', allergies: ['gluten'],
+            needsSleep: true, needsTransport: false, walkDistance: true,
+            bio: '',
+            avatarColor: '#b86442',
+          },
+        ],
+      },
       { id: 102, date: '2026-07-04', time: 'friday_evening', soldiers: 2, guests: [], note: '', status: 'canceled' },
     ],
   };
@@ -145,7 +163,8 @@ function App() {
     24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(17)} onBack={() => go(1)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} />,
+    25: <S17HostSummary data={formData} onEdit={() => go(16)} onSubmit={() => go(17)} onBack={() => go(16)} />,
     17: <S17HostSuccess onNext={() => go(19)} />,
     19: <S19HostHome    data={formData} setData={setFormData} onEditProfile={() => go(22)} />,
     20: <S20NewHosting  data={formData} setData={setFormData} onBack={() => go(19)} onSubmit={() => go(19)} />,
@@ -198,12 +217,12 @@ function InfoModal({ screen, isOpen, onClose }) {
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t(`${prefix}_title`)}>
-      <p className="text-sm text-warm-500 mb-6">{t(`${prefix}_sub`)}</p>
-      <div className="space-y-3">
+    <Modal isOpen={isOpen} onClose={onClose} title={t(`${prefix}_title`)} className="max-w-xl">
+      <p className="text-sm text-warm-500 mb-3">{t(`${prefix}_sub`)}</p>
+      <div className="grid grid-cols-2 gap-2">
         {features.map((f, index) => (
-          <Card key={f.title} className="flex gap-4 items-start p-4">
-            <span className="w-8 h-8 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
+          <Card key={f.title} className="flex gap-3 items-start p-3">
+            <span className="w-7 h-7 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{index + 1}</span>
             <div>
               <p className="font-semibold text-gray-800 text-sm">{f.title}</p>
               <p className="text-xs text-warm-500 mt-0.5 leading-relaxed">{f.desc}</p>

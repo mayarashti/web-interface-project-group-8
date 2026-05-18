@@ -39,9 +39,16 @@ function S0Login({ onBack, onLogin }) {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-5">
-            <div className="w-5 h-5 rounded-full border-4 border-brand-500" />
-          </div>
+          <button
+            onClick={onBack}
+            aria-label={t('back')}
+            className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-5 hover:bg-brand-100 active:scale-95 transition-all"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500">
+              <path d="M19 12H5"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </button>
           <h1 className="text-[28px] leading-[34px] font-bold text-gray-900 mb-2">{t('s0_title')}</h1>
           <p className="text-base text-warm-500 leading-6">{t('s0_subtitle')}</p>
         </div>
@@ -112,13 +119,6 @@ function S0Login({ onBack, onLogin }) {
           {t('demo_hint')}
         </p>
 
-        {/* Back to Registration */}
-        <button
-          onClick={onBack}
-          className="w-full mt-3 text-sm text-warm-500 hover:text-warm-600 font-semibold transition-colors text-center"
-        >
-          {t('s0_back_to_register')}
-        </button>
       </div>
     </div>
   );
@@ -132,10 +132,6 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
     <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-warm-50">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-6">
-            <div className="w-7 h-7 rounded-full bg-brand-500 shadow-xs" />
-          </div>
-          <p className="text-sm text-brand-600 font-semibold mb-2">{t('s1_subtitle')}</p>
           <h1 className="text-[32px] leading-9 font-bold text-gray-900 mb-3 tracking-normal">{t('s1_title')}</h1>
           <p className="text-lg text-warm-500 leading-7">{t('s1_tagline')}</p>
         </div>

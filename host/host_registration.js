@@ -215,7 +215,84 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
   );
 }
 
-/* S17 Host Success */
+/* S17 Host Summary */
+function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
+  const { t } = useLang();
+
+  const Row = ({ label, value }) => value ? (
+    <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
+      <span className="text-xs text-warm-500 font-medium w-32 flex-shrink-0">{label}</span>
+      <span className="text-sm text-gray-800 text-start flex-1 ms-2">{value}</span>
+    </div>
+  ) : null;
+
+  const koshMap = {
+    none:      t('s16_kosh_none'),
+    separated: t('s16_kosh_sep'),
+    kitchen:   t('s16_kosh_kit'),
+  };
+
+  const shabbatMap = {
+    none:        t('s16_shab_none'),
+    traditional: t('s16_shab_trad'),
+    keeps:       t('s16_shab_keeps'),
+  };
+
+  const cookingLabels = {
+    veg:     t('alg_veg'),
+    vegan:   t('alg_vegan'),
+    celiac:  t('alg_celiac'),
+    lactose: t('alg_lactose'),
+    nuts:    t('alg_nuts'),
+  };
+
+  const cookingValue = (data.hostCooking || []).map(c => cookingLabels[c]).filter(Boolean).join(', ');
+
+  const petsValue = data.hasPets
+    ? (data.petsDetails?.trim() ? t('s16_sum_pets_yes') + ': ' + data.petsDetails : t('s16_sum_pets_yes'))
+    : t('s16_sum_pets_no');
+
+  return (
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onSubmit}
+      nextLabel={t('s16_submit')}
+      icon="📋"
+      title={t('s16_sum_title')}
+      sub={t('s12_sub')}
+    >
+      <div className="pb-32">
+        <Card className="mb-4">
+          <p className="section-label mb-3">{t('s12_personal')}</p>
+          <Row label={t('s16_sum_name')}  value={data.hostName} />
+          <Row label={t('s12_phone')}     value={data.hostPhone} />
+          <Row label={t('s16_sum_city')}  value={data.hostCity} />
+        </Card>
+
+        <Card className="mb-4">
+          <p className="section-label mb-3">{t('s16_2_title')}</p>
+          <Row label={t('s16_sum_kosh')}       value={koshMap[data.hostKosher]} />
+          <Row label={t('s16_sum_shab')}        value={shabbatMap[data.hostShabbat]} />
+          <Row label={t('s16_sum_pets_label')} value={petsValue} />
+          {cookingValue && <Row label={t('s16_sum_cooking')} value={cookingValue} />}
+        </Card>
+
+        {data.hostVibe && (
+          <Card className="mb-4 bg-brand-50 border-brand-100">
+            <p className="section-label mb-2">{t('s16_sum_vibe')}</p>
+            <p className="text-sm text-gray-700 leading-relaxed italic">"{data.hostVibe}"</p>
+          </Card>
+        )}
+
+        <div className="mt-4">
+          <Btn variant="secondary" onClick={onEdit}>{t('s12_edit')}</Btn>
+        </div>
+      </div>
+    </ScreenLayout>
+  );
+}
+
+/* S18 Host Success */
 function S17HostSuccess({ onNext }) {
   const { t } = useLang();
   return (
@@ -233,4 +310,5 @@ function S17HostSuccess({ onNext }) {
 }
 
 window.S16HostRegistration = S16HostRegistration;
+window.S17HostSummary = S17HostSummary;
 window.S17HostSuccess = S17HostSuccess;
