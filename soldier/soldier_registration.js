@@ -10,6 +10,8 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
     const e = {};
     if (!data.fullName?.trim()) e.fullName = t('v_name');
     if (!data.phone?.trim() || data.phone.replace(/\D/g, '').length < 9) e.phone = t('err_phone');
+    const age = parseInt(data.age);
+    if (!data.age || isNaN(age) || age < 18 ) e.age = t('s3_age_err');
     if (!data.password || data.password.length < 6) e.password = t('err_pass');
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -44,13 +46,21 @@ function S3PersonalDetails({ data, setData, onNext, onBack }) {
             placeholder={t('s16_name_ph')} 
             error={errors.fullName} 
           />
-          <Input 
-            label={t('s3_phone')} 
-            type="tel" 
-            value={data.phone || ''} 
-            onChange={set('phone')} 
-            placeholder="050-1234567" 
-            error={errors.phone} 
+          <Input
+            label={t('s3_phone')}
+            type="tel"
+            value={data.phone || ''}
+            onChange={set('phone')}
+            placeholder="050-1234567"
+            error={errors.phone}
+          />
+          <Input
+            label={t('s3_age')}
+            type="number"
+            value={data.age || ''}
+            onChange={set('age')}
+            placeholder={t('s3_age_ph')}
+            error={errors.age}
           />
 
           <Input 
@@ -297,6 +307,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
         <p className="section-label mb-3">{t('s12_personal')}</p>
         <Row label={t('s12_full')}  value={data.fullName} />
         <Row label={t('s12_phone')} value={data.phone} />
+        <Row label={t('s12_age')}   value={data.age} />
       </Card>
 
 

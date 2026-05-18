@@ -20,6 +20,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
           </button>
         )}
         actions={<LangToggle variant="inline" />}
+        onLogout={() => window.setScreen(1)}
       />
 
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
@@ -156,13 +157,13 @@ window.MAP_FAMILIES = [
   {
     id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
     lat: 32.7943, lng: 34.9890,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 3,
-    canSleep: false, canTransport: true,
+    kosher: 'kosher', shabbat: 'traditional', capacity: 3, occupied: 1,
+    canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'singing'],
     rating: 4.9,
     shortDescription: 'אירוח חם עם נוף לים וקצת שירה משותפת',
-    hostedCount: 18,
+    vibe: 'אנחנו משפחה חמה שאוהבת לארח ולשיר סביב שולחן שישי. תמיד יש מקום לעוד אחד!',
     phoneDisplay: '+972528765432',
     waDigits: '972528765432',
     imageColor: '#fdeedd',
@@ -170,13 +171,13 @@ window.MAP_FAMILIES = [
   {
     id: 2, name: 'משפחת כהן', city: 'קריית אתא',
     lat: 32.8072, lng: 35.1073,
-    kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
-    canSleep: true, canTransport: false,
+    kosher: 'mehadrin', shabbat: 'observant', capacity: 2, occupied: 2,
+    canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['quiet', 'shabbat_atm'],
     rating: 4.7,
     shortDescription: 'בית משפחתי רגוע עם מנהגי שבת מסורתיים',
-    hostedCount: 24,
+    vibe: 'בית שקט ומסורתי עם קידוש, זמירות ושולחן שבת מלא אהבה. שמחים לתת לכם בית בשישי.',
     phoneDisplay: '+972528123987',
     waDigits: '972528123987',
     imageColor: '#f7d1b5',
@@ -184,13 +185,13 @@ window.MAP_FAMILIES = [
   {
     id: 3, name: 'משפחת גולן', city: 'נשר',
     lat: 32.7730, lng: 35.0460,
-    kosher: 'none', shabbat: 'secular', capacity: 4,
-    canSleep: false, canTransport: true,
+    kosher: 'none', shabbat: 'secular', capacity: 4, occupied: 0,
+    canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['food', 'spacious'],
     rating: 4.8,
     shortDescription: 'בית פתוח עם מטבח גדול ועוגת שבת טעימה',
-    hostedCount: 12,
+    vibe: 'מטבח גדול, אוכל בשפע ושולחן פתוח לכולם. לא דתיים אבל הלב גדול ותמיד שמחים לארח.',
     phoneDisplay: '+972523456789',
     waDigits: '972523456789',
     imageColor: '#fff1e5',
@@ -198,13 +199,13 @@ window.MAP_FAMILIES = [
   {
     id: 4, name: 'משפחת אברהם', city: 'חיפה — נווה שאנן',
     lat: 32.8021, lng: 35.0018,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 3,
-    canSleep: true, canTransport: false,
+    kosher: 'kosher', shabbat: 'traditional', capacity: 3, occupied: 1,
+    canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['shabbat_lunch'],
     tags: ['multilingual', 'spacious'],
     rating: 4.6,
     shortDescription: 'אירוח משפחתי בשפה עברית ואנגלית',
-    hostedCount: 9,
+    vibe: 'דוברי עברית ואנגלית, בית מרווח ואווירה נינוחה. תמיד מקום לעוד חייל סביב השולחן.',
     phoneDisplay: '+972527654321',
     waDigits: '972527654321',
     imageColor: '#f9efe4',
@@ -212,13 +213,13 @@ window.MAP_FAMILIES = [
   {
     id: 5, name: 'משפחת שמיר', city: 'קריית ביאליק',
     lat: 32.8350, lng: 35.0850,
-    kosher: 'mehadrin', shabbat: 'observant', capacity: 2,
-    canSleep: false, canTransport: false,
+    kosher: 'mehadrin', shabbat: 'observant', capacity: 2, occupied: 1,
+    canSleep: false, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'shabbat_atm'],
     rating: 5.0,
     shortDescription: 'בית שמח עם אווירה משפחתית וחלבית',
-    hostedCount: 21,
+    vibe: 'בית שמח עם ילדים קטנים ואווירת שבת מלאה. שרים, מספרים סיפורים ואוהבים לארח חיילים.',
     phoneDisplay: '+972527890123',
     waDigits: '972527890123',
     imageColor: '#f1dcc8',
@@ -226,13 +227,13 @@ window.MAP_FAMILIES = [
   {
     id: 6, name: 'משפחת פרץ', city: 'טירת כרמל',
     lat: 32.7608, lng: 34.9700,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 5,
-    canSleep: true, canTransport: true,
+    kosher: 'kosher', shabbat: 'traditional', capacity: 5, occupied: 2,
+    canSleep: true, canTransport: true, hasPets: true,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['food', 'pets', 'spacious'],
     rating: 4.5,
     shortDescription: 'בית גדול ומסביר פנים עם מקום למנוחה אחרי הארוחה',
-    hostedCount: 31,
+    vibe: 'בית גדול ומסביר פנים עם כלב חמוד ושולחן ארוך. יש מקום לכולם — מרחק הליכה מהבסיס.',
     phoneDisplay: '+972523210987',
     waDigits: '972523210987',
     imageColor: '#f3e2d3',
@@ -258,6 +259,13 @@ function FamilyInfoCard({ family, onClose }) {
     window.location.href = `tel:${family.phoneDisplay}`;
   };
 
+  const tags = [];
+  if (family.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+  else if (family.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+  if (family.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+  else if (family.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+  if (family.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
+
   return (
     <aside className="family-info-card">
       <div className="family-info-card-header">
@@ -277,13 +285,19 @@ function FamilyInfoCard({ family, onClose }) {
 
       <p className="family-info-card-description">{family.shortDescription}</p>
 
-      <div className="family-info-card-status">
-        <div>
-          <p>{t('s15_open_table')}</p>
-          <span>{family.hostedCount} {t('s15_guests_title')}</span>
+      {tags.length > 0 && (
+        <div className="family-info-tags">
+          {tags.map(tag => (
+            <span key={tag.label} className={`family-info-tag ${tag.cls}`}>
+              {tag.icon} {tag.label}
+            </span>
+          ))}
         </div>
-        <strong>{t('s15_open_table')}</strong>
-      </div>
+      )}
+
+      {family.vibe && (
+        <p className="family-info-vibe">"{family.vibe}"</p>
+      )}
 
       <div className="family-info-grid">
         <div>
@@ -292,7 +306,13 @@ function FamilyInfoCard({ family, onClose }) {
         </div>
         <div>
           <span>{t('s15_capacity')}</span>
-          <strong>{family.capacity}</strong>
+          <strong>
+            {(() => {
+              const free = family.capacity - (family.occupied || 0);
+              const taken = family.occupied || 0;
+              return `${free} ${t('s15_spots_free')} · ${taken} ${t('s15_spots_taken')}`;
+            })()}
+          </strong>
         </div>
         {family.canSleep && (
           <div className="family-info-grid-wide">
@@ -478,14 +498,15 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
         title={soldierName}
         onBack={onBack}
         profileAction={(
-          <button onClick={onProfile} className="app-icon-btn" title={t('settings_label')} aria-label={t('settings_label')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" />
+          <button onClick={onProfile} className="app-icon-btn" title={t('s15_landing_profile_title')} aria-label={t('s15_landing_profile_title')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
             </svg>
           </button>
         )}
         actions={<LangToggle variant="inline" />}
+        onLogout={() => window.setScreen(1)}
       />
 
       <div className="px-5 mt-2 space-y-5 max-w-6xl mx-auto">
@@ -1001,7 +1022,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
 
 function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName }) {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
 
@@ -1017,11 +1038,27 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     onClose();
   };
 
+  // Build tags the same way as FamilyInfoCard
+  const familyTags = matchedFamily ? (() => {
+    const tags = [];
+    if (matchedFamily.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+    else if (matchedFamily.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+    if (matchedFamily.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+    else if (matchedFamily.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+    if (matchedFamily.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
+    return tags;
+  })() : [];
+
+  const shabLabel = matchedFamily
+    ? (matchedFamily.shabbat === 'observant' ? t('map_obs') : matchedFamily.shabbat === 'traditional' ? t('map_trad') : t('map_sec'))
+    : '';
+
   return (
-    <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)}>
-      <div className="space-y-6">
+    <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)} className="max-w-md max-h-[93vh]">
+      <div className="space-y-3">
         {view === 'status' ? (
           <>
+            {/* Searching state */}
             {request.status === 'searching' && (
               <div className="text-center py-4">
                 <div className="flex justify-center gap-1.5 mb-4">
@@ -1033,51 +1070,75 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               </div>
             )}
 
+            {/* Matched state — family card */}
             {request.status === 'matched' && matchedFamily && (
-              <div className="space-y-6 animate-enter">
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-brand-50 border border-brand-100">
-                  <img src={matchedFamily.image} className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate">{matchedFamily.name}</h3>
-                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.location}</p>
+              <div className="space-y-2 animate-enter">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border border-warm-200" style={{ backgroundColor: matchedFamily.imageColor }}>
+                    <img src={familyAvatarUrl(matchedFamily.imageColor, matchedFamily.id)} alt={matchedFamily.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-gray-900 text-base leading-tight">{matchedFamily.name}</h3>
+                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city} | {shabLabel}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Btn onClick={() => {
-                    const msg = t('whatsapp_msg', soldierName, request.when);
-                    window.open(`https://wa.me/${matchedFamily.phone}?text=${encodeURIComponent(msg)}`);
-                  }} variant="outline" className="flex items-center justify-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
-                    WhatsApp
-                  </Btn>
-                  <Btn onClick={onViewMap} variant="outline" className="flex items-center justify-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    {t('view_map')}
-                  </Btn>
-                </div>
+                {/* Short description */}
+                <p className="text-sm text-warm-600 leading-relaxed">{matchedFamily.shortDescription}</p>
 
-                <div className="pt-4 border-t border-warm-100">
-                  <button 
-                    onClick={() => setView('rematch')}
-                    className="w-full py-3 text-sm font-semibold text-warm-500 hover:text-brand-600 transition-colors"
-                  >
-                    {t('request_rematch')}
-                  </button>
+                {/* Tags */}
+                {familyTags.length > 0 && (
+                  <div className="family-info-tags">
+                    {familyTags.map(tag => (
+                      <span key={tag.label} className={`family-info-tag ${tag.cls}`}>
+                        {tag.icon} {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Vibe quote */}
+                {matchedFamily.vibe && (
+                  <p className="family-info-vibe">"{matchedFamily.vibe}"</p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Btn onClick={() => {
+                      const msg = t('whatsapp_msg', soldierName, request.when);
+                      window.open(`https://wa.me/${matchedFamily.waDigits}?text=${encodeURIComponent(msg)}`);
+                    }} className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
+                      {t('s15_talk_whatsapp')}
+                    </Btn>
+                    <Btn onClick={onViewMap} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {t('view_map')}
+                    </Btn>
+                  </div>
+                  <Btn onClick={() => setView('rematch')} variant="outline" className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
+                  <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
+                  <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
                 </div>
               </div>
             )}
 
-            <div className="pt-4 flex flex-col gap-3">
-              <Btn onClick={onEdit} variant="outline">{t('edit_request')}</Btn>
-              <button onClick={() => onCancel(request.id)} className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
-            </div>
+            {/* Searching state actions */}
+            {request.status === 'searching' && (
+              <div className="flex flex-col gap-3 pt-2">
+                <Btn onClick={onEdit} variant="outline">{t('edit_request')}</Btn>
+                <button onClick={() => onCancel(request.id)} className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
+              </div>
+            )}
           </>
         ) : (
+          /* Rematch view */
           <div className="space-y-6 animate-enter">
             <div>
               <label className="block text-sm font-semibold text-warm-700 mb-2">{t('rematch_reason_label')}</label>
-              <textarea 
+              <textarea
                 value={rematchReason}
                 onChange={e => setRematchReason(e.target.value)}
                 placeholder={t('rematch_reason_ph')}

@@ -19,7 +19,7 @@ function useLang() {
 function LangToggle({ variant ='fixed', onInfo } = {}) {
   const { lang, setLang, t } = useLang();
   return (
-    <div className={variant === 'fixed' ? 'fixed top-6 right-6 z-50 flex gap-2' : 'flex gap-2'}>
+    <div className={variant === 'fixed' ? 'fixed top-4 right-4 z-50 flex gap-2 items-center' : 'flex gap-2 items-center'}>
       <button
         onClick={() => setLang(lang ==='he'?'en':'he')}
         className={`lang-toggle ${variant ==='inline'?'lang-toggle-inline':''}`}
@@ -29,7 +29,7 @@ function LangToggle({ variant ='fixed', onInfo } = {}) {
         {lang ==='he'?'EN':'עב'}
       </button>
       {onInfo && (
-        <button 
+        <button
           onClick={onInfo}
           className={`w-10 h-10 bg-white rounded-full shadow-sm border border-warm-200 flex items-center justify-center text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-all active:scale-95`}
           title={t('info_btn_title')}
@@ -38,6 +38,9 @@ function LangToggle({ variant ='fixed', onInfo } = {}) {
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
         </button>
+      )}
+      {variant === 'fixed' && (
+        <img src="MEMULAIM.png" alt="מימולאים" className="h-10 w-auto object-contain" />
       )}
     </div>
   );
@@ -91,6 +94,7 @@ const T = {
     s3_title:'יצירת חשבון', s3_sub:'כמה פרטים קטנים ואת/ה בפנים!',
     s3_first:'שם פרטי', s3_last:'שם משפחה',
     s3_phone:'מספר טלפון', s3_email:'אימייל',
+    s3_age:'גיל', s3_age_ph:'למשל 21', s3_age_err:'נא להזין גיל בין 18 ל-35',
     s3_pass:'סיסמה', s3_pass_ph:'לפחות 6 תווים', s3_pass_hint:'הסיסמה שמורה בצורה מאובטחת',
     s3_terms_pre:'אני מאשר/ת את', s3_terms_link1:'תנאי השימוש',
     s3_terms_and:'ו', s3_terms_link2:'מדיניות הפרטיות',
@@ -165,13 +169,18 @@ const T = {
 
     /* S12 Summary */
     s12_title:'סיכום הרשמה', s12_sub:'בדוק שהכל נכון לפני השליחה',
-    s12_personal:'פרטים אישיים', s12_full:'שם מלא', s12_phone:'טלפון', s12_email:'אימייל',
+    s12_personal:'פרטים אישיים', s12_full:'שם מלא', s12_phone:'טלפון', s12_age:'גיל', s12_email:'אימייל',
     s12_mil:'שירות צבאי', s12_stype:'סוג שירות', s12_unit:'יחידה', s12_doc:'מסמך',
     s12_uploaded:'הועלה',
     s12_prefs:'העדפות', s12_kosh:'כשרות', s12_shab:'שמירת שבת',
     s12_sleep:'לינה', s12_walk:'מרחק הליכה', s12_allerg:'אלרגיות',
     s12_no_allerg:'ללא', s12_pets:'חיות מחמד', s12_sol:'עם חיילים',
     s12_bio:'תיאור אישי', s12_submit:'שלח פרופיל', s12_edit:'ערוך פרטים',
+    guest_group_solo:'מגיע לבד',
+    guest_group_with: (n) => `מגיע עם ${n} חייל${n > 1 ? 'ים' : ''} נוסף${n > 1 ? 'ים' : ''}`,
+    guest_logistics:'לוגיסטיקה',
+    guest_needs_transport:'צריך הסעה',
+    guest_walk_dist:'מרחק הליכה מהבסיס',
 
     /* S13 Pending */
     s13_title:'הפרופיל שלך בבדיקה',
@@ -240,6 +249,7 @@ const T = {
     s15_talk_whatsapp:'דברו בוואטסאפ',
     s15_call:'התקשרו',
     s15_capacity:'מקומות',
+    s15_spots_free:'פנוי', s15_spots_taken:'תפוס',
     s15_sleep_available:'לינה זמינה',
     s15_open_table:'שולחן פתוח',
     s15_guests_title:'חיילים כבר התארחו',
@@ -453,6 +463,12 @@ const T = {
     s16_sum_shab:'שבת', s16_sum_cap:'קיבולת', s16_sum_tags:'תגיות',
     s16_cap_unit: (n) => `עד ${n} חיילים`,
     s16_submit:'השלם ורשום פרופיל',
+    s16_sum_kosh:'כשרות',
+    s16_sum_pets_label:'חיות מחמד',
+    s16_sum_pets_yes:'כן',
+    s16_sum_pets_no:'לא',
+    s16_sum_cooking:'בישול',
+    s16_sum_vibe:'אופי הבית',
     s17_hi:'ברוכים הבאים!', s17_ok:'ההרשמה הושלמה בהצלחה',
     s17_desc:'אתם עכשיו חלק ממשפחת מארחי שבת.\nחיילים יוכלו למצוא אתכם ולבקש אירוח לשישי!',
     s17_home:'לעמוד הבית',
@@ -495,6 +511,7 @@ const T = {
      ENGLISH
   ══════════════════════════════════════════ */
   en: {
+    logout: 'Log out',
     back:'Back',
     continue:'Continue →',
     close:'Close',
@@ -529,6 +546,7 @@ const T = {
     s3_title:'Create Account', s3_sub:'Just a few details and you\'re in!',
     s3_first:'First Name', s3_last:'Last Name',
     s3_phone:'Phone Number', s3_email:'Email',
+    s3_age:'Age', s3_age_ph:'e.g. 21', s3_age_err:'Please enter an age between 18 and 35',
     s3_pass:'Password', s3_pass_ph:'At least 6 characters', s3_pass_hint:'Your password is stored securely',
     s3_terms_pre:'I agree to the', s3_terms_link1:'Terms of Service',
     s3_terms_and:'and', s3_terms_link2:'Privacy Policy',
@@ -603,13 +621,18 @@ const T = {
 
     /* S12 Summary */
     s12_title:'Registration Summary', s12_sub:'Check everything is correct before submitting',
-    s12_personal:'Personal Details', s12_full:'Full Name', s12_phone:'Phone', s12_email:'Email',
+    s12_personal:'Personal Details', s12_full:'Full Name', s12_phone:'Phone', s12_age:'Age', s12_email:'Email',
     s12_mil:'Military Service', s12_stype:'Service Type', s12_unit:'Unit', s12_doc:'Document',
     s12_uploaded:'Uploaded',
     s12_prefs:'Preferences', s12_kosh:'Kashrut', s12_shab:'Shabbat',
     s12_sleep:'Overnight Stay', s12_walk:'Walk Distance', s12_allerg:'Allergies',
     s12_no_allerg:'None', s12_pets:'Pets', s12_sol:'With soldiers',
     s12_bio:'Personal Bio', s12_submit:'Submit Profile', s12_edit:'Edit Details',
+    guest_group_solo:'Coming alone',
+    guest_group_with: (n) => `Coming with ${n} more soldier${n > 1 ? 's' : ''}`,
+    guest_logistics:'Logistics',
+    guest_needs_transport:'Needs transportation',
+    guest_walk_dist:'Walking distance from base',
 
     /* S13 Pending */
     s13_title:'Your Profile is Under Review',
@@ -682,6 +705,7 @@ const T = {
     s15_talk_whatsapp:'Talk on WhatsApp',
     s15_call:'Call',
     s15_capacity:'Capacity',
+    s15_spots_free:'free', s15_spots_taken:'taken',
     s15_sleep_available:'Sleep available',
     s15_open_table:'Open table',
     s15_guests_title:'Soldiers Hosted',
@@ -772,8 +796,18 @@ const T = {
     v_city:'Please enter a city or address', v_shab:'Please select your Shabbat observance level',
     v_kosh:'Please select a kashrut level', v_pets:'Please specify the pets', v_bio:'Please enter a short bio',
 
+    /* S17 Host Summary */
+    s16_sum_title:'Registration Summary',
+    s16_sum_name:'Name', s16_sum_city:'City',
+    s16_sum_shab:'Shabbat',
+    s16_sum_kosh:'Kashrut',
+    s16_sum_pets_label:'Pets',
+    s16_sum_pets_yes:'Yes',
+    s16_sum_pets_no:'No',
+    s16_sum_cooking:'Cooking',
+    s16_sum_vibe:'Home Vibe',
+    s16_submit:'Complete Registration',
 
-    /* S17 Host Success */
     /* S17 Host Success */
     s17_hi:'Welcome!', s17_ok:'Registration complete!',
     s17_title:'Registration Successful!', s17_btn:'Go to Dashboard',

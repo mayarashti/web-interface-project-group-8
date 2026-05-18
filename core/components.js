@@ -356,13 +356,51 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }) {
-  const { lang } = useLang();
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout }) {
+  const { lang, t } = useLang();
   return (
     <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-warm-200">
-      <div className="max-w-md mx-auto px-5 h-16 flex items-center justify-between gap-3">
-        {/* Start side: optional back btn + title */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div dir="ltr" className="max-w-md mx-auto px-5 h-16 grid grid-cols-3 items-center">
+        {/* Start side: actions + profile/settings btn */}
+        <div className="app-header-actions flex-shrink-0">
+          {actions}
+          {profileAction || (onProfile && (
+            <button
+              onClick={onProfile}
+              className="app-icon-btn"
+              aria-label={lang === 'he' ? 'פרופיל' : 'Profile'}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </button>
+          ))}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="app-icon-btn"
+              aria-label={t('logout')}
+              title={t('logout')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          )}
+        </div>
+        {/* Center: logo */}
+        <div className="flex justify-center">
+          <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
+        </div>
+        {/* End side: optional back btn + title */}
+        <div className="flex items-center gap-3 min-w-0 justify-end">
+          <div className="min-w-0 text-end">
+            {eyebrow && <p className="text-xs font-semibold text-brand-600 truncate leading-none mb-0.5">{eyebrow}</p>}
+            <h1 className="text-lg font-bold text-gray-900 tracking-tight truncate leading-tight">{title}</h1>
+          </div>
           {onBack && (
             <button
               onClick={onBack}
@@ -374,48 +412,31 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions }
               </svg>
             </button>
           )}
-          <div className="min-w-0">
-            {eyebrow && <p className="text-xs font-semibold text-brand-600 truncate leading-none mb-0.5">{eyebrow}</p>}
-            <h1 className="text-lg font-bold text-gray-900 tracking-tight truncate leading-tight">{title}</h1>
-          </div>
-        </div>
-        {/* End side: extra actions + profile/settings btn */}
-        <div className="app-header-actions flex-shrink-0">
-          {actions}
-          {profileAction || (onProfile && (
-            <button
-              onClick={onProfile}
-              className="app-icon-btn"
-              aria-label={lang === 'he' ? 'הגדרות' : 'Settings'}
-            >
-              <span className="text-base leading-none">⚙️</span>
-            </button>
-          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function Modal({ isOpen, onClose, title, children }) {
+function Modal({ isOpen, onClose, title, children, className }) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" 
+      <div
+        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up">
-        <div className="px-6 py-5 border-b border-warm-100 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div className={`relative w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up ${className || ''}`}>
+        <div className="px-5 py-4 border-b border-warm-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-          <button 
+          <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-warm-50 text-gray-500 hover:bg-warm-100 hover:text-gray-800 transition-colors"
           >
             ✕
           </button>
         </div>
-        <div className="p-6 overflow-y-auto overscroll-contain">
+        <div className="px-5 py-4 overflow-y-auto overscroll-contain">
           {children}
         </div>
       </div>
