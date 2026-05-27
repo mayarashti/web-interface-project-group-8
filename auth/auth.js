@@ -127,28 +127,117 @@ function S0Login({ onBack, onLogin }) {
 /* S1Welcome — Welcome / role selector screen */
 
 function S1Welcome({ onSoldier, onHost, onLogin }) {
-  const { t } = useLang();
+  const { t, lang, setLang } = useLang();
+
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-warm-50">
-      <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <h1 className="text-[32px] leading-9 font-bold text-gray-900 mb-3 tracking-normal">{t('s1_title')}</h1>
-          <p className="text-lg text-warm-500 leading-7">{t('s1_tagline')}</p>
+    <div className="screen-enter min-h-screen flex flex-col bg-warm-50">
+
+      {/* ── Top Navbar ── */}
+      <header
+        dir="ltr"
+        style={{ backgroundColor: 'var(--brand-600)' }}
+        className="w-full shadow-sm"
+      >
+        {/* 3-equal-column grid guarantees the logo is pixel-perfect centred */}
+        <div className="grid grid-cols-3 items-center px-3 py-2 max-w-2xl mx-auto">
+
+          {/* Col 1 — Language toggle */}
+          <div className="flex justify-start">
+            <button
+              onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95"
+              style={{ color: 'var(--warm-600)' }}
+              aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
+            >
+              {lang === 'he' ? 'EN' : 'עב'}
+            </button>
+          </div>
+
+          {/* Col 2 — Logo: image perfectly centred, text below */}
+          <div className="flex flex-col items-center gap-1">
+            <img
+              src="MEMULAIM.png"
+              alt="לוגו משולאים"
+              className="h-12 w-auto object-contain"
+            />
+            <span
+              className="text-base font-bold leading-none"
+              style={{ color: '#2d1208', fontFamily: 'var(--font-primary)' }}
+            >
+            </span>
+          </div>
+
+          {/* Col 3 — Login button */}
+          <div className="flex justify-end">
+            <button
+              onClick={onLogin}
+              className="px-4 py-1.5 rounded-full border-2 border-white text-white text-sm font-semibold hover:bg-white hover:text-brand-700 transition-all active:scale-95"
+            >
+              {t('s1_login')}
+            </button>
+          </div>
+
         </div>
+      </header>
 
-        <Card className="space-y-3 p-4">
-          <Btn onClick={onSoldier}>{t('s1_soldier')}</Btn>
-          <Btn variant="secondary" onClick={onHost}>{t('s1_host')}</Btn>
-        </Card>
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
 
-        <button 
-          onClick={onLogin}
-          className="w-full mt-5 text-sm text-brand-600 hover:text-brand-700 font-semibold transition-colors"
-        >
-          {t('s1_login')}
-        </button>
-        <p className="mt-8 text-xs text-warm-500 text-center">{t('s1_footer')}</p>
+        {/* Decorative filler — left side, 45° diagonal tilt */}
+        <img
+          src="Designe- image/1memula.png"
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: '-0.1rem',
+            top: '35%',
+            transform: 'translateY(-100%) rotate(-25deg)',
+            width: '150px',
+            opacity: 0.9,
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
+
+        <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
+          <div className="mb-8">
+            <h1 className="text-[32px] leading-9 font-bold text-gray-900 mb-3 tracking-normal">{t('s1_title')}</h1>
+            <p className="text-lg text-warm-500 leading-7">{t('s1_tagline')}</p>
+          </div>
+
+          <Card className="space-y-3 p-4">
+            {/* Soldier button — icon pinned to the far right */}
+            <Btn onClick={onSoldier}>
+              <span className="relative flex items-center justify-center w-full">
+                {t('s1_soldier')}
+                <img
+                  src="Designe- image/solider icon'.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 object-contain"
+                />
+              </span>
+            </Btn>
+
+            {/* Host/family button — icon pinned to the far right */}
+            <Btn variant="secondary" onClick={onHost}>
+              <span className="relative flex items-center justify-center w-full">
+                {t('s1_host')}
+                <img
+                  src="Designe- image/hala.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 object-contain"
+                />
+              </span>
+            </Btn>
+          </Card>
+
+          <p className="mt-8 text-xs text-warm-500 text-center">{t('s1_footer')}</p>
+        </div>
       </div>
+
     </div>
   );
 }

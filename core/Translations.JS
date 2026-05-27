@@ -54,7 +54,7 @@ const T = {
      HEBREW
   ══════════════════════════════════════════ */
   he: {
-    s1_title: 'מארחי שבת',
+    s1_title: 'ברוכים הבאים לממולאים!',
     start_time: 'שעת התחלה',
     end_time: 'שעת סיום',
     logout: 'התנתק',
@@ -72,7 +72,7 @@ const T = {
     s1_tagline:'הצטרף לקהילת האירוח שלנו',
     s1_soldier:'הרשמה כחייל', s1_host:'הרשמה כמשפחה מארחת',
     s1_footer:'הצטרף לקהילה שמחברת חיילים עם משפחות מארחות',
-    s1_login:'כבר יש לך חשבון? התחברות',
+    s1_login:'התחברות',
 
     /* S0 Login */
     s0_title:'התחברות', s0_subtitle:'ברוך שובך!',
@@ -538,11 +538,11 @@ const T = {
     step_label: (s, total) => `Step ${s} of ${total}`,
 
     /* S1 Welcome */
-    s1_title:'מארחי שבת', s1_subtitle:'מארחי שבת',
+    s1_title:'Welcome to Memulaim!', s1_subtitle:'Marmelaim',
     s1_tagline:'Join our hosting community',
     s1_soldier:'Register as Soldier', s1_host:'Register as Host Family',
     s1_footer:'Join the community connecting soldiers with host families',
-    s1_login:'Already have an account? Log in',
+    s1_login:'Log in',
 
     /* S0 Login */
     s0_title:'Login', s0_subtitle:'Welcome back!',
