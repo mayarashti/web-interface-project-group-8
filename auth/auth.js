@@ -35,20 +35,12 @@ function S0Login({ onBack, onLogin }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-warm-50">
+    <div className="screen-enter min-h-screen flex flex-col bg-warm-50">
+      <AppHeader onBack={onBack} />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={onBack}
-            aria-label={t('back')}
-            className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-5 hover:bg-brand-100 active:scale-95 transition-all"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500">
-              <path d="M19 12H5"/>
-              <polyline points="12 19 5 12 12 5"/>
-            </svg>
-          </button>
           <h1 className="text-[28px] leading-[34px] font-bold text-gray-900 mb-2">{t('s0_title')}</h1>
           <p className="text-base text-warm-500 leading-6">{t('s0_subtitle')}</p>
         </div>
@@ -119,6 +111,7 @@ function S0Login({ onBack, onLogin }) {
           {t('demo_hint')}
         </p>
 
+      </div>
       </div>
     </div>
   );
@@ -212,7 +205,18 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
             </Btn>
           </Card>
 
-          <p className="mt-8 text-xs text-warm-500 text-center">{t('s1_footer')}</p>
+          {/* Already have an account */}
+          <p className="mt-5 text-sm text-center text-warm-500">
+            {lang === 'he' ? 'כבר יש לך חשבון?' : 'Already have an account?'}{' '}
+            <button
+              onClick={onLogin}
+              className="font-bold text-brand-600 hover:text-brand-700 hover:underline transition-colors"
+            >
+              {t('s1_login')}
+            </button>
+          </p>
+
+          <p className="mt-4 text-xs text-warm-500 text-center">{t('s1_footer')}</p>
         </div>
       </div>
 

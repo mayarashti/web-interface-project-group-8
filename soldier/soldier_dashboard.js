@@ -19,7 +19,6 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
             </svg>
           </button>
         )}
-        actions={<LangToggle variant="inline" />}
         onLogout={() => window.setScreen(1)}
       />
 
@@ -505,7 +504,6 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </svg>
           </button>
         )}
-        actions={<LangToggle variant="inline" />}
         onLogout={() => window.setScreen(1)}
       />
 
@@ -878,8 +876,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
     <div className="screen-enter min-h-screen flex flex-col pb-12 bg-warm-50">
       <AppHeader 
         title={t('s15_landing_profile_title')} 
-        onBack={onBack} 
-        actions={<LangToggle variant="inline" />}
+        onBack={onBack}
       />
       <div className="w-full max-w-md mx-auto px-5 space-y-6">
         

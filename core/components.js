@@ -581,13 +581,21 @@ function SectionTitle({ title, sub }) {
 }
 
 function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout }) {
-  const { lang, t } = useLang();
+  const { lang, setLang, t } = useLang();
   return (
-    <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-warm-200">
-      <div dir="ltr" className="max-w-md mx-auto px-5 h-16 grid grid-cols-3 items-center">
-        {/* Start side: actions + profile/settings btn */}
-        <div className="app-header-actions flex-shrink-0">
-          {actions}
+    <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-600)' }}>
+      <div dir="ltr" className="w-full px-2 py-1 grid grid-cols-3 items-center">
+
+        {/* Col 1 — Language toggle (always, far left) + profile / logout / extra actions */}
+        <div className="flex items-center gap-1 justify-start pl-1">
+          <button
+            onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
+            style={{ color: 'var(--warm-600)' }}
+            aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
+          >
+            {lang === 'he' ? 'EN' : 'עב'}
+          </button>
           {profileAction || (onProfile && (
             <button
               onClick={onProfile}
@@ -614,16 +622,27 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
               </svg>
             </button>
           )}
+          {actions}
         </div>
-        {/* Center: logo */}
+
+        {/* Col 2 — Logo, pixel-perfect centred */}
         <div className="flex justify-center">
-          <img src="MEMULAIM.png" alt="מימולאים" className="h-12 w-auto object-contain" />
+          <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md" />
         </div>
-        {/* End side: optional back btn + title */}
-        <div className="flex items-center gap-3 min-w-0 justify-end">
+
+        {/* Col 3 — Title + optional back button, far right */}
+        <div className="flex items-center gap-2 min-w-0 justify-end pr-1">
           <div className="min-w-0 text-end">
-            {eyebrow && <p className="text-xs font-semibold text-brand-600 truncate leading-none mb-0.5">{eyebrow}</p>}
-            <h1 className="text-lg font-bold text-gray-900 tracking-tight truncate leading-tight">{title}</h1>
+            {eyebrow && (
+              <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                {eyebrow}
+              </p>
+            )}
+            {title && (
+              <h1 className="text-base font-bold tracking-tight truncate leading-tight" style={{ color: '#fff' }}>
+                {title}
+              </h1>
+            )}
           </div>
           {onBack && (
             <button
@@ -637,6 +656,7 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
             </button>
           )}
         </div>
+
       </div>
     </div>
   );
