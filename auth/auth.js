@@ -138,11 +138,11 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
         style={{ backgroundColor: 'var(--brand-600)' }}
         className="w-full shadow-sm"
       >
-        {/* 3-equal-column grid guarantees the logo is pixel-perfect centred */}
-        <div className="grid grid-cols-3 items-center px-3 py-2 max-w-2xl mx-auto">
+        {/* full-width grid — no max-width so buttons reach the screen edges */}
+        <div className="grid grid-cols-3 items-center w-full px-2 py-1">
 
-          {/* Col 1 — Language toggle */}
-          <div className="flex justify-start">
+          {/* Col 1 — Language toggle: pushed to the far left */}
+          <div className="flex justify-start pl-1">
             <button
               onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
               className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95"
@@ -153,22 +153,17 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
             </button>
           </div>
 
-          {/* Col 2 — Logo: image perfectly centred, text below */}
+          {/* Col 2 — Logo: enlarged image centred */}
           <div className="flex flex-col items-center gap-1">
             <img
               src="MEMULAIM.png"
               alt="לוגו משולאים"
-              className="h-12 w-auto object-contain"
+              className="h-16 w-auto object-contain drop-shadow-md"
             />
-            <span
-              className="text-base font-bold leading-none"
-              style={{ color: '#2d1208', fontFamily: 'var(--font-primary)' }}
-            >
-            </span>
           </div>
 
-          {/* Col 3 — Login button */}
-          <div className="flex justify-end">
+          {/* Col 3 — Login button: pushed to the far right */}
+          <div className="flex justify-end pr-1">
             <button
               onClick={onLogin}
               className="px-4 py-1.5 rounded-full border-2 border-white text-white text-sm font-semibold hover:bg-white hover:text-brand-700 transition-all active:scale-95"
@@ -190,11 +185,11 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
           aria-hidden="true"
           style={{
             position: 'absolute',
-            left: '-0.1rem',
-            top: '35%',
+            left: '25rem',
+            top: '100%',
             transform: 'translateY(-100%) rotate(-25deg)',
-            width: '150px',
-            opacity: 0.9,
+            width: '450px',
+            opacity: 0.15,
             pointerEvents: 'none',
             userSelect: 'none',
           }}
