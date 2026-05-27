@@ -136,7 +136,27 @@ button:disabled {
 ::-webkit-scrollbar-thumb:hover { background: var(--warm-400); }
 
 .screen-enter {
+  position: relative;
+  isolation: isolate;   /* creates a local stacking context */
+  overflow: hidden;     /* clips the rotated image cleanly at screen edges */
   animation: fadeSlideIn var(--transition-slow) ease forwards;
+}
+
+/* Decorative background image — appears on every screen that uses .screen-enter.
+   z-index: -1 places it BEHIND all page content but ABOVE the screen's own background. */
+.screen-enter::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 30rem;
+  bottom: 2.2rem;
+  width: 450px;
+  height: 555px;
+  background: url('../Designe- image/1memula.png') no-repeat center bottom / contain;
+  transform: rotate(-25deg);
+  transform-origin: center bottom;
+  opacity: 0.15;
+  pointer-events: none;
 }
 
 @keyframes fadeSlideIn {

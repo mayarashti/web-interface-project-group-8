@@ -176,26 +176,9 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
       </header>
 
       {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
 
-        {/* Decorative filler — left side, 45° diagonal tilt */}
-        <img
-          src="Designe- image/1memula.png"
-          alt=""
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            left: '25rem',
-            top: '100%',
-            transform: 'translateY(-100%) rotate(-25deg)',
-            width: '450px',
-            opacity: 0.15,
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        />
-
-        <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
+        <div className="w-full max-w-sm">
           <div className="mb-8">
             <h1 className="text-[32px] leading-9 font-bold text-gray-900 mb-3 tracking-normal">{t('s1_title')}</h1>
             <p className="text-lg text-warm-500 leading-7">{t('s1_tagline')}</p>

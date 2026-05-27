@@ -230,6 +230,7 @@ function App() {
   return (
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
+
         {/* Screen 1 has its own navbar with a language toggle, so skip the floating one there */}
         {![1, 15, 19, 21, 24].includes(screen) && (
           <LangToggle onInfo={[3, 16].includes(screen) ? () => setShowInfo(true) : null} />
