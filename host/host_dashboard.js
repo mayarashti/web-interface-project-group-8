@@ -420,13 +420,11 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
         </div>
 
         <div className="space-y-6">
-          <Input 
+          <FridayDatePicker
             label={t('s20_date_free')}
-            type="date"
             value={form.date}
             onChange={setF('date')}
             error={errors.date}
-            required
           />
 
           <Input 

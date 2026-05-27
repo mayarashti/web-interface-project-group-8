@@ -425,6 +425,9 @@ const T = {
     view_on_map_btn: 'הצג על המפה',
     s20_date_free: 'תאריך',
     s20_time_free: 'שעה',
+    date_this_friday: 'שישי הקרוב',
+    date_next_friday: 'שישי הבא',
+    date_other: 'תאריך אחר',
   
     /* Migrated Host Screens */
     s18_title:'איך זה עובד?', s18_sub:'כל מה שצריך לדעת לפני שמתחילים',
@@ -773,6 +776,9 @@ const T = {
     view_on_map_btn: 'Show on Map',
     s20_date_free: 'Date',
     s20_time_free: 'Time',
+    date_this_friday: 'This Friday',
+    date_next_friday: 'Next Friday',
+    date_other: 'Other date',
     friends_kosher: 'Do friends need kosher food?',
     friends_shabbat: 'Are friends Shabbat observant?',
     other_prefs_ph: 'Specify other preferences here...',

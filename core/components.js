@@ -179,6 +179,101 @@ function MapPinModal({ isOpen, onClose, onConfirm, initialLat, initialLng }) {
   );
 }
 
+/* FridayDatePicker — shows "This Friday", "Next Friday", or "Other" (opens calendar) */
+function FridayDatePicker({ label, value, onChange, error }) {
+  const { t, lang } = useLang();
+  const [showCustom, setShowCustom] = useState(false);
+  const dateInputRef = useRef(null);
+
+  // Compute the ISO strings for the two upcoming Fridays
+  const today = new Date();
+  const daysUntilFriday = (5 - today.getDay() + 7) % 7;
+
+  const thisFriday = new Date(today);
+  thisFriday.setDate(today.getDate() + daysUntilFriday);
+
+  const nextFriday = new Date(thisFriday);
+  nextFriday.setDate(thisFriday.getDate() + 7);
+
+  const toISO   = (d) => d.toISOString().split('T')[0];
+  const thisFridayISO = toISO(thisFriday);
+  const nextFridayISO = toISO(nextFriday);
+
+  const fmtDate = (d) =>
+    d.toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'numeric' });
+
+  const isCustom = value && value !== thisFridayISO && value !== nextFridayISO;
+
+  const options = [
+    { id: thisFridayISO, label: t('date_this_friday'), sub: fmtDate(thisFriday) },
+    { id: nextFridayISO, label: t('date_next_friday'), sub: fmtDate(nextFriday) },
+    { id: 'other',       label: t('date_other'),       sub: isCustom ? fmtDate(new Date(value + 'T00:00:00')) : null },
+  ];
+
+  const handleSelect = (id) => {
+    if (id === 'other') {
+      setShowCustom(true);
+      if (!isCustom) onChange('');
+      // Open the native calendar immediately after the input renders
+      setTimeout(() => {
+        try { dateInputRef.current?.showPicker(); } catch (_) {
+          dateInputRef.current?.click();
+        }
+      }, 50);
+    } else {
+      setShowCustom(false);
+      onChange(id);
+    }
+  };
+
+  return (
+    <div>
+      {label && (
+        <label className="block text-sm font-semibold text-warm-600 mb-2">{label}</label>
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        {options.map(opt => {
+          const selected = opt.id === 'other'
+            ? (showCustom || isCustom)
+            : value === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => handleSelect(opt.id)}
+              className={clsx(
+                'rounded-xl border px-2 py-3 text-center transition-all duration-150 flex flex-col items-center gap-1',
+                selected
+                  ? 'border-brand-400 bg-brand-50 text-brand-700 shadow-sm'
+                  : 'border-warm-200 bg-white text-gray-700 hover:border-brand-200 hover:bg-brand-50'
+              )}
+            >
+              <span className="font-semibold text-sm leading-tight">{opt.label}</span>
+              {opt.sub && (
+                <span className={clsx('text-xs', selected ? 'text-brand-500' : 'text-warm-400')}>
+                  {opt.sub}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {(showCustom || isCustom) && (
+        <div className="mt-3 animate-fade-in">
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-warm-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 transition-all"
+          />
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500 mt-1.5 font-medium">{error}</p>}
+    </div>
+  );
+}
+
 function RadiusMapModal({ isOpen, onClose, onConfirm, initialLat, initialLng, initialRadius }) {
   const { t } = useLang();
   const mapRef    = useRef(null);
@@ -678,5 +773,6 @@ window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
 window.LocationInput = LocationInput;
 window.MapPinModal = MapPinModal;
+window.FridayDatePicker = FridayDatePicker;
 window.RadiusMapModal = RadiusMapModal;
 window.PreferencesPromptModal = PreferencesPromptModal;

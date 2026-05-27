@@ -628,12 +628,10 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
         <p className="text-base text-warm-500 mb-8 leading-6">{t('s15_form_sub')}</p>
         
         <form onSubmit={handleFormSubmit} className="space-y-6">
-          <Input 
+          <FridayDatePicker
             label={t('s15_when')}
-            type="date"
             value={request.when}
             onChange={(val) => handleChange('when', val)}
-            required
           />
 
           <div className="grid grid-cols-2 gap-4">
