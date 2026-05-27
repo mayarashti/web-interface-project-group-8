@@ -231,9 +231,19 @@ function App() {
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
 
-        {/* Screens 0, 1, 15, 19, 21, 24 have AppHeader with a built-in language toggle */}
-        {![0, 1, 15, 19, 21, 24].includes(screen) && (
-          <LangToggle onInfo={[3, 16].includes(screen) ? () => setShowInfo(true) : null} />
+        {/* All screens now have AppHeader with built-in lang toggle.
+            Only registration screens 3 & 16 need an extra floating ⓘ info button. */}
+        {[3, 16].includes(screen) && (
+          <button
+            onClick={() => setShowInfo(true)}
+            className="fixed bottom-24 right-4 z-50 w-11 h-11 bg-white rounded-full shadow-md border border-warm-200 flex items-center justify-center text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-all active:scale-95"
+            title={lang === 'he' ? 'איך זה עובד?' : 'How it works?'}
+            aria-label={lang === 'he' ? 'איך זה עובד?' : 'How it works?'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </button>
         )}
         {screens[screen] || screens[1]}
         

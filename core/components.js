@@ -693,33 +693,34 @@ function ScreenLayout({ children, onBack, onNext, nextLabel, title, sub, icon, s
   // Accept both 'totalSteps' and 'total' for backward compat
   const steps = totalSteps || total;
   return (
-    <div className="min-h-screen bg-warm-50 flex justify-center screen-enter">
-      <div className="w-full max-w-md bg-white min-h-screen shadow-sm flex flex-col relative">
-        <div className="flex-1 px-6 pt-8 pb-32">
-          {onBack && <BackBtn onClick={onBack} />}
-          
-          {(step && steps) && <ProgressBar step={step} total={steps} />}
+    <div className="min-h-screen bg-warm-50 flex flex-col screen-enter">
+      <AppHeader onBack={onBack} />
+      <div className="flex-1 flex justify-center">
+        <div className="w-full max-w-md bg-white flex flex-col relative">
+          <div className="flex-1 px-6 pt-6 pb-32">
+            {(step && steps) && <ProgressBar step={step} total={steps} />}
 
-          <div className="mb-8">
-            {icon && typeof icon === 'string' && <div className="text-4xl mb-4 animate-fade-in">{icon}</div>}
-            {title && <h1 className="text-[28px] font-bold text-gray-900 leading-tight mb-2 tracking-tight">{title}</h1>}
-            {sub && <p className="text-[15px] text-warm-500 leading-relaxed">{sub}</p>}
-          </div>
+            <div className="mb-8">
+              {icon && typeof icon === 'string' && <div className="text-4xl mb-4 animate-fade-in">{icon}</div>}
+              {title && <h1 className="text-[28px] font-bold text-gray-900 leading-tight mb-2 tracking-tight">{title}</h1>}
+              {sub && <p className="text-[15px] text-warm-500 leading-relaxed">{sub}</p>}
+            </div>
 
-          <div className="animate-fade-in delay-100">
-            {children}
-          </div>
-        </div>
-
-        {onNext && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10 flex justify-center">
-            <div className="w-full max-w-md pointer-events-auto">
-              <Btn onClick={onNext} className="shadow-lg shadow-brand-500/20">
-                {nextLabel || (lang === 'he' ? 'המשך' : 'Continue')}
-              </Btn>
+            <div className="animate-fade-in delay-100">
+              {children}
             </div>
           </div>
-        )}
+
+          {onNext && (
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none z-10 flex justify-center">
+              <div className="w-full max-w-md pointer-events-auto">
+                <Btn onClick={onNext} className="shadow-lg shadow-brand-500/20">
+                  {nextLabel || (lang === 'he' ? 'המשך' : 'Continue')}
+                </Btn>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -312,15 +312,18 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
 function S17HostSuccess({ onNext }) {
   const { t } = useLang();
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 bg-warm-50 text-center">
-      <div className="w-24 h-24 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center mb-6 shadow-sm">
-        <span className="text-5xl">✅</span>
+    <div className="screen-enter min-h-screen flex flex-col bg-warm-50">
+      <AppHeader />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
+        <div className="w-24 h-24 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center mb-6 shadow-sm">
+          <span className="text-5xl">✅</span>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">{t('s17_title')}</h1>
+        <p className="text-base text-warm-500 leading-relaxed mb-10 max-w-[300px]">
+          {t('s17_sub')}
+        </p>
+        <Btn onClick={onNext} className="w-full max-w-xs">{t('s17_btn')}</Btn>
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">{t('s17_title')}</h1>
-      <p className="text-base text-warm-500 leading-relaxed mb-10 max-w-[300px]">
-        {t('s17_sub')}
-      </p>
-      <Btn onClick={onNext} className="w-full max-w-xs">{t('s17_btn')}</Btn>
     </div>
   );
 }

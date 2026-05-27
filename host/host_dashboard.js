@@ -386,9 +386,10 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
   };
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col max-w-md mx-auto bg-warm-50">
-      <div className="px-5 pt-8 pb-24">
-        <BackBtn onClick={onBack} />
+    <div className="screen-enter min-h-screen flex flex-col bg-warm-50">
+      <AppHeader onBack={onBack} />
+      <div className="flex-1 flex justify-center">
+      <div className="w-full max-w-md px-5 pt-6 pb-24">
         <div className="mb-6">
           <h1 className="text-[26px] font-bold text-gray-900 leading-tight">
             {editingHosting ? t('s19_edit') : t('s20_title')}
@@ -465,6 +466,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 
           <Btn onClick={handleSubmit}>{t('s20_submit')}</Btn>
         </div>
+      </div>
       </div>
     </div>
   );

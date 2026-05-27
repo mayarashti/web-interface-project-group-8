@@ -297,7 +297,9 @@ function S13Pending({ onHome, autoApprove }) {
   }, [approved]);
 
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
+    <div className="screen-enter min-h-screen flex flex-col">
+      <AppHeader />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
       {!approved ? (
         <>
           <div className="relative mb-8">
@@ -324,6 +326,7 @@ function S13Pending({ onHome, autoApprove }) {
           <p className="text-sm text-warm-500 mt-2">{t('s13_redir')}</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -333,17 +336,20 @@ function S13Pending({ onHome, autoApprove }) {
 function S14Success({ onHome, name }) {
   const { t } = useLang();
   return (
-    <div className="screen-enter min-h-screen flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
-      <div className="mb-6">
-        <div className="w-20 h-20 rounded-2xl bg-support-50 border border-support-100 flex items-center justify-center">
-          <div className="w-10 h-10 rounded-full bg-support-500" />
+    <div className="screen-enter min-h-screen flex flex-col">
+      <AppHeader />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-md mx-auto text-center">
+        <div className="mb-6">
+          <div className="w-20 h-20 rounded-2xl bg-support-50 border border-support-100 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-support-500" />
+          </div>
         </div>
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t('s14_hi')}</h1>
+        <p className="text-xl font-semibold text-brand-600 mb-2">{name}</p>
+        <p className="text-base text-green-600 font-bold mb-1">{t('s14_ok')}</p>
+        <p className="text-sm text-warm-500 mb-10 leading-relaxed" style={{ whiteSpace: 'pre-line' }}>{t('s14_desc')}</p>
+        <Btn onClick={onHome} className="text-lg py-4">{t('s14_home')}</Btn>
       </div>
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t('s14_hi')}</h1>
-      <p className="text-xl font-semibold text-brand-600 mb-2">{name}</p>
-      <p className="text-base text-green-600 font-bold mb-1">{t('s14_ok')}</p>
-      <p className="text-sm text-warm-500 mb-10 leading-relaxed" style={{ whiteSpace: 'pre-line' }}>{t('s14_desc')}</p>
-      <Btn onClick={onHome} className="text-lg py-4">{t('s14_home')}</Btn>
     </div>
   );
 }
