@@ -2,16 +2,19 @@ var { useState, useEffect } = React;
 
 
 function App() {
-  const { 
+  const {
     S0Login, S1Welcome, S2Explain, S3PersonalDetails, S7Preferences,
     S12Summary, S13Pending, S14Success, S15Home, S15NewRequest, S15Landing,
     S18HostExplain, S16HostRegistration, S17HostSummary, S17HostSuccess, S19HostHome,
     S20NewHosting, S21SoldierProfile, S22HostProfile,
-    LangContext, LangToggle, Modal, Card, Btn, useLang
+    LangContext, LangToggle, Modal, Card, Btn, useLang,
+    PreferencesPromptModal,
   } = window;
   const [screen,   setScreen]   = useState(1);
   const [lang,     setLang]     = useState('he');
   const [showInfo, setShowInfo] = useState(false);
+  const [prefPrompt, setPrefPrompt]               = useState({ show: false, context: null });
+  const [nextScreenAfterPrefs, setNextScreenAfterPrefs] = useState(12);
   const [formData, setFormData] = useState({ 
     languages:['he'], 
     hostings: [
@@ -39,8 +42,47 @@ function App() {
   const go = (n) => { setScreen(n); window.scrollTo(0,0); };
   window.setScreen = go;
 
+  /* ── Preferences prompt helpers ── */
+  const triggerPrefPrompt = (context) => {
+    setPrefPrompt({ show: true, context });
+  };
+
+  const handlePrefNow = () => {
+    const ctx = prefPrompt.context;
+    setPrefPrompt({ show: false, context: null });
+    if (ctx === 'soldier_reg') {
+      setNextScreenAfterPrefs(12);
+      go(7);
+    } else if (ctx === 'first_request') {
+      setFormData(prev => ({ ...prev, prefPromptedBeforeRequest: true }));
+      setNextScreenAfterPrefs(23);
+      go(7);
+    }
+  };
+
+  const handlePrefLater = () => {
+    const ctx = prefPrompt.context;
+    setPrefPrompt({ show: false, context: null });
+    if (ctx === 'soldier_reg') {
+      setFormData(prev => ({ ...prev, preferencesSkipped: true }));
+      go(13);
+    } else if (ctx === 'first_request') {
+      // Soldier chose not to fill preferences — stay on the landing screen.
+      // Do NOT navigate to the request and do NOT mark as prompted,
+      // so the requirement reappears every time they try to open a request.
+      go(24);
+    }
+  };
+
   const handleNewRequest = (requestToEdit = null) => {
     setFormData(prev => ({ ...prev, editingRequest: requestToEdit }));
+    // Show preferences prompt before the very first accommodation request
+    // only when the soldier skipped preferences during registration.
+    const isFirstRequest = !requestToEdit && (formData.requests || []).length === 0;
+    if (isFirstRequest && formData.preferencesSkipped && !formData.prefPromptedBeforeRequest) {
+      triggerPrefPrompt('first_request');
+      return;
+    }
     go(23);
   };
 
@@ -128,8 +170,8 @@ function App() {
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} />,
-    7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(3)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => triggerPrefPrompt('soldier_reg')} onBack={() => go(1)} />,
+    7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(nextScreenAfterPrefs)} onBack={() => nextScreenAfterPrefs === 23 ? go(24) : go(3)} />,
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => go(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
@@ -163,7 +205,7 @@ function App() {
     24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} onSkipPreferences={() => { setFormData(prev => ({ ...prev, hostPreferencesSkipped: true })); go(17); }} />,
     25: <S17HostSummary data={formData} onEdit={() => go(16)} onSubmit={() => go(17)} onBack={() => go(16)} />,
     17: <S17HostSuccess onNext={() => go(19)} />,
     19: <S19HostHome    data={formData} setData={setFormData} onEditProfile={() => go(22)} />,
@@ -195,6 +237,14 @@ function App() {
         
         {/* Global Info Modal for Registration Screens */}
         <InfoModal screen={screen} isOpen={showInfo} onClose={() => setShowInfo(false)} />
+
+        {/* Preferences Questionnaire Prompt */}
+        <PreferencesPromptModal
+          isOpen={prefPrompt.show}
+          context={prefPrompt.context}
+          onNow={handlePrefNow}
+          onLater={handlePrefLater}
+        />
       </div>
     </LangContext.Provider>
   );

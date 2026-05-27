@@ -481,6 +481,59 @@ function ScreenLayout({ children, onBack, onNext, nextLabel, title, sub, icon, s
   );
 }
 
+/* PreferencesPromptModal — Shown after page 1 of registration and before the first request / hosting */
+function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
+  const { t, lang } = useLang();
+  if (!isOpen) return null;
+
+  // Blocking contexts prevent the action until preferences are filled
+  const isBlocking = context === 'first_request' || context === 'host_first_hosting';
+
+  const sub =
+    context === 'host_first_hosting' ? t('pref_prompt_host_sub') :
+    context === 'first_request'      ? t('pref_prompt_first_req_sub') :
+    t('pref_prompt_sub');
+
+  const warning =
+    context === 'first_request' ?
+      (lang === 'he' ? '⚠️ לא ניתן לשלוח בקשה ללא מילוי השאלון'
+                     : '⚠️ You cannot submit a request without filling this in') :
+    context === 'host_first_hosting' ?
+      (lang === 'he' ? '⚠️ לא ניתן לפתוח אירוח ללא מילוי השאלון'
+                     : '⚠️ You cannot create a hosting without filling this in') :
+    null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-slide-up"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">{t('pref_prompt_title')}</h2>
+            <p className="text-sm text-warm-500 leading-relaxed">{sub}</p>
+          </div>
+          <div className="space-y-3">
+            <Btn onClick={onNow}>{t('pref_prompt_now')}</Btn>
+            <Btn variant="secondary" onClick={onLater}>
+              {isBlocking ? t('pref_prompt_decline') : t('pref_prompt_later')}
+            </Btn>
+          </div>
+          {warning ? (
+            <p className="text-xs text-center text-red-400 font-medium mt-4">{warning}</p>
+          ) : (
+            <p className="text-xs text-center text-warm-400 mt-4">{t('pref_prompt_later_hint')}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 window.ProgressBar = ProgressBar;
 window.Btn = Btn;
 window.Input = Input;
@@ -496,3 +549,4 @@ window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
 window.LocationInput = LocationInput;
 window.MapPinModal = MapPinModal;
+window.PreferencesPromptModal = PreferencesPromptModal;

@@ -2,11 +2,12 @@
 
 var { useState } = React;
 
-function S16HostRegistration({ data, setData, onNext, onBack }) {
+function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences }) {
   const { t } = useLang();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [showMap, setShowMap] = useState(false);
+  const [showPrefModal, setShowPrefModal] = useState(false);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
@@ -35,6 +36,11 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
 
   const handleNext = () => {
     if (!validateStep()) return;
+    // After step 1 show the preferences-prompt instead of jumping to step 2
+    if (step === 1) {
+      setShowPrefModal(true);
+      return;
+    }
     if (step < TOTAL_STEPS) setStep(step + 1);
     else onNext();
   };
@@ -69,6 +75,7 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
   const icons     = ['', '🏡', '🍽️', '✨'];
 
   return (
+    <>
     <ScreenLayout
       onBack={handleBack}
       onNext={handleNext}
@@ -212,6 +219,15 @@ function S16HostRegistration({ data, setData, onNext, onBack }) {
         )}
       </div>
     </ScreenLayout>
+
+    {/* Preferences questionnaire prompt — shown after step 1 completes */}
+    <PreferencesPromptModal
+      isOpen={showPrefModal}
+      context="host_reg"
+      onNow={() => { setShowPrefModal(false); setStep(2); }}
+      onLater={() => { setShowPrefModal(false); if (onSkipPreferences) onSkipPreferences(); }}
+    />
+    </>
   );
 }
 

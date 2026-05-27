@@ -505,6 +505,16 @@ const T = {
     s20_done_sub:'חיילים באזורכם יוכלו לראות את האירוח ולבקש להצטרף',
     s20_cook_dietary: 'לאילו העדפות אוכל אתם יכולים לבשל?',
     s20_cook_dietary_sub: 'בחרו את כל האפשרויות שמתאימות לכם',
+
+    /* Preferences Prompt */
+    pref_prompt_title: 'שאלון העדפות',
+    pref_prompt_sub: 'כדי שנוכל להתאים לך את הבית המושלם, יעזור לנו לדעת קצת יותר על ההעדפות שלך',
+    pref_prompt_now: 'כן, אמלא עכשיו',
+    pref_prompt_later: 'אמלא אחר כך',
+    pref_prompt_later_hint: 'ניתן למלא לפני הבקשה הראשונה שלך',
+    pref_prompt_first_req_sub: 'כדי לשלוח בקשת אירוח, יש למלא את שאלון ההעדפות קודם. ללא מילוי השאלון לא ניתן להגיש בקשה.',
+    pref_prompt_host_sub: 'כדי לפתוח אירוח חדש, יש למלא את שאלון ההעדפות קודם. ללא מילוי השאלון לא ניתן לפתוח אירוח.',
+    pref_prompt_decline: 'לא עכשיו',
   },
 
   /* ══════════════════════════════════════════
@@ -873,6 +883,16 @@ const T = {
     map_sleep:'Needs overnight', map_walk:'Walking distance required',
     map_fri:'Friday Night Dinner', map_lun:'Saturday Lunch', map_del:'Base Delivery',
     map_fri_s:'Friday dinner', map_lun_s:'Sat. lunch', map_del_s:'Delivery',
+
+    /* Preferences Prompt */
+    pref_prompt_title: 'Preferences Questionnaire',
+    pref_prompt_sub: 'To match you with the perfect home, it would help to know a bit more about your preferences',
+    pref_prompt_now: 'Yes, fill it out now',
+    pref_prompt_later: "I'll do it later",
+    pref_prompt_later_hint: 'You can fill it in before your first request',
+    pref_prompt_first_req_sub: 'To submit an accommodation request, you need to fill out the preferences questionnaire first. Without it, you cannot send a request.',
+    pref_prompt_host_sub: 'To create a new hosting, you need to fill out the preferences questionnaire first. Without it, you cannot open a hosting.',
+    pref_prompt_decline: 'Not now',
   }
 
     /* Migrated Host Screens */

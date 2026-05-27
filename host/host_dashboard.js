@@ -102,8 +102,14 @@ function S19HostHome({ data, setData, onEditProfile }) {
   const [selectedHosting,     setSelectedHosting]     = useState(null);
   const [selectedGuest,       setSelectedGuest]       = useState(null);
   const [guestSourceHosting,  setGuestSourceHosting]  = useState(null);
+  const [showPrefModal,       setShowPrefModal]       = useState(false);
 
   const handleNewHosting = () => {
+    // Block new hosting creation until preferences are filled
+    if (data.hostPreferencesSkipped) {
+      setShowPrefModal(true);
+      return;
+    }
     setData(prev => ({ ...prev, editingHostingId: null }));
     window.setScreen(20);
   };
@@ -337,6 +343,18 @@ function S19HostHome({ data, setData, onEditProfile }) {
           </div>
         </Modal>
       )}
+
+      {/* Preferences questionnaire — blocks new hosting until filled */}
+      <PreferencesPromptModal
+        isOpen={showPrefModal}
+        context="host_first_hosting"
+        onNow={() => {
+          setShowPrefModal(false);
+          setData(prev => ({ ...prev, pendingNewHosting: true }));
+          window.setScreen(22);
+        }}
+        onLater={() => setShowPrefModal(false)}
+      />
     </div>
   );
 }
@@ -496,9 +514,18 @@ function S22HostProfile({ data, setData, onBack }) {
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const handleSave = () => {
-    setData(prev => ({ ...prev, ...form }));
+    const hasPending = !!data.pendingNewHosting;
+    setData(prev => ({
+      ...prev,
+      ...form,
+      ...(hasPending ? { hostPreferencesSkipped: false, pendingNewHosting: false } : {}),
+    }));
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    if (hasPending) {
+      setTimeout(() => window.setScreen(20), 900);
+    } else {
+      setTimeout(() => setSaved(false), 2500);
+    }
   };
 
   const shabbatOpts = [
