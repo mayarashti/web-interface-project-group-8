@@ -179,6 +179,135 @@ function MapPinModal({ isOpen, onClose, onConfirm, initialLat, initialLng }) {
   );
 }
 
+function RadiusMapModal({ isOpen, onClose, onConfirm, initialLat, initialLng, initialRadius }) {
+  const { t } = useLang();
+  const mapRef    = useRef(null);
+  const markerRef = useRef(null);
+  const circleRef = useRef(null);
+  const [tempPos, setTempPos] = useState(null);
+  const [address, setAddress] = useState('');
+  const [radius,  setRadius]  = useState(initialRadius || 10);
+
+  useEffect(() => {
+    if (isOpen && !mapRef.current) {
+      setTimeout(() => {
+        const center = [initialLat || 32.0853, initialLng || 34.7818];
+        const map = L.map('radius-map-container').setView(center, 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        mapRef.current = map;
+
+        const marker = L.marker(center, { draggable: true }).addTo(map);
+        markerRef.current = marker;
+
+        const initRadius = initialRadius || 10;
+        const circle = L.circle(center, {
+          radius: initRadius * 1000,
+          color: '#6B8F71',
+          fillColor: '#6B8F71',
+          fillOpacity: 0.15,
+          weight: 2,
+        }).addTo(map);
+        circleRef.current = circle;
+
+        if (initialLat && initialLng) {
+          setTempPos({ lat: initialLat, lng: initialLng });
+          reverseGeocode({ lat: initialLat, lng: initialLng });
+        }
+
+        const updatePos = (latlng) => {
+          marker.setLatLng(latlng);
+          circle.setLatLng(latlng);
+          setTempPos({ lat: latlng.lat, lng: latlng.lng });
+          reverseGeocode(latlng);
+        };
+
+        marker.on('dragend', () => updatePos(marker.getLatLng()));
+        map.on('click', (e) => updatePos(e.latlng));
+      }, 100);
+    }
+    return () => {
+      if (!isOpen && mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+        circleRef.current = null;
+      }
+    };
+  }, [isOpen]);
+
+  // Keep circle radius in sync with slider
+  useEffect(() => {
+    if (circleRef.current) {
+      circleRef.current.setRadius(radius * 1000);
+    }
+  }, [radius]);
+
+  const reverseGeocode = async (pos) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`
+      );
+      const json = await res.json();
+      const a = json.address || {};
+      setAddress(a.city || a.town || a.village || a.county || json.display_name?.split(',')[0] || '');
+    } catch (_) {
+      setAddress('');
+    }
+  };
+
+  const handleConfirm = () => {
+    if (tempPos) onConfirm({ lat: tempPos.lat, lng: tempPos.lng, radius, address });
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={t('radius_map_title')}>
+      <div className="space-y-4">
+        <p className="text-sm text-warm-500 leading-relaxed">{t('radius_map_sub')}</p>
+
+        <div
+          id="radius-map-container"
+          className="w-full rounded-xl border border-warm-200 overflow-hidden z-0"
+          style={{ height: '240px' }}
+        />
+
+        <div>
+          <label className="block text-sm font-semibold text-warm-600 mb-2">
+            {t('radius_label')}: <span className="text-brand-700">
+              {radius < 1 ? '500 מ\'' : `${radius} ${t('km_unit')}`}
+            </span>
+          </label>
+          <input
+            type="range"
+            min="0.5"
+            max="100"
+            step="0.5"
+            value={radius}
+            onChange={(e) => setRadius(parseFloat(e.target.value))}
+            className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
+          />
+          <div className="flex justify-between text-[11px] text-warm-400 mt-1">
+            <span>500 מ'</span>
+            <span>100 {t('km_unit')}</span>
+          </div>
+        </div>
+
+        {address && (
+          <div className="bg-brand-50 border border-brand-100 p-3 rounded-xl">
+            <p className="text-xs text-brand-700 font-medium">📍 {address}</p>
+          </div>
+        )}
+
+        <Btn onClick={handleConfirm} disabled={!tempPos}>
+          {t('radius_confirm')}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 function Card({ children, className = '', onClick }) {
   const isClickable = !!onClick;
   return (
@@ -549,4 +678,5 @@ window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
 window.LocationInput = LocationInput;
 window.MapPinModal = MapPinModal;
+window.RadiusMapModal = RadiusMapModal;
 window.PreferencesPromptModal = PreferencesPromptModal;

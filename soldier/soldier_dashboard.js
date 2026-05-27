@@ -595,7 +595,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
   };
 
   const [request, setRequest] = useState(initialRequest);
-  const [showMap, setShowMap] = useState(false);
+  const [showRadiusMap, setShowRadiusMap] = useState(false);
 
   const dietaryOpts = [
     { value: 'gluten',     label: t('a_gluten')  },
@@ -751,40 +751,54 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             ]}
           />
 
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-warm-600 mb-1.5">
-              {t('s15_travel_dist')}: {request.travelDistance} {t('km_unit')}
+          {/* ── Radius Map Picker ── */}
+          <div>
+            <label className="block text-sm font-semibold text-warm-600 mb-2">
+              {t('radius_map_btn')}
             </label>
-            <input 
-              type="range" 
-              min="1" 
-              max="100" 
-              value={request.travelDistance} 
-              onChange={(e) => handleChange('travelDistance', e.target.value)}
-              className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
-            />
+            {(request.lat && request.travelDistance) ? (
+              <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    📍 {request.location || t('radius_set')}
+                  </p>
+                  <p className="text-xs text-warm-500 mt-0.5">
+                    {t('radius_label')}: {request.travelDistance < 1 ? "500 מ'" : `${request.travelDistance} ${t('km_unit')}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRadiusMap(true)}
+                  className="text-xs text-brand-600 font-semibold underline flex-shrink-0"
+                >
+                  {t('radius_edit')}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowRadiusMap(true)}
+                className="w-full border-2 border-dashed border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-brand-700 transition-colors"
+              >
+                <span className="text-3xl">🗺️</span>
+                <span className="font-semibold text-sm">{t('radius_map_btn')}</span>
+                <span className="text-xs text-warm-400">{t('radius_map_sub')}</span>
+              </button>
+            )}
           </div>
 
-          <LocationInput 
-            label={t('s15_location')}
-            placeholder={t('s15_location_ph')}
-            value={request.location}
-            onChange={(val) => handleChange('location', val)}
-            onMapPin={() => setShowMap(true)}
-            required
-            hint={request.lat ? t('map_pin_set') : null}
-          />
-
-          <MapPinModal 
-            isOpen={showMap}
-            onClose={() => setShowMap(false)}
-            onConfirm={(pos, addr) => {
-              handleChange('lat', pos.lat);
-              handleChange('lng', pos.lng);
-              if (addr) handleChange('location', addr.split(',')[0]); // Take city part
+          <RadiusMapModal
+            isOpen={showRadiusMap}
+            onClose={() => setShowRadiusMap(false)}
+            onConfirm={({ lat, lng, radius, address }) => {
+              handleChange('lat', lat);
+              handleChange('lng', lng);
+              handleChange('travelDistance', radius);
+              if (address) handleChange('location', address);
             }}
             initialLat={request.lat}
             initialLng={request.lng}
+            initialRadius={request.travelDistance || 10}
           />
 
           <div className="pt-4 space-y-3">
