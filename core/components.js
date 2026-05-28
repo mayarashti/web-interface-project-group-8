@@ -46,7 +46,26 @@ function Btn({ children, onClick, variant = 'primary', className = '', type = 'b
   );
 }
 
+function EyeIcon({ open }) {
+  return open ? (
+    /* Eye open */
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/>
+    </svg>
+  ) : (
+    /* Eye closed — same eye with a diagonal slash */
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/>
+      <line x1="48" y1="40" x2="208" y2="216" stroke="currentColor" strokeWidth="16" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 function Input({ label, value, onChange, placeholder, type = 'text', hint, error, required = false, className = '' }) {
+  const [showPw, setShowPw] = useState(false);
+  const isPassword = type === 'password';
+  const inputType = isPassword ? (showPw ? 'text' : 'password') : type;
+
   return (
     <div className={clsx("w-full mb-5", className)}>
       {label && (
@@ -55,19 +74,33 @@ function Input({ label, value, onChange, placeholder, type = 'text', hint, error
           {hint && <span className="text-xs font-normal text-warm-500">{hint}</span>}
         </label>
       )}
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        className={clsx(
-          "w-full min-h-[48px] px-4 py-3 rounded-xl border bg-white text-[15px] transition-all duration-200 placeholder:text-warm-400 focus:outline-none focus:ring-4",
-          error 
-            ? "border-red-300 focus:border-red-500 focus:ring-red-100 bg-red-50/30" 
-            : "border-warm-200 focus:border-brand-400 focus:ring-brand-50 hover:border-warm-300"
+      <div className={isPassword ? 'relative' : undefined}>
+        <input
+          type={inputType}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className={clsx(
+            "w-full min-h-[48px] py-3 rounded-xl border bg-white text-[15px] transition-all duration-200 placeholder:text-warm-400 focus:outline-none focus:ring-4",
+            isPassword ? 'ps-4 pe-12' : 'px-4',
+            error
+              ? "border-red-300 focus:border-red-500 focus:ring-red-100 bg-red-50/30"
+              : "border-warm-200 focus:border-brand-400 focus:ring-brand-50 hover:border-warm-300"
+          )}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPw(v => !v)}
+            className="absolute inset-y-0 end-0 flex items-center px-3 text-warm-400 hover:text-brand-500 transition-colors"
+            tabIndex={-1}
+            aria-label={showPw ? 'Hide password' : 'Show password'}
+          >
+            <EyeIcon open={showPw} />
+          </button>
         )}
-      />
+      </div>
       {error && <p className="mt-1.5 text-xs font-medium text-red-600 animate-fade-in">{error}</p>}
     </div>
   );
@@ -442,12 +475,15 @@ function BackBtn({ onClick }) {
   const { lang } = useLang();
   const isHeb = lang === 'he';
   return (
-    <button 
+    <button
       onClick={onClick}
       className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-warm-200 text-gray-600 hover:bg-warm-50 hover:text-brand-600 transition-colors shadow-sm mb-6 active:scale-95"
       aria-label="Back"
     >
-      {isHeb ? '→' : '←'}
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"
+        style={isHeb ? {} : { transform: 'scaleX(-1)' }}>
+        <path d="M237.66,122.34l-96-96A8,8,0,0,0,128,32V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16h80v40a8,8,0,0,0,13.66,5.66l96-96A8,8,0,0,0,237.66,122.34ZM144,204.69V176a8,8,0,0,0-8-8H48V88h88a8,8,0,0,0,8-8V51.31L220.69,128Z"/>
+      </svg>
     </button>
   );
 }
@@ -580,13 +616,13 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout }) {
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo }) {
   const { lang, setLang, t } = useLang();
   return (
     <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-600)' }}>
       <div dir="ltr" className="w-full px-2 py-1 grid grid-cols-3 items-center">
 
-        {/* Col 1 — Language toggle (always, far left) + profile / logout / extra actions */}
+        {/* Col 1 — Language toggle (always, far left) + info + profile / logout / extra actions */}
         <div className="flex items-center gap-1 justify-start pl-1">
           <button
             onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
@@ -596,15 +632,27 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
           >
             {lang === 'he' ? 'EN' : 'עב'}
           </button>
+          {onInfo && (
+            <button
+              onClick={onInfo}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
+              style={{ color: 'var(--warm-600)' }}
+              aria-label={t('info_btn_title')}
+              title={t('info_btn_title')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </button>
+          )}
           {profileAction || (onProfile && (
             <button
               onClick={onProfile}
               className="app-icon-btn"
               aria-label={lang === 'he' ? 'פרופיל' : 'Profile'}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
               </svg>
             </button>
           ))}
@@ -650,8 +698,9 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
               className="app-icon-btn flex-shrink-0"
               aria-label={lang === 'he' ? 'חזור' : 'Back'}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d={lang === 'he' ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6'}/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"
+                style={lang === 'he' ? {} : { transform: 'scaleX(-1)' }}>
+                <path d="M237.66,122.34l-96-96A8,8,0,0,0,128,32V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16h80v40a8,8,0,0,0,13.66,5.66l96-96A8,8,0,0,0,237.66,122.34ZM144,204.69V176a8,8,0,0,0-8-8H48V88h88a8,8,0,0,0,8-8V51.31L220.69,128Z"/>
               </svg>
             </button>
           )}
@@ -688,13 +737,13 @@ function Modal({ isOpen, onClose, title, children, className }) {
   );
 }
 
-function ScreenLayout({ children, onBack, onNext, nextLabel, title, sub, icon, step, totalSteps, total }) {
+function ScreenLayout({ children, onBack, onNext, nextLabel, title, sub, icon, step, totalSteps, total, onInfo }) {
   const { lang } = useLang();
   // Accept both 'totalSteps' and 'total' for backward compat
   const steps = totalSteps || total;
   return (
     <div className="min-h-screen bg-warm-50 flex flex-col screen-enter">
-      <AppHeader onBack={onBack} />
+      <AppHeader onBack={onBack} onInfo={onInfo} />
       <div className="flex-1 flex justify-center">
         <div className="w-full max-w-md bg-white flex flex-col relative">
           <div className="flex-1 px-6 pt-6 pb-32">

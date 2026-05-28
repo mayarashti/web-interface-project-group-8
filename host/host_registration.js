@@ -2,7 +2,7 @@
 
 var { useState } = React;
 
-function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences }) {
+function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences, onInfo }) {
   const { t } = useLang();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
@@ -83,6 +83,7 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences 
       totalSteps={TOTAL_STEPS}
       icon={icons[step]}
       title={titles[step]}
+      onInfo={step === 1 ? onInfo : null}
     >
       <div className="space-y-6 pb-32">
         {/* ── Step 1: Account & Location ── */}

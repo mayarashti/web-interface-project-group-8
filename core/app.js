@@ -170,7 +170,7 @@ function App() {
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => triggerPrefPrompt('soldier_reg')} onBack={() => go(1)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => triggerPrefPrompt('soldier_reg')} onBack={() => go(1)} onInfo={() => setShowInfo(true)} />,
     7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(nextScreenAfterPrefs)} onBack={() => nextScreenAfterPrefs === 23 ? go(24) : go(3)} />,
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => go(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
@@ -205,7 +205,7 @@ function App() {
     24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} onSkipPreferences={() => { setFormData(prev => ({ ...prev, hostPreferencesSkipped: true })); go(17); }} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} onSkipPreferences={() => { setFormData(prev => ({ ...prev, hostPreferencesSkipped: true })); go(17); }} onInfo={() => setShowInfo(true)} />,
     25: <S17HostSummary data={formData} onEdit={() => go(16)} onSubmit={() => go(17)} onBack={() => go(16)} />,
     17: <S17HostSuccess onNext={() => go(19)} />,
     19: <S19HostHome    data={formData} setData={setFormData} onEditProfile={() => go(22)} />,
@@ -231,20 +231,6 @@ function App() {
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
 
-        {/* All screens now have AppHeader with built-in lang toggle.
-            Only registration screens 3 & 16 need an extra floating ⓘ info button. */}
-        {[3, 16].includes(screen) && (
-          <button
-            onClick={() => setShowInfo(true)}
-            className="fixed bottom-24 right-4 z-50 w-11 h-11 bg-white rounded-full shadow-md border border-warm-200 flex items-center justify-center text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-all active:scale-95"
-            title={lang === 'he' ? 'איך זה עובד?' : 'How it works?'}
-            aria-label={lang === 'he' ? 'איך זה עובד?' : 'How it works?'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
-          </button>
-        )}
         {screens[screen] || screens[1]}
         
         {/* Global Info Modal for Registration Screens */}
