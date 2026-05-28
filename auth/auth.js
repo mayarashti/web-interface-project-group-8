@@ -12,7 +12,7 @@ function S0Login({ onBack, onLogin }) {
   const [forgotSent, setForgotSent] = useState(false);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault();צקצ
     const loginKey = phone.trim();
 
     if (loginKey === 'חייל') {
