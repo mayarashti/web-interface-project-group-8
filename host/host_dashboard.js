@@ -96,7 +96,7 @@ function SoldierProfileModal({ guest, onClose }) {
   );
 }
 
-function S19HostHome({ data, setData, onEditProfile }) {
+function S19HostHome({ data, setData, onProfile }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
   const [selectedHosting,     setSelectedHosting]     = useState(null);
@@ -121,10 +121,14 @@ function S19HostHome({ data, setData, onEditProfile }) {
 
   const handleCancel = (id) => {
     if (confirm(t('s19_confirm_cancel'))) {
-      setData(prev => ({
-        ...prev,
-        hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h)
-      }));
+      if (window.DB) {
+        window.db.collection('family_hostings').doc(id).set({ status: 'canceled' }, { merge: true });
+      } else {
+        setData(prev => ({
+          ...prev,
+          hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h)
+        }));
+      }
     }
   };
 
@@ -134,14 +138,10 @@ function S19HostHome({ data, setData, onEditProfile }) {
       <AppHeader
         eyebrow={`${t('s19_greeting')} ${data.hostName || 'משפחה'}`}
         title={t('s19_status')}
-        profileAction={(
-          <button onClick={onEditProfile} className="app-icon-btn" aria-label={t('profile_settings')}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
-            </svg>
-          </button>
-        )}
-        onLogout={() => window.setScreen(1)}
+        onProfile={onProfile}
+        onLogout={async () => {
+          if (window.auth) await window.auth.signOut();
+        }}
       />
 
       <div className="max-w-md mx-auto px-5 mt-6">
@@ -232,7 +232,13 @@ function S19HostHome({ data, setData, onEditProfile }) {
                   <div className="px-4 py-3 bg-warm-50 flex justify-end gap-3">
                     {isCanceled ? (
                       <button
-                        onClick={() => setData(prev => ({ ...prev, hostings: prev.hostings.map(h2 => h2.id === h.id ? { ...h2, status: 'open' } : h2) }))}
+                        onClick={() => {
+                          if (window.DB) {
+                            window.db.collection('family_hostings').doc(h.id).set({ status: 'open' }, { merge: true });
+                          } else {
+                            setData(prev => ({ ...prev, hostings: prev.hostings.map(h2 => h2.id === h.id ? { ...h2, status: 'open' } : h2) }))
+                          }
+                        }}
                         className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
                       >
                         {t('restore_hosting')}
@@ -364,24 +370,7 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 
   const handleSubmit = () => {
     if (!validate()) return;
-
-    setData(prev => {
-      const hostings = prev.hostings || [];
-      if (prev.editingHostingId) {
-        return {
-          ...prev,
-          hostings: hostings.map(h => h.id === prev.editingHostingId ? { ...h, ...form } : h),
-          editingHostingId: null
-        };
-      } else {
-        return {
-          ...prev,
-          hostings: [...hostings, { ...form, id: Date.now(), guests: [] }]
-        };
-      }
-    });
-
-    onSubmit();
+    onSubmit({ ...form, guests: form.guests || [] });
   };
 
   return (
@@ -489,13 +478,22 @@ function S22HostProfile({ data, setData, onBack }) {
 
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const hasPending = !!data.pendingNewHosting;
-    setData(prev => ({
-      ...prev,
+    const updatedData = {
       ...form,
       ...(hasPending ? { hostPreferencesSkipped: false, pendingNewHosting: false } : {}),
-    }));
+    };
+    
+    if (window.DB && data.uid) {
+      try {
+        await window.DB.saveFamilyProfile(data.uid, updatedData);
+      } catch (e) {
+        alert("Error saving profile to database.");
+      }
+    }
+
+    setData(prev => ({ ...prev, ...updatedData }));
     setSaved(true);
     if (hasPending) {
       setTimeout(() => window.setScreen(20), 900);
@@ -550,7 +548,7 @@ function S22HostProfile({ data, setData, onBack }) {
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>
           {saved ? t('saved_success') : t('save_changes')}
         </Btn>
-        <Btn onClick={() => window.setScreen(1)} variant="danger" className="mt-2 mb-6">
+        <Btn onClick={async () => { if (window.auth) await window.auth.signOut(); }} variant="danger" className="mt-2 mb-6">
           {t('logout')}
         </Btn>
       </div>

@@ -18,7 +18,9 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
             </svg>
           </button>
         )}
-        onLogout={() => window.setScreen(1)}
+        onLogout={async () => {
+          if (window.auth) await window.auth.signOut();
+        }}
       />
 
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
@@ -502,7 +504,9 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </svg>
           </button>
         )}
-        onLogout={() => window.setScreen(1)}
+        onLogout={async () => {
+          if (window.auth) await window.auth.signOut();
+        }}
       />
 
       <div className="px-5 mt-2 space-y-5 max-w-6xl mx-auto">
@@ -1009,7 +1013,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         <Btn onClick={handleSave} className="text-base py-4 shadow-lg">
           {saved ? t('saved_success') : t('save_changes')}
         </Btn>
-        <Btn onClick={() => window.setScreen(1)} variant="danger" className="text-base py-4 shadow-sm mb-6">
+        <Btn onClick={async () => { if (window.auth) await window.auth.signOut(); }} variant="danger" className="text-base py-4 shadow-sm mb-6">
           {t('logout')}
         </Btn>
       </div>

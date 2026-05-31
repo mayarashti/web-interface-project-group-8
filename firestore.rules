@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Soldiers: 
+    // Anyone can read profiles (needed for matches)
+    // Only the owner can create/update their profile
+    match /soldiers/{soldierId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == soldierId;
+    }
+    
+    // Families: 
+    // Anyone can read profiles
+    // Only the owner can create/update their profile
+    match /families/{familyId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == familyId;
+    }
+
+    // Soldier Hosting Searches (Requests):
+    // Anyone can read (so families can see them)
+    // Only the soldier who created it can modify it
+    match /soldier_hosting_searches/{searchId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.soldier_id;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.soldier_id;
+    }
+
+    // Family Hostings (Offers):
+    // Anyone can read (so soldiers can see them)
+    // Only the family who created it can modify it
+    match /family_hostings/{hostingId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.family_id;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.family_id;
+    }
+
+    // Active Matches:
+    // Requires authentication to read or modify.
+    // In a production app, you might restrict this further 
+    // so only the involved soldier and family can read/update.
+    match /active_matches/{matchId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Rematches:
+    match /rematches/{rematchId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
