@@ -1,6 +1,6 @@
 /* S16 Host Registration Wizard (3 Steps) */
 
-var { useState } = React;
+var { useState, useEffect } = React;
 
 function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences, onInfo }) {
   const { t } = useLang();
@@ -9,7 +9,43 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
   const [showMap, setShowMap] = useState(false);
   const [showPrefModal, setShowPrefModal] = useState(false);
 
+  const [customLanguages, setCustomLanguages] = useState([]);
+  const [newLanguageText, setNewLanguageText] = useState('');
+
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
+
+  useEffect(() => {
+    if (!data.hostLanguages) {
+      setData(prev => ({ ...prev, hostLanguages: ['עברית'] }));
+    }
+  }, []);
+
+  const staticLanguages = [
+    { id: 'עברית', label: 'עברית' },
+    { id: 'אנגלית', label: 'אנגלית' },
+    { id: 'רוסית', label: 'רוסית' },
+    { id: 'ספרדית', label: 'ספרדית' }
+  ];
+
+  const allLanguages = [...staticLanguages, ...customLanguages.map(lang => ({ id: lang, label: lang }))];
+
+  const handleAddLanguage = () => {
+    const trimmed = newLanguageText.trim();
+    if (!trimmed) return;
+    const alreadyExists = allLanguages.some(l => l.id.toLowerCase() === trimmed.toLowerCase());
+    if (!alreadyExists) {
+      setCustomLanguages(prev => [...prev, trimmed]);
+    }
+    const currentLangs = data.hostLanguages || ['עברית'];
+    if (!currentLangs.includes(trimmed)) {
+      setData(prev => ({
+        ...prev,
+        hostLanguages: [...currentLangs, trimmed]
+      }));
+    }
+    setNewLanguageText('');
+  };
+
 
   const TOTAL_STEPS = 3;
 
@@ -190,6 +226,39 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
                 onChange={set('hostCooking')}
               />
             </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-800 mb-3">שפות מדוברות (לסמן את כל מה שרלוונטי)</p>
+              <MultiCheck
+                options={allLanguages}
+                values={data.hostLanguages || ['עברית']}
+                onChange={set('hostLanguages')}
+              />
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={newLanguageText}
+                  onChange={(e) => setNewLanguageText(e.target.value)}
+                  placeholder="הוסף שפה אחרת..."
+                  className="flex-1 min-h-[44px] py-2 px-4 rounded-xl border border-warm-200 bg-white text-sm transition-all placeholder:text-warm-400 focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 hover:border-warm-300"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddLanguage();
+                    }
+                  }}
+                />
+                <Btn
+                  type="button"
+                  variant="secondary"
+                  onClick={handleAddLanguage}
+                  className="!w-auto !py-2.5"
+                >
+                  הוסף
+                </Btn>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -292,6 +361,7 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
           <Row label={t('s16_sum_shab')}        value={shabbatMap[data.hostShabbat]} />
           <Row label={t('s16_sum_pets_label')} value={petsValue} />
           {cookingValue && <Row label={t('s16_sum_cooking')} value={cookingValue} />}
+          <Row label={t('s16_langs') || 'שפות שמדברים בבית'} value={(data.hostLanguages || ['עברית']).join(', ')} />
         </Card>
 
         {data.hostVibe && (
