@@ -735,16 +735,6 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             ]}
           />
 
-          <RadioGroup 
-            label={t('s15_need_sleep')}
-            value={request.needSleep ? 'yes' : 'no'}
-            onChange={(val) => handleChange('needSleep', val === 'yes')}
-            options={[
-              { value: 'yes', label: t('s15_yes') },
-              { value: 'no', label: t('s15_no') }
-            ]}
-          />
-
           {/* ── Radius Map Picker ── */}
           <div>
             <label className="block text-sm font-semibold text-warm-600 mb-2">
