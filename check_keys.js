@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const trans = fs.readFileSync('core/Translations.JS', 'utf8');
+const trans = fs.readFileSync('core/translations.js', 'utf8');
 const defMatches = trans.match(/[a-zA-Z0-9_]+(?=\s*:)/g);
 const defs = Array.from(new Set(defMatches));
 
@@ -24,4 +24,4 @@ for (const file of files) {
 used = Array.from(new Set(used));
 
 const missing = used.filter(k => !defs.includes(k));
-console.log('Missing keys in core/Translations.JS:', missing.join(', '));
+console.log('Missing keys in core/translations.js:', missing.join(', '));
