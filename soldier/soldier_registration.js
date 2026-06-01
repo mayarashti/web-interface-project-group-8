@@ -1,9 +1,10 @@
 /* S3PersonalDetails — Personal details */
 var { useState } = React;
 
-function S3PersonalDetails({ data, setData, onNext, onBack, onInfo }) {
+function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPreferences }) {
   const { t } = useLang();
   const [errors, setErrors] = useState({});
+  const [showPrefModal, setShowPrefModal] = useState(false);
 
   const validate = () => {
     const e = {};
@@ -19,52 +20,60 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo }) {
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   return (
-    <ScreenLayout
-      onBack={onBack}
-      onNext={() => { if (validate()) onNext(); }}
-      step={1}
-      total={3}
-      icon="🪶"
-      title={t('s3_title')}
-      onInfo={onInfo}
-    >
-      <div className="space-y-6 pb-32">
-        <div className="space-y-4">
-          <Input
-            label={t('s16_name')}
-            value={data.fullName || ''}
-            onChange={set('fullName')}
-            placeholder={t('s16_name_ph')}
-            error={errors.fullName}
-          />
-          <Input
-            label={t('s3_phone')}
-            type="tel"
-            value={data.phone || ''}
-            onChange={set('phone')}
-            placeholder="050-1234567"
-            error={errors.phone}
-          />
-          <Input
-            label={t('s3_age')}
-            type="number"
-            value={data.age || ''}
-            onChange={set('age')}
-            placeholder={t('s3_age_ph')}
-            error={errors.age}
-          />
-          <Input
-            label={t('s3_pass')}
-            type="password"
-            value={data.password || ''}
-            onChange={set('password')}
-            placeholder={t('s3_pass_ph')}
-            error={errors.password}
-            hint={t('s3_pass_hint')}
-          />
+    <React.Fragment>
+      <ScreenLayout
+        onBack={onBack}
+        onNext={() => { if (validate()) setShowPrefModal(true); }}
+        step={1}
+        total={3}
+        icon="🪶"
+        title={t('s3_title')}
+        onInfo={onInfo}
+      >
+        <div className="space-y-6 pb-32">
+          <div className="space-y-4">
+            <Input
+              label={t('s16_name')}
+              value={data.fullName || ''}
+              onChange={set('fullName')}
+              placeholder={t('s16_name_ph')}
+              error={errors.fullName}
+            />
+            <Input
+              label={t('s3_phone')}
+              type="tel"
+              value={data.phone || ''}
+              onChange={set('phone')}
+              placeholder="050-1234567"
+              error={errors.phone}
+            />
+            <Input
+              label={t('s3_age')}
+              type="number"
+              value={data.age || ''}
+              onChange={set('age')}
+              placeholder={t('s3_age_ph')}
+              error={errors.age}
+            />
+            <Input
+              label={t('s3_pass')}
+              type="password"
+              value={data.password || ''}
+              onChange={set('password')}
+              placeholder={t('s3_pass_ph')}
+              error={errors.password}
+              hint={t('s3_pass_hint')}
+            />
+          </div>
         </div>
-      </div>
-    </ScreenLayout>
+      </ScreenLayout>
+      <PreferencesPromptModal
+        isOpen={showPrefModal}
+        context="soldier_reg"
+        onNow={() => { setShowPrefModal(false); onNext(); }}
+        onLater={() => { setShowPrefModal(false); if (onSkipPreferences) onSkipPreferences(); }}
+      />
+    </React.Fragment>
   );
 }
 

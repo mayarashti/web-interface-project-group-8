@@ -5,6 +5,15 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
   const [activeRequest, setActiveRequest] = useState(null);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const hasRequests = data.requests && data.requests.length > 0;
+  const [showPrefModal, setShowPrefModal] = useState(false);
+
+  const handleNewRequestClick = () => {
+    if (data.soldierPreferencesSkipped) {
+      setShowPrefModal(true);
+    } else {
+      onNewRequest();
+    }
+  };
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-10">
@@ -81,7 +90,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
         
         {/* New Request CTA */}
         <button
-          onClick={() => onNewRequest()}
+          onClick={handleNewRequestClick}
           className="w-full text-start p-5 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-300 hover:shadow-md transition-all group flex items-center gap-4"
         >
           <div className="w-12 h-12 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-500 group-hover:bg-brand-500 group-hover:text-white transition-colors flex-shrink-0">
@@ -110,6 +119,17 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
             setData({ ...data, requests: newRequests });
           }}
           onViewMap={() => { setActiveRequest(null); onViewMatches(activeRequest.id); }}
+        />
+        
+        <PreferencesPromptModal
+          isOpen={showPrefModal}
+          context="first_request"
+          onNow={() => {
+            setShowPrefModal(false);
+            setData(prev => ({ ...prev, pendingNewRequest: true }));
+            onProfile();
+          }}
+          onLater={() => setShowPrefModal(false)}
         />
       </div>
     </div>
@@ -450,11 +470,20 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 /* ——————————————————————————————————————————— 
    S15Home — Soldier home screen
 ————————————————————————————————————————————— */
-function S15Home({ data, onProfile, onNewRequest, onBack }) {
+function S15Home({ data, setData, onNewRequest, onProfile, onBack }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
+  const [showPrefModal, setShowPrefModal] = useState(false);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
+
+  const handleNewRequestClick = () => {
+    if (data.soldierPreferencesSkipped) {
+      setShowPrefModal(true);
+    } else {
+      onNewRequest();
+    }
+  };
 
   const nextFriday = new Date(
     Date.now() + ((5 - new Date().getDay() + 7) % 7 || 7) * 86400000
@@ -519,7 +548,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
             <h2 className="text-xl font-bold text-gray-900">{t('s15_no_requests_title')}</h2>
             <p className="text-warm-500 max-w-xs">{t('s15_no_requests_sub')}</p>
-            <Btn onClick={onNewRequest} className="max-w-xs">{t('s15_landing_new_req_title')}</Btn>
+            <Btn onClick={handleNewRequestClick} className="max-w-xs">{t('s15_landing_new_req_title')}</Btn>
           </div>
         ) : noMatches ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
@@ -532,7 +561,7 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
             <h2 className="text-xl font-bold text-gray-900">{t('s15_no_matches_title')}</h2>
             <p className="text-warm-500 max-w-sm">{t('s15_no_matches_sub')}</p>
-            <Btn variant="secondary" onClick={onNewRequest} className="max-w-xs">{t('update_request')}</Btn>
+            <Btn variant="secondary" onClick={handleNewRequestClick} className="max-w-xs">{t('update_request')}</Btn>
           </div>
         ) : (
           <React.Fragment>
@@ -564,6 +593,17 @@ function S15Home({ data, onProfile, onNewRequest, onBack }) {
             </div>
           </React.Fragment>
         )}
+        
+        <PreferencesPromptModal
+          isOpen={showPrefModal}
+          context="first_request"
+          onNow={() => {
+            setShowPrefModal(false);
+            setData(prev => ({ ...prev, pendingNewRequest: true }));
+            onProfile();
+          }}
+          onLater={() => setShowPrefModal(false)}
+        />
       </div>
     </div>
   );
@@ -832,10 +872,28 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = () => {
-    setData(prev => ({ ...prev, ...form }));
+  const handleSave = async () => {
+    const hasPending = !!data.pendingNewRequest;
+    const updatedData = {
+      ...form,
+      ...(hasPending ? { soldierPreferencesSkipped: false, pendingNewRequest: false } : {}),
+    };
+
+    if (window.DB && data.uid) {
+      try {
+        await window.DB.saveSoldierProfile(data.uid, updatedData);
+      } catch (e) {
+        alert("Error saving profile to database.");
+      }
+    }
+
+    setData(prev => ({ ...prev, ...updatedData }));
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (hasPending) {
+      setTimeout(() => onNewRequest(), 900);
+    } else {
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const allergyOpts = [

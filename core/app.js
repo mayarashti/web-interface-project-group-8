@@ -157,45 +157,82 @@ function App() {
     document.documentElement.lang = lang;
   }, [lang]);
 
+  const registerSoldier = async (nextScreen, skipped = false) => {
+    if (window.DB) {
+      let uid = formData.uid;
+      if (!uid && formData.phone && formData.password) {
+        try {
+          const cred = await window.auth.createUserWithEmailAndPassword(formData.phone + "@memulaim.com", formData.password);
+          uid = cred.user.uid;
+          setFormData(prev => ({ ...prev, uid }));
+        } catch (err) {
+          alert("Error creating account: " + err.message);
+          return;
+        }
+      }
+      if (uid) {
+        try {
+          const toSave = { ...formData, soldierPreferencesSkipped: skipped };
+          await window.DB.saveSoldierProfile(uid, toSave);
+          setFormData(prev => ({ ...prev, role: 'soldier', soldierPreferencesSkipped: skipped }));
+          go(nextScreen);
+        } catch (err) {
+          alert("Error saving profile: " + err.message + "\n\nDid you create the Firestore Database and update the Rules?");
+        }
+      } else {
+        if (skipped) setFormData(prev => ({ ...prev, soldierPreferencesSkipped: true }));
+        go(nextScreen);
+      }
+    } else {
+      if (skipped) setFormData(prev => ({ ...prev, soldierPreferencesSkipped: true }));
+      go(nextScreen);
+    }
+  };
+
+  const registerHost = async (nextScreen, skipped = false) => {
+    if (window.DB) {
+      let uid = formData.uid;
+      if (!uid && formData.hostPhone && formData.hostPassword) {
+        try {
+          const cred = await window.auth.createUserWithEmailAndPassword(formData.hostPhone + "@memulaim.com", formData.hostPassword);
+          uid = cred.user.uid;
+          setFormData(prev => ({ ...prev, uid }));
+        } catch (err) {
+          alert("Error creating account: " + err.message);
+          return;
+        }
+      }
+      if (uid) {
+        try {
+          const toSave = { ...formData, hostPreferencesSkipped: skipped };
+          await window.DB.saveFamilyProfile(uid, toSave);
+          setFormData(prev => ({ ...prev, role: 'host', hostPreferencesSkipped: skipped }));
+          go(nextScreen);
+        } catch (err) {
+          alert("Error saving profile: " + err.message + "\n\nDid you create the Firestore Database and update the Rules?");
+        }
+      } else {
+        if (skipped) setFormData(prev => ({ ...prev, hostPreferencesSkipped: true }));
+        go(nextScreen);
+      }
+    } else {
+      if (skipped) setFormData(prev => ({ ...prev, hostPreferencesSkipped: true }));
+      go(nextScreen);
+    }
+  };
+
   const screens = {
     /* login */
     0:  <S0Login      onBack={() => go(1)} onLogin={handleDemoLogin} />,
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} />,
     7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(3)} />,
-    12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={async () => {
-          if (window.DB) {
-            let uid = formData.uid;
-            if (!uid && formData.phone && formData.password) {
-              try {
-                const cred = await window.auth.createUserWithEmailAndPassword(formData.phone + "@memulaim.com", formData.password);
-                uid = cred.user.uid;
-                setFormData(prev => ({ ...prev, uid }));
-              } catch (err) {
-                alert("Error creating account: " + err.message);
-                return;
-              }
-            }
-            if (uid) {
-              try {
-                await window.DB.saveSoldierProfile(uid, formData);
-                setFormData(prev => ({ ...prev, role: 'soldier' }));
-                go(13);
-              } catch (err) {
-                alert("Error saving profile: " + err.message + "\n\nDid you create the Firestore Database and update the Rules?");
-              }
-            } else {
-              go(13);
-            }
-          } else {
-            go(13);
-          }
-        }} onBack={() => go(7)} />,
+    12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => registerSoldier(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
-    15: <S15Home      data={formData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} />,
+    15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} />,
     23: <S15NewRequest 
           data={formData} 
           setData={setFormData} 
@@ -240,37 +277,10 @@ function App() {
             go(24);
           }}
         />,
-    24: <S15Landing   data={formData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
+    24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={async () => {
-          if (window.DB) {
-            let uid = formData.uid;
-            if (!uid && formData.hostPhone && formData.hostPassword) {
-              try {
-                const cred = await window.auth.createUserWithEmailAndPassword(formData.hostPhone + "@memulaim.com", formData.hostPassword);
-                uid = cred.user.uid;
-                setFormData(prev => ({ ...prev, uid }));
-              } catch (err) {
-                alert("Error creating account: " + err.message);
-                return;
-              }
-            }
-            if (uid) {
-              try {
-                await window.DB.saveFamilyProfile(uid, formData);
-                setFormData(prev => ({ ...prev, role: 'host' }));
-                go(17);
-              } catch (err) {
-                alert("Error saving profile: " + err.message + "\n\nDid you create the Firestore Database and update the Rules?");
-              }
-            } else {
-              go(17);
-            }
-          } else {
-            go(17);
-          }
-        }} onBack={() => go(1)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => registerHost(17)} onBack={() => go(1)} onSkipPreferences={() => registerHost(17, true)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || formData.hostName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
     19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
     20: <S20NewHosting  
