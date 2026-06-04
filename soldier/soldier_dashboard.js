@@ -150,7 +150,8 @@ const familyAvatarUrl = (bgColor, familyId) => {
     { from: '#eadfd8', to: '#f3e3d9' },
     { from: '#e8e3dc', to: '#d8d0c6' },
   ];
-  const grad = gradients[familyId % gradients.length];
+  const hash = String(familyId ?? 0).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const grad = gradients[hash % gradients.length];
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
     <defs>
@@ -287,18 +288,20 @@ function FamilyInfoCard({ family, onClose }) {
   return (
     <aside className="family-info-card">
       <div className="family-info-card-header">
-        <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor }}>
+        <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor || '#f3e2d3' }}>
           <img src={familyAvatarUrl(family.imageColor, family.id)} alt={family.name} />
         </div>
         <div className="min-w-0 flex-1">
           <h2>{family.name}</h2>
           <p>{family.city} &middot; {shabLabel}</p>
         </div>
-        <button
-          onClick={onClose}
-          className="family-info-card-close"
-          aria-label={t('close_label')}
-        >&times;</button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="family-info-card-close"
+            aria-label={t('close_label')}
+          >&times;</button>
+        )}
       </div>
 
       <p className="family-info-card-description">{family.shortDescription}</p>
@@ -1087,24 +1090,52 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
   const [realMatch, setRealMatch] = useState(null);
+  const [fullFamily, setFullFamily] = useState(null);
 
   useEffect(() => {
-    if (!request?.id || !request.is_match) { setRealMatch(null); return; }
+    if (!request?.id || !request.is_match) { setRealMatch(null); setFullFamily(null); return; }
     if (!window.db) return;
     window.db.collection('active_matches')
       .where('soldier_request_id', '==', request.id)
       .where('status', '==', 'pending_soldier_approval')
       .limit(1)
       .get()
-      .then(snap => { if (!snap.empty) setRealMatch(snap.docs[0].data()); });
+      .then(snap => {
+        if (snap.empty) return;
+        const match = snap.docs[0].data();
+        setRealMatch(match);
+        // Fetch full family profile to populate the card
+        if (match.family_id) {
+          window.db.collection('families').doc(match.family_id).get().then(doc => {
+            if (!doc.exists) return;
+            const d = doc.data();
+            const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
+            const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
+            setFullFamily({
+              id: doc.id,
+              name: d.hostName,
+              city: d.hostCity,
+              shabbat: d.hostShabbat,
+              kosher: d.hostKosher,
+              hasPets: d.hasPets,
+              vibe: d.hostVibe,
+              shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
+              phoneDisplay: d.hostPhone,
+              waDigits,
+              compromise_notes: match.compromise_notes,
+            });
+          });
+        }
+      });
   }, [request?.id, request?.is_match]);
 
   if (!request) return null;
 
   const statusKey = request.status ? ('search_status_' + request.status) : 'search_status_searching';
-  const matchedFamily = realMatch
-    ? { name: realMatch.family_name, city: realMatch.family_city, score: realMatch.score, compromise_notes: realMatch.compromise_notes }
-    : window.MAP_FAMILIES?.[0]; // fallback to mock in demo mode
+  // Real match: use fetched family data. Demo mode: fall back to mock families.
+  const matchedFamily = fullFamily
+    || (realMatch ? { name: realMatch.family_name, city: realMatch.family_city, compromise_notes: realMatch.compromise_notes } : null)
+    || (request?.status === 'matched' ? window.MAP_FAMILIES?.[0] : null);
 
   const handleRematchSubmit = () => {
     onRematch(request, rematchReason);
@@ -1113,20 +1144,6 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     onClose();
   };
 
-  // Build tags the same way as FamilyInfoCard
-  const familyTags = matchedFamily ? (() => {
-    const tags = [];
-    if (matchedFamily.shabbat === 'keeps') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
-    else if (matchedFamily.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
-    if (matchedFamily.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-    else if (matchedFamily.kosher === 'separated') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-    if (matchedFamily.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
-    return tags;
-  })() : [];
-
-  const shabLabel = matchedFamily
-    ? (matchedFamily.shabbat === 'keeps' ? t('map_obs') : matchedFamily.shabbat === 'traditional' ? t('map_trad') : t('map_sec'))
-    : '';
 
   return (
     <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)} className="max-w-md max-h-[93vh]">
@@ -1145,44 +1162,12 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               </div>
             )}
 
-            {/* Matched state — family card */}
+            {/* Matched state — reuse FamilyInfoCard for consistent look */}
             {request.status === 'matched' && matchedFamily && (
               <div className="space-y-2 animate-enter">
-                {/* Header */}
-                <div className="flex items-center gap-3">
-                  {matchedFamily.imageColor != null && (
-                    <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border border-warm-200" style={{ backgroundColor: matchedFamily.imageColor }}>
-                      <img src={familyAvatarUrl(matchedFamily.imageColor, matchedFamily.id)} alt={matchedFamily.name} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-gray-900 text-base leading-tight">{matchedFamily.name}</h3>
-                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city}{shabLabel ? ` | ${shabLabel}` : ''}</p>
-                  </div>
-                </div>
+                <FamilyInfoCard family={matchedFamily} onClose={null} />
 
-                {/* Short description (mock/demo mode only) */}
-                {matchedFamily.shortDescription && (
-                  <p className="text-sm text-warm-600 leading-relaxed">{matchedFamily.shortDescription}</p>
-                )}
-
-                {/* Tags (mock/demo mode only) */}
-                {familyTags.length > 0 && (
-                  <div className="family-info-tags">
-                    {familyTags.map(tag => (
-                      <span key={tag.label} className={`family-info-tag ${tag.cls}`}>
-                        {tag.icon} {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Vibe quote (mock/demo mode only) */}
-                {matchedFamily.vibe && (
-                  <p className="family-info-vibe">"{matchedFamily.vibe}"</p>
-                )}
-
-                {/* Compromise notes (real match only) */}
+                {/* Compromise notes */}
                 {matchedFamily.compromise_notes?.length > 0 && (
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 space-y-1">
                     {matchedFamily.compromise_notes.map((note, i) => (
@@ -1191,23 +1176,8 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
                   </div>
                 )}
 
-                {/* Action buttons */}
+                {/* Extra actions */}
                 <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {matchedFamily.waDigits && (
-                      <Btn onClick={() => {
-                        const msg = t('whatsapp_msg', soldierName, request.when);
-                        window.open(`https://wa.me/${matchedFamily.waDigits}?text=${encodeURIComponent(msg)}`);
-                      }} className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
-                        {t('s15_talk_whatsapp')}
-                      </Btn>
-                    )}
-                    <Btn onClick={onViewMap} variant="outline" className={`!py-2.5 flex items-center justify-center gap-1.5 text-sm${matchedFamily.waDigits ? '' : ' col-span-2'}`}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                      {t('view_map')}
-                    </Btn>
-                  </div>
                   <Btn onClick={() => setView('rematch')} variant="outline" className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
                   <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
                   <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
