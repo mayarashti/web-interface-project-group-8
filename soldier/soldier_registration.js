@@ -98,7 +98,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
     { value: 'lactose',    label: t('a_lactose') },
     { value: 'nuts',       label: t('a_nuts')    },
     { value: 'peanuts',    label: t('a_peanuts') },
-    { value: 'vegetarian', label: t('a_veg')     },
+    { value: 'veg',        label: t('a_veg')     },
     { value: 'vegan',      label: t('a_vegan')   },
     { value: 'fish',       label: t('a_fish')    },
     { value: 'other',      label: t('a_other')   },
@@ -126,9 +126,9 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           value={data.kosher || ''}
           onChange={set('kosher')}
           options={[
-            { value: 'mehadrin', label: t('s7_meh'),    sub: t('s7_meh_s')    },
-            { value: 'kosher',   label: t('s7_kosh_k'), sub: t('s7_kosh_k_s') },
-            { value: 'none',     label: t('s7_none'),   sub: t('s7_none_s')   },
+            { value: 'mehadrin',  label: t('s7_meh'),    sub: t('s7_meh_s')    },
+            { value: 'separated', label: t('s7_kosh_k'), sub: t('s7_kosh_k_s') },
+            { value: 'none',      label: t('s7_none'),   sub: t('s7_none_s')   },
           ]}
         />
 
@@ -138,8 +138,9 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           value={data.shabbatKeeps || ''}
           onChange={set('shabbatKeeps')}
           options={[
-            { value: 'yes', label: t('s7_yes'), sub: t('s7_yes_s') },
-            { value: 'no',  label: t('s7_no'),  sub: t('s7_no_s')  },
+            { value: 'keeps',       label: t('s7_yes'),        sub: t('s7_yes_s')     },
+            { value: 'traditional', label: t('s16_shab_trad'), sub: t('s7_trad_s')   },
+            { value: 'none',        label: t('s7_no'),         sub: t('s7_no_s')      },
           ]}
         />
 
@@ -242,7 +243,8 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
     </div>
   ) : null;
 
-  const kosh = { none: t('map_none'), kosher: t('map_kosh'), mehadrin: t('map_meh') };
+  const kosh = { none: t('map_none'), separated: t('map_kosh'), mehadrin: t('map_meh') };
+  const shab = { none: t('map_sec'), traditional: t('map_trad'), keeps: t('map_obs') };
   const pets = { ok: t('map_pets_ok'), notok: t('map_pets_no'), allergy: t('map_pets_al') };
 
   return (
@@ -268,7 +270,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       <Card className="mb-4">
         <p className="section-label mb-3">{t('s12_prefs')}</p>
         <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
-        <Row label={t('s12_shab')}   value={data.shabbatKeeps === 'yes' ? t('s7_yes') : data.shabbatKeeps === 'no' ? t('s7_no') : null} />
+        <Row label={t('s12_shab')}   value={shab[data.shabbatKeeps]} />
         <Row label={t('s12_allerg')} value={(data.allergies || []).map(a => a === 'other' ? t('a_other') : t('a_' + a)).join(', ') || t('s12_no_allerg')} />
         <Row label={t('s12_pets')}   value={pets[data.pets]} />
       </Card>

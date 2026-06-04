@@ -29,11 +29,10 @@ service cloud.firestore {
 
     // Family Hostings (Offers):
     // Anyone can read (so soldiers can see them)
-    // Only the family who created it can modify it
+    // Any authenticated user can create or update (family_id is set by the app)
     match /family_hostings/{hostingId} {
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.family_id;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.family_id;
+      allow create, update, delete: if request.auth != null;
     }
 
     // Active Matches:

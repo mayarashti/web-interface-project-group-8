@@ -135,6 +135,7 @@ const T = {
     s7_meh:'מטבח כשר', s7_meh_s:'מטבח כשר עם תעודה / הקפדה מלאה',
     s7_shab:'שמירת שבת',
     s7_yes:'שומר/ת שבת', s7_yes_s:'חשוב לי להיות בבית שומר שבת',
+    s7_trad_s:'מתאים לי בית מסורתי עם קידוש',
     s7_no:'לא שומר/ת שבת', s7_no_s:'מתאים לי גם בית לא דתי',
 
     /* S8 Hosting Options */
@@ -392,7 +393,7 @@ const T = {
 
     /* Shared labels */
     lang_he:'עברית', lang_en:'אנגלית', lang_ru:'רוסית',
-    lang_ar:'ערבית', lang_fr:'צרפתית', lang_other:'אחר',
+    lang_ar:'ערבית', lang_es:'ספרדית', lang_fr:'צרפתית', lang_other:'אחר',
     vibe_kids:'בית עם ילדים', vibe_quiet:'בית שקט', vibe_multi:'דוברי שפות',
     vibe_sing:'אוהבי שירה', vibe_pets:'יש חיות בית', vibe_space:'בית מרווח',
     vibe_shab:'אווירה שבתית', vibe_food:'אוהבי בישול',
@@ -607,6 +608,7 @@ const T = {
     s7_meh:'Mehadrin Kosher',  s7_meh_s:'Mehadrin certification only',
     s7_shab:'Shabbat Observance',
     s7_yes:'I observe Shabbat',       s7_yes_s:'I prefer a Shabbat-observant household',
+    s7_trad_s:'A traditional home with Kiddush is fine for me',
     s7_no:'I don\'t observe Shabbat', s7_no_s:'A non-religious home is also fine',
 
     /* S8 Hosting Options */
@@ -891,7 +893,7 @@ const T = {
 
     /* Shared */
     lang_he:'Hebrew', lang_en:'English', lang_ru:'Russian',
-    lang_ar:'Arabic', lang_fr:'French', lang_other:'Other',
+    lang_ar:'Arabic', lang_es:'Spanish', lang_fr:'French', lang_other:'Other',
     vibe_kids:'Home with kids', vibe_quiet:'Quiet home', vibe_multi:'Multilingual',
     vibe_sing:'Love singing', vibe_pets:'Pets at home', vibe_space:'Spacious home',
     vibe_shab:'Shabbat atmosphere', vibe_food:'Food lovers',

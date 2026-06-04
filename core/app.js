@@ -20,6 +20,12 @@ function App() {
   // Make `go` available globally for components that use `window.setScreen`
   window.setScreen = go;
 
+  const handleLogout = async () => {
+    try { if (window.auth) await window.auth.signOut(); } catch (e) {}
+    setFormData({ languages: ['he'], hostings: [], requests: [], editingRequest: null, selectedRequestId: null, editingHostingId: null });
+    go(1);
+  };
+
   const handleNewRequest = (requestToEdit = null) => {
     setFormData(prev => ({ ...prev, editingRequest: requestToEdit }));
     go(23);
@@ -39,15 +45,15 @@ function App() {
     unit: 'גולני',
     serviceType: 'regular',
     languages: ['he'],
-    kosher: 'kosher',
+    kosher: 'separated',
     shabbat: 'traditional',
     needsSleep: false,
     walkDistance: true,
     allergies: ['none'],
     preferWithSoldiers: true,
     requests: [
-      { id: 10, when: '2026-06-22', kosher: true, shabbat: true, needSleep: false, location: 'חיפה' },
-      { id: 11, when: '2026-06-29', kosher: true, shabbat: true, needSleep: true, location: 'חיפה' },
+      { id: 10, when: '2026-06-22', kosher: 'separated', shabbat: 'traditional', needSleep: false, location: 'חיפה' },
+      { id: 11, when: '2026-06-29', kosher: 'separated', shabbat: 'keeps',       needSleep: true,  location: 'חיפה' },
     ],
   };
 
@@ -56,7 +62,7 @@ function App() {
     hostPhone: '052-7654321',
     hostEmail: 'family@example.com',
     hostCity: 'חיפה',
-    hostKosher: 'kosher',
+    hostKosher: 'separated',
     hostShabbat: 'traditional',
     hostLanguages: ['he'],
     hostCanSleep: true,
@@ -86,8 +92,10 @@ function App() {
           window.db.collection('soldier_hosting_searches')
             .where('soldier_id', '==', user.uid)
             .onSnapshot(snapshot => {
-              const reqs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-              // Ensure we sort by latest or something, for now just set
+              const reqs = snapshot.docs.map(doc => {
+                const d = doc.data();
+                return { ...d, id: doc.id, status: d.is_match ? 'matched' : (d.status || 'searching') };
+              });
               setFormData(prev => ({ ...prev, requests: reqs }));
             });
 
@@ -204,7 +212,8 @@ function App() {
       }
       if (uid) {
         try {
-          const toSave = { ...formData, hostPreferencesSkipped: skipped };
+          const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, ...hostFields } = formData;
+          const toSave = { ...hostFields, hostPreferencesSkipped: skipped };
           await window.DB.saveFamilyProfile(uid, toSave);
           setFormData(prev => ({ ...prev, role: 'host', hostPreferencesSkipped: skipped }));
           go(nextScreen);
@@ -227,12 +236,12 @@ function App() {
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} onInfo={() => setShowInfo(true)} />,
     7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(3)} />,
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => registerSoldier(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
-    15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} />,
+    15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} onLogout={handleLogout} />,
     23: <S15NewRequest 
           data={formData} 
           setData={setFormData} 
@@ -277,12 +286,12 @@ function App() {
             go(24);
           }}
         />,
-    24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} />,
+    24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} onLogout={handleLogout} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => registerHost(17)} onBack={() => go(1)} onSkipPreferences={() => registerHost(17, true)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => registerHost(17)} onBack={() => go(1)} onSkipPreferences={() => registerHost(17, true)} onInfo={() => setShowInfo(true)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || formData.hostName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
-    19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} />,
+    19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} onLogout={handleLogout} />,
     20: <S20NewHosting  
           data={formData} 
           setData={setFormData} 
@@ -310,10 +319,10 @@ function App() {
             go(19); 
           }} 
         />,
-    21: <S21SoldierProfile 
-          data={formData} 
-          setData={setFormData} 
-          onBack={() => go(24)} 
+    21: <S21SoldierProfile
+          data={formData}
+          setData={setFormData}
+          onBack={() => go(24)}
           onNewRequest={() => handleNewRequest()}
           onEditRequest={(req) => handleNewRequest(req)}
           onDeleteRequest={(id) => {
@@ -323,8 +332,9 @@ function App() {
             }));
           }}
           onViewMatches={handleViewMatches}
+          onLogout={handleLogout}
         />,
-    22: <S22HostProfile data={formData} setData={setFormData} onBack={() => go(19)} />,
+    22: <S22HostProfile data={formData} setData={setFormData} onBack={() => go(19)} onLogout={handleLogout} />,
   };
 
   if (loadingUser) {
@@ -341,9 +351,6 @@ function App() {
   return (
     <LangContext.Provider value={{ lang, setLang }}>
       <div className="min-h-screen">
-        {![15, 19, 21, 24].includes(screen) && (
-          <LangToggle onInfo={[3, 16].includes(screen) ? () => setShowInfo(true) : null} />
-        )}
         {screens[screen] || screens[1]}
         
         {/* Global Info Modal for Registration Screens */}

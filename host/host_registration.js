@@ -16,15 +16,16 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
 
   useEffect(() => {
     if (!data.hostLanguages) {
-      setData(prev => ({ ...prev, hostLanguages: ['עברית'] }));
+      setData(prev => ({ ...prev, hostLanguages: ['he'] }));
     }
   }, []);
 
   const staticLanguages = [
-    { id: 'עברית', label: 'עברית' },
-    { id: 'אנגלית', label: 'אנגלית' },
-    { id: 'רוסית', label: 'רוסית' },
-    { id: 'ספרדית', label: 'ספרדית' }
+    { id: 'he', label: t('lang_he') },
+    { id: 'en', label: t('lang_en') },
+    { id: 'ru', label: t('lang_ru') },
+    { id: 'es', label: t('lang_es') },
+    { id: 'ar', label: t('lang_ar') },
   ];
 
   const allLanguages = [...staticLanguages, ...customLanguages.map(lang => ({ id: lang, label: lang }))];
@@ -36,7 +37,7 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
     if (!alreadyExists) {
       setCustomLanguages(prev => [...prev, trimmed]);
     }
-    const currentLangs = data.hostLanguages || ['עברית'];
+    const currentLangs = data.hostLanguages || ['he'];
     if (!currentLangs.includes(trimmed)) {
       setData(prev => ({
         ...prev,
@@ -89,7 +90,7 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
   const kosherOptions = [
     { id: 'none',      label: t('s16_kosh_none') },
     { id: 'separated', label: t('s16_kosh_sep') },
-    { id: 'kitchen',   label: t('s16_kosh_kit') },
+    { id: 'mehadrin',  label: t('s16_kosh_kit') },
   ];
 
   const shabbatOptions = [
@@ -231,7 +232,7 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
               <p className="text-sm font-semibold text-gray-800 mb-3">שפות מדוברות (לסמן את כל מה שרלוונטי)</p>
               <MultiCheck
                 options={allLanguages}
-                values={data.hostLanguages || ['עברית']}
+                values={data.hostLanguages || ['he']}
                 onChange={set('hostLanguages')}
               />
               <div className="flex gap-2 mt-3">
@@ -315,7 +316,7 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
   const koshMap = {
     none:      t('s16_kosh_none'),
     separated: t('s16_kosh_sep'),
-    kitchen:   t('s16_kosh_kit'),
+    mehadrin:  t('s16_kosh_kit'),
   };
 
   const shabbatMap = {
@@ -361,7 +362,7 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
           <Row label={t('s16_sum_shab')}        value={shabbatMap[data.hostShabbat]} />
           <Row label={t('s16_sum_pets_label')} value={petsValue} />
           {cookingValue && <Row label={t('s16_sum_cooking')} value={cookingValue} />}
-          <Row label={t('s16_langs') || 'שפות שמדברים בבית'} value={(data.hostLanguages || ['עברית']).join(', ')} />
+          <Row label={t('s16_langs') || 'שפות שמדברים בבית'} value={(data.hostLanguages || ['he']).map(c => t('lang_' + c) || c).join(', ')} />
         </Card>
 
         {data.hostVibe && (

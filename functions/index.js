@@ -19,32 +19,25 @@ const COMPROMISE = {
 
 // ──────────────────────────────────────────────────────────────────
 // KOSHER COMPATIBILITY
-// Soldier request has kosher:true/false (does the soldier need kosher?)
-// Soldier profile has kosher: "mehadrin" | "kosher" | "none"
-// Family profile has hostKosher: "kitchen" | "separated" | "none"
-//
-// If request.kosher === false → any family is ok
-// If request.kosher === true:
-//   soldier "mehadrin" → family must be "kitchen"
-//   soldier "kosher"   → family must be "kitchen" or "separated"
+// Unified values for both soldier and family: "none" | "separated" | "mehadrin"
+// Family must be at same level or higher than the soldier's need.
 // ──────────────────────────────────────────────────────────────────
-function isKosherCompatible(soldierKosherLevel, familyKosher) {
-  const familyRank = { kitchen: 2, separated: 1, none: 0 };
-  const soldierNeed = soldierKosherLevel === "mehadrin" ? 2 : 1;
-  return (familyRank[familyKosher] ?? 0) >= soldierNeed;
+function isKosherCompatible(requestKosher, familyKosher) {
+  const rank = { mehadrin: 2, separated: 1, none: 0 };
+  return (rank[familyKosher] ?? 0) >= (rank[requestKosher] ?? 0);
 }
 
 // ──────────────────────────────────────────────────────────────────
 // SHABBAT COMPATIBILITY
-// Soldier request has shabbat:true/false (does the soldier need a shabbat home?)
-// Family profile has hostShabbat: "keeps" | "traditional" | "none"
-//
-// If request.shabbat === false → any family is ok
-// If request.shabbat === true → family must be "keeps"
+// Unified values for both soldier and family: "none" | "traditional" | "keeps"
+//   "none"        → soldier doesn't care, any family is ok
+//   "traditional" → family must be "traditional" or "keeps"
+//   "keeps"       → family must be "keeps"
 // ──────────────────────────────────────────────────────────────────
 function isShabbatCompatible(requestShabbat, familyShabbat) {
-  if (!requestShabbat) return true;
-  return familyShabbat === "keeps";
+  if (!requestShabbat || requestShabbat === "none") return true;
+  if (requestShabbat === "traditional") return familyShabbat === "traditional" || familyShabbat === "keeps";
+  return familyShabbat === "keeps"; // "keeps"
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -97,18 +90,28 @@ function passesHardFilters(soldier, request, family, hosting, bannedIds, comprom
   if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) return false;
 
   // Kosher — never compromised
-  if (request.kosher === true) {
-    if (!isKosherCompatible(soldier.kosher, family.hostKosher)) return false;
+  if (request.kosher && request.kosher !== "none") {
+    if (!isKosherCompatible(request.kosher, family.hostKosher)) return false;
   }
 
-  // Diet/Allergies — soldier's allergies must be covered by family's cooking
-  // (no compromise — dietary restrictions are a health need)
-  const soldierAllergies = soldier.allergies ?? [];
+  // Diet/Allergies — soldier's allergies must be covered by family's cooking.
+  // Map soldier allergy IDs to the corresponding family cooking IDs (they use
+  // different id strings for the same concept).  Allergies with no family-side
+  // equivalent ('peanuts', 'fish', 'other') are skipped — we cannot enforce
+  // them via the family cooking list and blocking matches over them is wrong.
+  const ALLERGY_TO_COOKING = { gluten: "celiac", vegetarian: "veg" };
+  const UNMATCHABLE = new Set(["peanuts", "fish", "other"]);
+  const soldierAllergies = (soldier.allergies ?? [])
+    .filter((a) => !UNMATCHABLE.has(a))
+    .map((a) => ALLERGY_TO_COOKING[a] ?? a);
   const familyCooking = family.hostCooking ?? [];
   if (soldierAllergies.some((a) => !familyCooking.includes(a))) return false;
 
   // Accommodation — if soldier needs to sleep over, family must offer it
   if (request.needSleep === true && hosting.sleepOvernight !== true) return false;
+
+  // If the soldier is allergic to animals and the family has a life - a rigid restriction, there is no possibility of adjustment.
+if (soldier.pets === "allergy" && family.hasPets === true) return false; 
 
   // Pets — hard filter unless we're in PETS compromise mode
   if (compromiseLevel < COMPROMISE.PETS) {
@@ -139,35 +142,36 @@ function passesHardFilters(soldier, request, family, hosting, bannedIds, comprom
 // ──────────────────────────────────────────────────────────────────
 // SCORING — higher = better match (soft preferences)
 // ──────────────────────────────────────────────────────────────────
-function scoreFamily(soldier, request, family, hosting) {
-  let score = 0;
+  function scoreFamily(soldier, request, family, hosting) {
+    let score = 0;
 
-  // Shared languages (soldier.languages vs family.hostLanguages)
-  const soldierLangs = soldier.languages ?? [];
-  const familyLangs = family.hostLanguages ?? [];
-  // family stores full names like "עברית", soldier stores codes like "he"
-  // count overlap on whichever format matches
-  const sharedLangs = soldierLangs.filter((l) => familyLangs.includes(l));
-  score += sharedLangs.length * 10;
+    // Shared languages — both sides now use the same codes: "he" | "en" | "ru" | "es" | "ar" | "other"
+    const soldierLangs = soldier.languages ?? [];
+    const familyLangs = family.hostLanguages ?? [];
+    const sharedLangs = soldierLangs.filter((l) => familyLangs.includes(l));
+    score += sharedLangs.length * 10;
 
-  // Transportation — soldier needs pickup and family offers it
-  if (request.transport === true && hosting.pickup === true) score += 15;
+    // Transportation — soldier needs pickup and family offers it
+    if (request.transport === true && hosting.pickup === true) score += 15;
 
-  // Pets — soldier is ok with pets and family has pets (positive vibe match)
-  if (request.petsComfort === "ok" && family.hasPets === true) score += 5;
+    // Pets — soldier is ok with pets and family has pets (positive vibe match)
+    if (request.petsComfort === "ok" && family.hasPets === true) score += 5;
 
-  // No pets and soldier prefers no pets
-  if (request.petsComfort === "no" && family.hasPets === false) score += 10;
+    // No pets and soldier prefers no pets
+    if (request.petsComfort === "no" && family.hasPets === false) score += 10;
 
-  // Exact kosher level bonus
-  if (family.hostKosher === "kitchen" && soldier.kosher === "mehadrin") score += 10;
-  if (family.hostKosher === "separated" && soldier.kosher === "kosher") score += 5;
+    // Exact kosher level match bonus
+    if (request.kosher && request.kosher !== "none" && request.kosher === family.hostKosher) score += 10;
+    if (request.kosher === "separated" && family.hostKosher === "mehadrin") score += 5;
 
-  // Shabbat bonus — traditional is better than nothing even if soldier didn't require
-  if (!request.shabbat && family.hostShabbat === "traditional") score += 5;
+    // Shabbat bonus — traditional family is a bonus when soldier didn't require shabbat
+    if ((!request.shabbat || request.shabbat === "none") && family.hostShabbat === "traditional") score += 5;
 
-  return score;
-}
+        // Exact Shabbat level match bonus
+    if (request.shabbat && request.shabbat !== "none" && request.shabbat === family.hostShabbat) score += 10;
+
+    return score;
+  }
 
 // ──────────────────────────────────────────────────────────────────
 // BUILD COMPROMISE NOTIFICATIONS for the soldier
@@ -249,6 +253,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     soldier_request_id: requestId,
     host_offer_id: best.hosting.id,
     family_id: best.family.id,
+    family_name: best.family.hostName ?? null,
+    family_city: best.family.hostCity ?? null,
     status: "pending_soldier_approval",
     score: best.score,
     compromise_level: compromiseLevel,
@@ -282,9 +288,16 @@ async function tryAllCompromiseLevels(requestId) {
 // TRIGGER: new soldier request → scan available family hostings
 // ──────────────────────────────────────────────────────────────────
 exports.onNewSoldierRequest = onDocumentCreated(
-  "soldier_hosting_searches/{requestId}",
+  { document: "soldier_hosting_searches/{requestId}", region: "me-west1" },
   async (event) => {
-    await runMatchingForRequest(event.params.requestId, COMPROMISE.NONE);
+    const requestId = event.params.requestId;
+    console.log("🔔 onNewSoldierRequest triggered for:", requestId);
+    try {
+      const result = await runMatchingForRequest(requestId, COMPROMISE.NONE);
+      console.log("✅ Matching result:", JSON.stringify(result));
+    } catch (err) {
+      console.error("❌ Error in onNewSoldierRequest:", err);
+    }
   }
 );
 
@@ -292,8 +305,9 @@ exports.onNewSoldierRequest = onDocumentCreated(
 // TRIGGER: new family hosting → scan unmatched soldier requests
 // ──────────────────────────────────────────────────────────────────
 exports.onNewFamilyHosting = onDocumentCreated(
-  "family_hostings/{hostingId}",
+  { document: "family_hostings/{hostingId}", region: "me-west1" },
   async (event) => {
+    console.log("🔔 onNewFamilyHosting triggered for:", event.params.hostingId);
     const hosting = event.data.data();
 
     const unmatchedSnap = await db
@@ -380,4 +394,96 @@ exports.requestRematch = onCall(async (req) => {
   return newMatch
     ? { success: true, new_match: newMatch }
     : { success: true, new_match: null, message: "לא נמצאה התאמה חלופית כרגע, נמשיך לחפש" };
+});
+
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: one-time migration — unify kosher & shabbat values
+//
+// Unified schema (same values for soldiers AND families):
+//   kosher:  "none" | "separated" | "mehadrin"
+//   shabbat: "none" | "traditional" | "keeps"
+//
+// Call once after deploy.  Safe to call again — already-migrated
+// docs are detected and skipped.
+// ──────────────────────────────────────────────────────────────────
+exports.migrateValues = onCall(async (req) => {
+  // Only allow signed-in users (add uid check here if you want admin-only)
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const KOSHER_REMAP  = { kosher: "separated", kitchen: "mehadrin" };
+  const SHABBAT_REMAP = { yes: "keeps", no: "none", observant: "keeps", secular: "none" };
+
+  const stats = { soldiers: 0, families: 0, requests: 0 };
+
+  // ── 1. soldiers ────────────────────────────────────────────────
+  const soldiersSnap = await db.collection("soldiers").get();
+  const soldierLevels = {};   // uid → { kosher, shabbatKeeps } after migration
+
+  for (const doc of soldiersSnap.docs) {
+    const d = doc.data();
+    const patch = {};
+
+    const newKosher  = KOSHER_REMAP[d.kosher]       ?? d.kosher;
+    const newShabbat = SHABBAT_REMAP[d.shabbatKeeps] ?? d.shabbatKeeps;
+
+    if (newKosher  !== d.kosher)       patch.kosher       = newKosher;
+    if (newShabbat !== d.shabbatKeeps) patch.shabbatKeeps = newShabbat;
+
+    soldierLevels[doc.id] = {
+      kosher:      newKosher  || "none",
+      shabbatKeeps: newShabbat || "none",
+    };
+
+    if (Object.keys(patch).length > 0) {
+      await doc.ref.update(patch);
+      stats.soldiers++;
+    }
+  }
+
+  // ── 2. families ────────────────────────────────────────────────
+  const familiesSnap = await db.collection("families").get();
+  for (const doc of familiesSnap.docs) {
+    const d = doc.data();
+    const newKosher = KOSHER_REMAP[d.hostKosher] ?? d.hostKosher;
+
+    if (newKosher !== d.hostKosher) {
+      await doc.ref.update({ hostKosher: newKosher });
+      stats.families++;
+    }
+    // hostShabbat already uses none/traditional/keeps — no change needed
+  }
+
+  // ── 3. soldier_hosting_searches ────────────────────────────────
+  // kosher & shabbat were stored as booleans; convert to string levels
+  const requestsSnap = await db.collection("soldier_hosting_searches").get();
+  for (const doc of requestsSnap.docs) {
+    const d = doc.data();
+    const patch = {};
+    const soldier = soldierLevels[d.soldier_id] ?? {};
+
+    // kosher: boolean true → soldier's level, false → "none"
+    if (typeof d.kosher === "boolean") {
+      patch.kosher = d.kosher ? (soldier.kosher || "separated") : "none";
+    } else if (KOSHER_REMAP[d.kosher]) {
+      patch.kosher = KOSHER_REMAP[d.kosher];
+    }
+
+    // shabbat: boolean true → soldier's shabbat level, false → "none"
+    if (typeof d.shabbat === "boolean") {
+      patch.shabbat = d.shabbat ? (soldier.shabbatKeeps || "keeps") : "none";
+    } else if (SHABBAT_REMAP[d.shabbat]) {
+      patch.shabbat = SHABBAT_REMAP[d.shabbat];
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await doc.ref.update(patch);
+      stats.requests++;
+    }
+  }
+
+  return {
+    success: true,
+    updated: stats,
+    message: `עודכנו: ${stats.soldiers} חיילים, ${stats.families} משפחות, ${stats.requests} בקשות`,
+  };
 });

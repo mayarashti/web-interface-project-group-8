@@ -1,0 +1,37 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "soldier_hosting_searches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_match", "order": "ASCENDING" },
+        { "fieldPath": "when",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "soldier_hosting_searches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "soldier_id", "order": "ASCENDING" },
+        { "fieldPath": "when",       "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "family_hostings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date",           "order": "ASCENDING" },
+        { "fieldPath": "is_fully_booked","order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "active_matches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "soldier_request_id", "order": "ASCENDING" },
+        { "fieldPath": "status",             "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

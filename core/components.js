@@ -620,10 +620,10 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
   const { lang, setLang, t } = useLang();
   return (
     <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-600)' }}>
-      <div dir="ltr" className="w-full px-2 py-1 grid grid-cols-3 items-center">
+      <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
 
-        {/* Col 1 — Language toggle (always, far left) + info + profile / logout / extra actions */}
-        <div className="flex items-center gap-1 justify-start pl-1">
+        {/* Left — Language toggle + info + profile / logout / extra actions */}
+        <div className="relative flex items-center gap-1 z-10 flex-shrink-0">
           <button
             onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
             className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
@@ -673,13 +673,13 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
           {actions}
         </div>
 
-        {/* Col 2 — Logo, pixel-perfect centred */}
-        <div className="flex justify-center">
-          <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md" />
+        {/* Logo — absolutely centred so it never gets displaced by side buttons */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md pointer-events-none" />
         </div>
 
-        {/* Col 3 — Title + optional back button, far right */}
-        <div className="flex items-center gap-2 min-w-0 justify-end pr-1">
+        {/* Right — Title + optional back button */}
+        <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
           <div className="min-w-0 text-end">
             {eyebrow && (
               <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>

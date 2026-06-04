@@ -13,9 +13,9 @@ function SoldierProfileModal({ guest, onClose }) {
     fish: t('a_fish'), other: t('a_other'),
   };
   const allergyList = (guest.allergies || []).map(a => allergyMap[a]).filter(Boolean).join(', ') || t('s12_no_allerg');
-  const koshMap = { mehadrin: t('map_meh'), kosher: t('map_kosh'), none: t('map_none') };
+  const koshMap = { mehadrin: t('map_meh'), separated: t('map_kosh'), none: t('map_none') };
   const logisticsItems = [
-    guest.needsSleep      && t('s12_sleep'),
+    (guest.needSleep || guest.needsSleep) && t('s12_sleep'),
     guest.needsTransport  && t('guest_needs_transport'),
     guest.walkDistance    && t('guest_walk_dist'),
   ].filter(Boolean);
@@ -96,7 +96,7 @@ function SoldierProfileModal({ guest, onClose }) {
   );
 }
 
-function S19HostHome({ data, setData, onProfile }) {
+function S19HostHome({ data, setData, onProfile, onLogout }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
   const [selectedHosting,     setSelectedHosting]     = useState(null);
@@ -139,9 +139,7 @@ function S19HostHome({ data, setData, onProfile }) {
         eyebrow={`${t('s19_greeting')} ${data.hostName || 'משפחה'}`}
         title={t('s19_status')}
         onProfile={onProfile}
-        onLogout={async () => {
-          if (window.auth) await window.auth.signOut();
-        }}
+        onLogout={onLogout}
       />
 
       <div className="max-w-md mx-auto px-5 mt-6">
@@ -464,19 +462,47 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
    S22 Host Profile — Settings
 ───────────────────────────────────────── */
 
-function S22HostProfile({ data, setData, onBack }) {
+function S22HostProfile({ data, setData, onBack, onLogout }) {
   const { t, lang } = useLang();
 
   const [form, setForm] = useState({
-    hostName:          data.hostName || data.hostFullName || '',
-    hostPhone:         data.hostPhone || '',
-    hostCity:          data.hostCity  || '',
-    hostKosher:        data.hostKosher        || 'kosher',
-    hostShabbat:       data.hostShabbat       || 'traditional',
+    hostName:     data.hostName     || data.hostFullName || '',
+    hostPhone:    data.hostPhone    || '',
+    hostCity:     data.hostCity     || '',
+    hostKosher:   data.hostKosher   || '',
+    hostShabbat:  data.hostShabbat  || '',
+    hasPets:      data.hasPets      || false,
+    petsDetails:  data.petsDetails  || '',
+    hostCooking:  data.hostCooking  || [],
+    hostLanguages: data.hostLanguages || ['he'],
+    hostVibe:     data.hostVibe     || '',
   });
   const [saved, setSaved] = useState(false);
+  const [newLanguageText, setNewLanguageText] = useState('');
+  const [customLanguages, setCustomLanguages] = useState([]);
 
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const staticLanguages = [
+    { id: 'he', label: t('lang_he') },
+    { id: 'en', label: t('lang_en') },
+    { id: 'ru', label: t('lang_ru') },
+    { id: 'es', label: t('lang_es') },
+    { id: 'ar', label: t('lang_ar') },
+  ];
+  const allLanguages = [...staticLanguages, ...customLanguages.map(l => ({ id: l, label: l }))];
+
+  const handleAddLanguage = () => {
+    const trimmed = newLanguageText.trim();
+    if (!trimmed) return;
+    if (!allLanguages.some(l => l.id.toLowerCase() === trimmed.toLowerCase())) {
+      setCustomLanguages(prev => [...prev, trimmed]);
+    }
+    if (!form.hostLanguages.includes(trimmed)) {
+      setF('hostLanguages')([...form.hostLanguages, trimmed]);
+    }
+    setNewLanguageText('');
+  };
 
   const handleSave = async () => {
     const hasPending = !!data.pendingNewHosting;
@@ -484,7 +510,7 @@ function S22HostProfile({ data, setData, onBack }) {
       ...form,
       ...(hasPending ? { hostPreferencesSkipped: false, pendingNewHosting: false } : {}),
     };
-    
+
     if (window.DB && data.uid) {
       try {
         await window.DB.saveFamilyProfile(data.uid, updatedData);
@@ -507,48 +533,105 @@ function S22HostProfile({ data, setData, onBack }) {
     { id: 'traditional', label: t('s16_shab_trad')  },
     { id: 'none',        label: t('s16_shab_none')  },
   ];
-
   const kosherOpts = [
-    { id: 'kitchen',   label: t('s16_kosh_kit')  },
+    { id: 'mehadrin',  label: t('s16_kosh_kit')  },
     { id: 'separated', label: t('s16_kosh_sep')  },
     { id: 'none',      label: t('s16_kosh_none') },
+  ];
+  const cookingOptions = [
+    { id: 'veg',     label: t('alg_veg')    },
+    { id: 'vegan',   label: t('alg_vegan')  },
+    { id: 'celiac',  label: t('alg_celiac') },
+    { id: 'lactose', label: t('alg_lactose')},
+    { id: 'nuts',    label: t('alg_nuts')   },
   ];
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-12">
-      <AppHeader
-        title={t('profile_settings')}
-        onBack={onBack}
-      />
+      <AppHeader title={t('profile_settings')} onBack={onBack} />
 
       <div className="max-w-md mx-auto px-5 pt-6 space-y-5">
+
+        {/* Basic details */}
         <Card className="p-5 space-y-4">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
             {t('family_details_label')}
           </h2>
-          <Input label={t('s16_name')} value={form.hostName} onChange={setF('hostName')} />
+          <Input label={t('s16_name')}  value={form.hostName}  onChange={setF('hostName')} />
           <Input label={t('s16_phone')} type="tel" value={form.hostPhone} onChange={setF('hostPhone')} />
-          <Input label={t('s16_city')} value={form.hostCity} onChange={setF('hostCity')} />
+          <Input label={t('s16_city')}  value={form.hostCity}  onChange={setF('hostCity')} />
         </Card>
 
-        <Card className="p-5 space-y-5">
+        {/* Lifestyle & preferences — identical to registration steps 2+3 */}
+        <Card className="p-5 space-y-6">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
             {t('lifestyle_label')}
           </h2>
-          <div>
-            <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_shabbat')}</p>
-            <RadioGroup options={shabbatOpts} value={form.hostShabbat} onChange={setF('hostShabbat')} />
-          </div>
+
           <div>
             <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_kosher')}</p>
             <RadioGroup options={kosherOpts} value={form.hostKosher} onChange={setF('hostKosher')} />
           </div>
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_shabbat')}</p>
+            <RadioGroup options={shabbatOpts} value={form.hostShabbat} onChange={setF('hostShabbat')} />
+          </div>
+
+          <div>
+            <CheckRow label={t('s16_has_pets')} checked={form.hasPets} onChange={setF('hasPets')} />
+            {form.hasPets && (
+              <div className="mt-3 ps-1">
+                <Input
+                  value={form.petsDetails}
+                  onChange={setF('petsDetails')}
+                  placeholder={t('s16_pets_ph')}
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_cooking')}</p>
+            <MultiCheck options={cookingOptions} values={form.hostCooking} onChange={setF('hostCooking')} />
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-3">שפות מדוברות (לסמן את כל מה שרלוונטי)</p>
+            <MultiCheck options={allLanguages} values={form.hostLanguages} onChange={setF('hostLanguages')} />
+            <div className="flex gap-2 mt-3">
+              <input
+                type="text"
+                value={newLanguageText}
+                onChange={e => setNewLanguageText(e.target.value)}
+                placeholder="הוסף שפה אחרת..."
+                className="flex-1 min-h-[44px] py-2 px-4 rounded-xl border border-warm-200 bg-white text-sm transition-all placeholder:text-warm-400 focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 hover:border-warm-300"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddLanguage(); } }}
+              />
+              <Btn type="button" variant="secondary" onClick={handleAddLanguage} className="!w-auto !py-2.5">הוסף</Btn>
+            </div>
+          </div>
+        </Card>
+
+        {/* Vibe / bio */}
+        <Card className="p-5 space-y-3">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
+            {t('s16_3_title')}
+          </h2>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_vibe_label')}</label>
+          <textarea
+            value={form.hostVibe}
+            onChange={e => setF('hostVibe')(e.target.value)}
+            placeholder={t('s16_vibe_ph')}
+            rows={5}
+            className="w-full px-4 py-3 rounded-xl border border-warm-200 text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
+          />
         </Card>
 
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>
           {saved ? t('saved_success') : t('save_changes')}
         </Btn>
-        <Btn onClick={async () => { if (window.auth) await window.auth.signOut(); }} variant="danger" className="mt-2 mb-6">
+        <Btn onClick={onLogout} variant="danger" className="mt-2 mb-6">
           {t('logout')}
         </Btn>
       </div>

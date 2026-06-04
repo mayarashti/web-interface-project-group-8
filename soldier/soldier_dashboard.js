@@ -1,6 +1,6 @@
 /* S15Landing â€” Landing screen for soldiers after login */
 
-function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, data, setData }) {
+function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onLogout, data, setData }) {
   const { t, lang } = useLang();
   const [activeRequest, setActiveRequest] = useState(null);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
@@ -27,9 +27,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, dat
             </svg>
           </button>
         )}
-        onLogout={async () => {
-          if (window.auth) await window.auth.signOut();
-        }}
+        onLogout={onLogout}
       />
 
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
@@ -177,7 +175,7 @@ window.MAP_FAMILIES = [
   {
     id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
     lat: 32.7943, lng: 34.9890,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 3, occupied: 1,
+    kosher: 'separated', shabbat: 'traditional', capacity: 3, occupied: 1,
     canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'singing'],
@@ -191,7 +189,7 @@ window.MAP_FAMILIES = [
   {
     id: 2, name: 'משפחת כהן', city: 'קריית אתא',
     lat: 32.8072, lng: 35.1073,
-    kosher: 'mehadrin', shabbat: 'observant', capacity: 2, occupied: 2,
+    kosher: 'mehadrin', shabbat: 'keeps', capacity: 2, occupied: 2,
     canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['quiet', 'shabbat_atm'],
@@ -205,7 +203,7 @@ window.MAP_FAMILIES = [
   {
     id: 3, name: 'משפחת גולן', city: 'נשר',
     lat: 32.7730, lng: 35.0460,
-    kosher: 'none', shabbat: 'secular', capacity: 4, occupied: 0,
+    kosher: 'none', shabbat: 'none', capacity: 4, occupied: 0,
     canSleep: false, canTransport: true, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['food', 'spacious'],
@@ -219,7 +217,7 @@ window.MAP_FAMILIES = [
   {
     id: 4, name: 'משפחת אברהם', city: 'חיפה — נווה שאנן',
     lat: 32.8021, lng: 35.0018,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 3, occupied: 1,
+    kosher: 'separated', shabbat: 'traditional', capacity: 3, occupied: 1,
     canSleep: true, canTransport: false, hasPets: false,
     hostingTypes: ['shabbat_lunch'],
     tags: ['multilingual', 'spacious'],
@@ -233,7 +231,7 @@ window.MAP_FAMILIES = [
   {
     id: 5, name: 'משפחת שמיר', city: 'קריית ביאליק',
     lat: 32.8350, lng: 35.0850,
-    kosher: 'mehadrin', shabbat: 'observant', capacity: 2, occupied: 1,
+    kosher: 'mehadrin', shabbat: 'keeps', capacity: 2, occupied: 1,
     canSleep: false, canTransport: false, hasPets: false,
     hostingTypes: ['friday_dinner'],
     tags: ['kids', 'shabbat_atm'],
@@ -247,7 +245,7 @@ window.MAP_FAMILIES = [
   {
     id: 6, name: 'משפחת פרץ', city: 'טירת כרמל',
     lat: 32.7608, lng: 34.9700,
-    kosher: 'kosher', shabbat: 'traditional', capacity: 5, occupied: 2,
+    kosher: 'separated', shabbat: 'traditional', capacity: 5, occupied: 2,
     canSleep: true, canTransport: true, hasPets: true,
     hostingTypes: ['friday_dinner', 'shabbat_lunch'],
     tags: ['food', 'pets', 'spacious'],
@@ -268,8 +266,8 @@ function FamilyInfoCard({ family, onClose }) {
   const { t } = useLang();
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
-    : family.kosher === 'kosher' ? t('map_kosh') : t('map_none');
-  const shabLabel = family.shabbat === 'observant' ? t('map_obs')
+    : family.kosher === 'separated' ? t('map_kosh') : t('map_none');
+  const shabLabel = family.shabbat === 'keeps' ? t('map_obs')
     : family.shabbat === 'traditional' ? t('map_trad') : t('map_sec');
 
   const openWhatsApp = () => {
@@ -280,10 +278,10 @@ function FamilyInfoCard({ family, onClose }) {
   };
 
   const tags = [];
-  if (family.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+  if (family.shabbat === 'keeps') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
   else if (family.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
   if (family.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-  else if (family.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+  else if (family.kosher === 'separated') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
   if (family.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
 
   return (
@@ -470,7 +468,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 /* ——————————————————————————————————————————— 
    S15Home — Soldier home screen
 ————————————————————————————————————————————— */
-function S15Home({ data, setData, onNewRequest, onProfile, onBack }) {
+function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
   const { t } = useLang();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
@@ -533,9 +531,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack }) {
             </svg>
           </button>
         )}
-        onLogout={async () => {
-          if (window.auth) await window.auth.signOut();
-        }}
+        onLogout={onLogout}
       />
 
       <div className="px-5 mt-2 space-y-5 max-w-6xl mx-auto">
@@ -618,14 +614,14 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
   const initialRequest = data.editingRequest || {
     id: Date.now(),
     when: '',
-    startTime: '19:00',
-    endTime: '22:00',
+    startTime: '',
+    endTime: '',
     guestCount: 1,
     friendDietary: [],
     friendDietaryOther: '',
-    petsComfort: 'ok',
-    shabbat: data.shabbat === 'observant' || data.shabbat === 'traditional',
-    kosher: data.kosher === 'kosher' || data.kosher === 'mehadrin',
+    petsComfort: data.pets === 'notok' || data.pets === 'allergy' ? 'no' : 'ok',
+    shabbat: data.shabbatKeeps || 'none',
+    kosher: data.kosher || 'none',
     duration: 'dinner',
     transport: false,
     needSleep: data.needsSleep || false,
@@ -724,22 +720,24 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
                   />
                 </div>
               )}
-              <RadioGroup 
+              <RadioGroup
                 label={t('s15_shabbat')}
-                value={request.shabbat ? 'yes' : 'no'}
-                onChange={(val) => handleChange('shabbat', val === 'yes')}
+                value={request.shabbat || 'none'}
+                onChange={(val) => handleChange('shabbat', val)}
                 options={[
-                  { value: 'yes', label: t('s15_yes') },
-                  { value: 'no', label: t('s15_no') }
+                  { value: 'keeps',       label: t('s7_yes'),        sub: t('s7_yes_s')   },
+                  { value: 'traditional', label: t('s16_shab_trad'), sub: t('s7_trad_s') },
+                  { value: 'none',        label: t('s7_no'),         sub: t('s7_no_s')    },
                 ]}
               />
-              <RadioGroup 
+              <RadioGroup
                 label={t('s15_kosher')}
-                value={request.kosher ? 'yes' : 'no'}
-                onChange={(val) => handleChange('kosher', val === 'yes')}
+                value={request.kosher || 'none'}
+                onChange={(val) => handleChange('kosher', val)}
                 options={[
-                  { value: 'yes', label: t('s15_yes') },
-                  { value: 'no', label: t('s15_no') }
+                  { value: 'mehadrin',  label: t('s7_meh'),    sub: t('s7_meh_s')    },
+                  { value: 'separated', label: t('s7_kosh_k'), sub: t('s7_kosh_k_s') },
+                  { value: 'none',      label: t('s7_none'),   sub: t('s7_none_s')   },
                 ]}
               />
               <RadioGroup 
@@ -855,7 +853,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 /* S21SoldierProfile — Soldier profile and request dashboard */
 var { useState } = React;
 
-function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest, onDeleteRequest, onViewMatches }) {
+function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest, onDeleteRequest, onViewMatches, onLogout }) {
   const { t, lang } = useLang();
   
   // Use local state for the form so edits are not global until saved
@@ -863,8 +861,8 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
     fullName: data.fullName || '',
     phone: data.phone || '',
     bio: data.bio || '',
-    kosher: data.kosher || 'kosher',
-    shabbat: data.shabbat || 'no',
+    kosher: data.kosher || 'separated',
+    shabbat: data.shabbat || data.shabbatKeeps || 'none',
     allergies: data.allergies || [],
   });
 
@@ -910,11 +908,14 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
   const getMatchCount = (req) => {
     const families = window.MAP_FAMILIES || [];
     return families.filter(fam => {
-      if (req.kosher) {
-        if (fam.kosher === 'none' && req.kosher !== 'none') return false;
-        if (req.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+      if (req.kosher && req.kosher !== 'none') {
+        const kRank = { mehadrin: 2, separated: 1, none: 0 };
+        if ((kRank[fam.kosher] ?? 0) < (kRank[req.kosher] ?? 0)) return false;
       }
-      if (req.shabbat && fam.shabbat === 'secular') return false;
+      if (req.shabbat && req.shabbat !== 'none') {
+        if (req.shabbat === 'keeps' && fam.shabbat !== 'keeps') return false;
+        if (req.shabbat === 'traditional' && fam.shabbat === 'none') return false;
+      }
       if (req.needSleep && !fam.canSleep) return false;
       return true;
     }).length;
@@ -1041,9 +1042,9 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
             value={form.kosher} 
             onChange={setF('kosher')}
             options={[
-              { value:'mehadrin', label:t('s7_meh'),    sub:t('s7_meh_s') },
-              { value:'kosher',   label:t('s7_kosh_k'), sub:t('s7_kosh_k_s') },
-              { value:'none',     label:t('s7_none'),   sub:t('s7_none_s') },
+              { value:'mehadrin',  label:t('s7_meh'),    sub:t('s7_meh_s')    },
+              { value:'separated', label:t('s7_kosh_k'), sub:t('s7_kosh_k_s') },
+              { value:'none',      label:t('s7_none'),   sub:t('s7_none_s')   },
             ]}
           />
           <RadioGroup 
@@ -1051,8 +1052,9 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
             value={form.shabbat} 
             onChange={setF('shabbat')}
             options={[
-              { value:'yes', label:t('s7_yes'), sub:t('s7_yes_s') },
-              { value:'no',  label:t('s7_no'),  sub:t('s7_no_s') },
+              { value:'keeps',       label:t('s7_yes'),        sub:t('s7_yes_s')   },
+              { value:'traditional', label:t('s16_shab_trad'), sub:t('s7_trad_s') },
+              { value:'none',        label:t('s7_no'),         sub:t('s7_no_s')    },
             ]}
           />
           <MultiCheck label={t('s9_title')} options={allergyOpts} values={form.allergies} onChange={setF('allergies')} />
@@ -1071,7 +1073,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         <Btn onClick={handleSave} className="text-base py-4 shadow-lg">
           {saved ? t('saved_success') : t('save_changes')}
         </Btn>
-        <Btn onClick={async () => { if (window.auth) await window.auth.signOut(); }} variant="danger" className="text-base py-4 shadow-sm mb-6">
+        <Btn onClick={onLogout} variant="danger" className="text-base py-4 shadow-sm mb-6">
           {t('logout')}
         </Btn>
       </div>
@@ -1084,11 +1086,25 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
   const { t } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
+  const [realMatch, setRealMatch] = useState(null);
+
+  useEffect(() => {
+    if (!request?.id || !request.is_match) { setRealMatch(null); return; }
+    if (!window.db) return;
+    window.db.collection('active_matches')
+      .where('soldier_request_id', '==', request.id)
+      .where('status', '==', 'pending_soldier_approval')
+      .limit(1)
+      .get()
+      .then(snap => { if (!snap.empty) setRealMatch(snap.docs[0].data()); });
+  }, [request?.id, request?.is_match]);
 
   if (!request) return null;
 
   const statusKey = request.status ? ('search_status_' + request.status) : 'search_status_searching';
-  const matchedFamily = window.MAP_FAMILIES?.[0]; // Mocking first family as match for demo
+  const matchedFamily = realMatch
+    ? { name: realMatch.family_name, city: realMatch.family_city, score: realMatch.score, compromise_notes: realMatch.compromise_notes }
+    : window.MAP_FAMILIES?.[0]; // fallback to mock in demo mode
 
   const handleRematchSubmit = () => {
     onRematch(request, rematchReason);
@@ -1100,16 +1116,16 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
   // Build tags the same way as FamilyInfoCard
   const familyTags = matchedFamily ? (() => {
     const tags = [];
-    if (matchedFamily.shabbat === 'observant') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
+    if (matchedFamily.shabbat === 'keeps') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
     else if (matchedFamily.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
     if (matchedFamily.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-    else if (matchedFamily.kosher === 'kosher') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
+    else if (matchedFamily.kosher === 'separated') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
     if (matchedFamily.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
     return tags;
   })() : [];
 
   const shabLabel = matchedFamily
-    ? (matchedFamily.shabbat === 'observant' ? t('map_obs') : matchedFamily.shabbat === 'traditional' ? t('map_trad') : t('map_sec'))
+    ? (matchedFamily.shabbat === 'keeps' ? t('map_obs') : matchedFamily.shabbat === 'traditional' ? t('map_trad') : t('map_sec'))
     : '';
 
   return (
@@ -1134,19 +1150,23 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               <div className="space-y-2 animate-enter">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border border-warm-200" style={{ backgroundColor: matchedFamily.imageColor }}>
-                    <img src={familyAvatarUrl(matchedFamily.imageColor, matchedFamily.id)} alt={matchedFamily.name} className="w-full h-full object-cover" />
-                  </div>
+                  {matchedFamily.imageColor != null && (
+                    <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border border-warm-200" style={{ backgroundColor: matchedFamily.imageColor }}>
+                      <img src={familyAvatarUrl(matchedFamily.imageColor, matchedFamily.id)} alt={matchedFamily.name} className="w-full h-full object-cover" />
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-gray-900 text-base leading-tight">{matchedFamily.name}</h3>
-                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city} | {shabLabel}</p>
+                    <p className="text-xs text-warm-500 mt-0.5">{matchedFamily.city}{shabLabel ? ` | ${shabLabel}` : ''}</p>
                   </div>
                 </div>
 
-                {/* Short description */}
-                <p className="text-sm text-warm-600 leading-relaxed">{matchedFamily.shortDescription}</p>
+                {/* Short description (mock/demo mode only) */}
+                {matchedFamily.shortDescription && (
+                  <p className="text-sm text-warm-600 leading-relaxed">{matchedFamily.shortDescription}</p>
+                )}
 
-                {/* Tags */}
+                {/* Tags (mock/demo mode only) */}
                 {familyTags.length > 0 && (
                   <div className="family-info-tags">
                     {familyTags.map(tag => (
@@ -1157,22 +1177,33 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
                   </div>
                 )}
 
-                {/* Vibe quote */}
+                {/* Vibe quote (mock/demo mode only) */}
                 {matchedFamily.vibe && (
                   <p className="family-info-vibe">"{matchedFamily.vibe}"</p>
+                )}
+
+                {/* Compromise notes (real match only) */}
+                {matchedFamily.compromise_notes?.length > 0 && (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 space-y-1">
+                    {matchedFamily.compromise_notes.map((note, i) => (
+                      <p key={i} className="text-xs text-amber-800">{note}</p>
+                    ))}
+                  </div>
                 )}
 
                 {/* Action buttons */}
                 <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
                   <div className="grid grid-cols-2 gap-1.5">
-                    <Btn onClick={() => {
-                      const msg = t('whatsapp_msg', soldierName, request.when);
-                      window.open(`https://wa.me/${matchedFamily.waDigits}?text=${encodeURIComponent(msg)}`);
-                    }} className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
-                      {t('s15_talk_whatsapp')}
-                    </Btn>
-                    <Btn onClick={onViewMap} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                    {matchedFamily.waDigits && (
+                      <Btn onClick={() => {
+                        const msg = t('whatsapp_msg', soldierName, request.when);
+                        window.open(`https://wa.me/${matchedFamily.waDigits}?text=${encodeURIComponent(msg)}`);
+                      }} className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.025 3.207l-.695 2.54 2.599-.681c.887.486 1.856.741 2.839.741h.001c3.182 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.766-5.769-5.767zm3.387 8.192c-.146.411-.849.761-1.157.808-.285.045-.653.075-1.047-.052-.244-.078-.553-.189-.912-.345-1.528-.66-2.518-2.213-2.593-2.313-.076-.101-.617-.82-.617-1.564 0-.743.393-1.109.531-1.258.143-.15.311-.188.413-.188h.27c.086 0 .201-.033.31.233l.423 1.027c.038.09.064.195.004.314-.06.12-.09.195-.181.3-.09.105-.19.233-.27.315-.088.09-.181.188-.076.368.106.181.469.773.999 1.246.684.609 1.261.799 1.442.889.181.09.286.075.391-.045.105-.12.451-.525.571-.705.12-.18.24-.15.405-.09.166.06 1.054.496 1.235.586.181.09.301.135.346.21.046.075.046.435-.1.846z"/></svg>
+                        {t('s15_talk_whatsapp')}
+                      </Btn>
+                    )}
+                    <Btn onClick={onViewMap} variant="outline" className={`!py-2.5 flex items-center justify-center gap-1.5 text-sm${matchedFamily.waDigits ? '' : ' col-span-2'}`}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       {t('view_map')}
                     </Btn>
