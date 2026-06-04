@@ -116,7 +116,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
             const newRequests = data.requests.map(r => r.id === req.id ? { ...r, status: 'searching' } : r);
             setData({ ...data, requests: newRequests });
           }}
-          onViewMap={() => { setActiveRequest(null); onViewMatches(activeRequest.id); }}
+          onViewMap={(family) => { setActiveRequest(null); onViewMatches(activeRequest.id, family); }}
         />
         
         <PreferencesPromptModal
@@ -473,7 +473,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 ————————————————————————————————————————————— */
 function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
   const { t } = useLang();
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(data.focusFamilyForMap || null);
   const [hovered, setHovered] = useState(null);
   const [showPrefModal, setShowPrefModal] = useState(false);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
@@ -499,20 +499,22 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
   let filteredFamilies = [];
   if (activeRequest) {
     if (activeRequest.status === 'matched') {
-      filteredFamilies = [MAP_FAMILIES[0]].filter(Boolean); // Mocking the matched family
+      // Use the real matched family if we have it (with lat/lng), otherwise fall back to mock
+      const realFamily = data.focusFamilyForMap;
+      filteredFamilies = realFamily
+        ? [realFamily]
+        : [MAP_FAMILIES[0]].filter(Boolean);
     } else {
       filteredFamilies = MAP_FAMILIES.filter(fam => {
-        // 1. Kashrut
-        if (activeRequest.kosher) {
-          if (fam.kosher === 'none' && activeRequest.kosher !== 'none') return false;
-          if (activeRequest.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
+        if (activeRequest.kosher && activeRequest.kosher !== 'none') {
+          const kRank = { mehadrin: 2, separated: 1, none: 0 };
+          if ((kRank[fam.kosher] ?? 0) < (kRank[activeRequest.kosher] ?? 0)) return false;
         }
-        // 2. Shabbat
-        if (activeRequest.shabbat && fam.shabbat === 'secular') return false;
-        
-        // 3. Sleeping
+        if (activeRequest.shabbat && activeRequest.shabbat !== 'none') {
+          if (activeRequest.shabbat === 'keeps' && fam.shabbat !== 'keeps') return false;
+          if (activeRequest.shabbat === 'traditional' && fam.shabbat === 'none') return false;
+        }
         if (activeRequest.needSleep && !fam.canSleep) return false;
-
         return true;
       });
     }
@@ -1122,6 +1124,8 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
               phoneDisplay: d.hostPhone,
               waDigits,
+              lat: d.hostLat,
+              lng: d.hostLng,
               compromise_notes: match.compromise_notes,
             });
           });
@@ -1178,6 +1182,10 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
 
                 {/* Extra actions */}
                 <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
+                  <Btn onClick={() => { onViewMap(matchedFamily); onClose(); }} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {t('view_map')}
+                  </Btn>
                   <Btn onClick={() => setView('rematch')} variant="outline" className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
                   <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
                   <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>

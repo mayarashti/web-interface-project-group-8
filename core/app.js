@@ -31,8 +31,8 @@ function App() {
     go(23);
   };
 
-  const handleViewMatches = (requestId) => {
-    setFormData(prev => ({ ...prev, selectedRequestId: requestId }));
+  const handleViewMatches = (requestId, focusFamily = null) => {
+    setFormData(prev => ({ ...prev, selectedRequestId: requestId, focusFamilyForMap: focusFamily }));
     go(15);
   };
 
