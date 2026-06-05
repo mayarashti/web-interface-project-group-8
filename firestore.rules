@@ -20,11 +20,19 @@ service cloud.firestore {
 
     // Soldier Hosting Searches (Requests):
     // Anyone can read (so families can see them)
-    // Only the soldier who created it can modify it
+    // The soldier can fully update their own request.
+    // Any authenticated user (e.g. a family canceling their hosting) may only
+    // reset is_match and update temporarily_banned_families — nothing else.
     match /soldier_hosting_searches/{searchId} {
       allow read: if true;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.soldier_id;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.soldier_id;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.soldier_id;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.soldier_id
+        ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['is_match', 'temporarily_banned_families'])
+      );
     }
 
     // Family Hostings (Offers):

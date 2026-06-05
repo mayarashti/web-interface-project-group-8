@@ -119,16 +119,48 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
     window.setScreen(20);
   };
 
-  const handleCancel = (id) => {
-    if (confirm(t('s19_confirm_cancel'))) {
-      if (window.DB) {
-        window.db.collection('family_hostings').doc(id).set({ status: 'canceled' }, { merge: true });
-      } else {
-        setData(prev => ({
-          ...prev,
-          hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h)
-        }));
+  const handleCancel = async (id) => {
+    if (!confirm(t('s19_confirm_cancel'))) return;
+
+    if (!window.db) {
+      setData(prev => ({
+        ...prev,
+        hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h),
+      }));
+      return;
+    }
+
+    try {
+      // 1. Mark the hosting as canceled
+      await window.db.collection('family_hostings').doc(id).update({ status: 'canceled' });
+
+      // 2. Find all matches for this hosting — single-field query, no composite index needed
+      const matchesSnap = await window.db.collection('active_matches')
+        .where('host_offer_id', '==', id)
+        .get();
+
+      const activeStatuses = ['pending_soldier_approval', 'approved'];
+
+      for (const matchDoc of matchesSnap.docs) {
+        const match = matchDoc.data();
+        if (!activeStatuses.includes(match.status)) continue;
+
+        // 3. Cancel the match
+        await matchDoc.ref.update({ status: 'canceled_by_host' });
+
+        // 4. Reopen the soldier's request
+        //    Read first to safely extend the temporarily_banned_families array
+        const reqRef = window.db.collection('soldier_hosting_searches').doc(match.soldier_request_id);
+        const reqSnap = await reqRef.get();
+        if (reqSnap.exists) {
+          const banned = reqSnap.data().temporarily_banned_families || [];
+          if (!banned.includes(match.family_id)) banned.push(match.family_id);
+          await reqRef.update({ is_match: false, temporarily_banned_families: banned });
+        }
       }
+    } catch (e) {
+      console.error('Cancel hosting error:', e);
+      alert('שגיאה בביטול: ' + e.message);
     }
   };
 

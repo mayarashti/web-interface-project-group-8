@@ -84,6 +84,7 @@ window.DB = {
         ...data,
         id: docRef.id,
         family_id: familyId,
+        status: 'open',
         guests: [],
         occupied: 0,
         created_at: firebase.firestore.FieldValue.serverTimestamp(),

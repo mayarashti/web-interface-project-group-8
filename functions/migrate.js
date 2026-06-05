@@ -115,6 +115,17 @@ const LR = { 'עברית': 'he', 'אנגלית': 'en', 'רוסית': 'ru', 'ספ
   }
   console.log('Matches backfilled:', backfilled, '/', matches.size);
 
+  // 5. Set status:'open' on hostings that have no status field
+  const hostings = await db.collection('family_hostings').get();
+  let hostingsFixed = 0;
+  for (const d of hostings.docs) {
+    if (!d.data().status) {
+      await d.ref.update({ status: 'open' });
+      hostingsFixed++;
+    }
+  }
+  console.log('Hostings status fixed:', hostingsFixed, '/', hostings.size);
+
   console.log('Migration complete!');
   process.exit(0);
 })();
