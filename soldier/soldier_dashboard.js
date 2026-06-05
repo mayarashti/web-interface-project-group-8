@@ -326,16 +326,18 @@ function FamilyInfoCard({ family, onClose }) {
           <span>{t('kashrut_label')}</span>
           <strong>{koshLabel}</strong>
         </div>
-        <div>
-          <span>{t('s15_capacity')}</span>
-          <strong>
-            {(() => {
-              const free = family.capacity - (family.occupied || 0);
-              const taken = family.occupied || 0;
-              return `${free} ${t('s15_spots_free')} · ${taken} ${t('s15_spots_taken')}`;
-            })()}
-          </strong>
-        </div>
+        {family.capacity != null && (
+          <div>
+            <span>{t('s15_capacity')}</span>
+            <strong>
+              {(() => {
+                const taken = family.occupied || 0;
+                const free = family.capacity - taken;
+                return `${free} ${t('s15_spots_free')} · ${taken} ${t('s15_spots_taken')}`;
+              })()}
+            </strong>
+          </div>
+        )}
         {family.canSleep && (
           <div className="family-info-grid-wide">
             <span>{t('s15_sleep_available')}</span>
@@ -1109,15 +1111,23 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
         if (snap.empty) return;
         const match = snap.docs[0].data();
         setRealMatch(match);
-        // Fetch full family profile to populate the card
+        // Fetch family profile + hosting capacity in parallel
         if (match.family_id) {
-          window.db.collection('families').doc(match.family_id).get().then(doc => {
-            if (!doc.exists) return;
-            const d = doc.data();
+          Promise.all([
+            window.db.collection('families').doc(match.family_id).get(),
+            match.host_offer_id
+              ? window.db.collection('family_hostings').doc(match.host_offer_id).get()
+              : Promise.resolve(null),
+          ]).then(([familyDoc, hostingDoc]) => {
+            if (!familyDoc.exists) return;
+            const d = familyDoc.data();
+            const h = hostingDoc?.exists ? hostingDoc.data() : {};
             const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
             const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
+            const capacity = parseInt(h.soldiers) || null;
+            const occupied = (h.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0) || h.occupied || 0;
             setFullFamily({
-              id: doc.id,
+              id: familyDoc.id,
               name: d.hostName,
               city: d.hostCity,
               shabbat: d.hostShabbat,
@@ -1129,6 +1139,8 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               waDigits,
               lat: d.hostLat,
               lng: d.hostLng,
+              capacity,
+              occupied,
               compromise_notes: match.compromise_notes,
             });
           });
