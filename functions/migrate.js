@@ -52,6 +52,69 @@ const LR = { 'עברית': 'he', 'אנגלית': 'en', 'רוסית': 'ru', 'ספ
   }
   console.log('Requests done:', reqs.size);
 
+  // 4. Backfill guests array in family_hostings from existing active_matches
+  // Needed for matches created before the Cloud Function was updated to write guests.
+  const soldierCache = {};
+  const getSoldier = async (id) => {
+    if (!soldierCache[id]) {
+      const snap = await db.collection('soldiers').doc(id).get();
+      soldierCache[id] = snap.exists ? snap.data() : {};
+    }
+    return soldierCache[id];
+  };
+
+  const matches = await db.collection('active_matches')
+    .where('status', '==', 'pending_soldier_approval')
+    .get();
+
+  let backfilled = 0;
+  for (const matchDoc of matches.docs) {
+    const match = matchDoc.data();
+    if (!match.host_offer_id || match.guest_object) continue; // skip already-backfilled
+
+    const reqSnap = await db.collection('soldier_hosting_searches').doc(match.soldier_request_id).get();
+    if (!reqSnap.exists) continue;
+    const req = reqSnap.data();
+
+    const soldier = await getSoldier(req.soldier_id);
+    const guestCount = req.guestCount ?? 1;
+
+    const guestObj = {
+      match_id:       matchDoc.id,
+      soldier_id:     req.soldier_id,
+      name:           soldier.fullName ?? soldier.name ?? 'חייל',
+      unit:           soldier.unit    ?? null,
+      age:            soldier.age     ?? null,
+      avatarColor:    soldier.avatarPreview ?? '#6f8f72',
+      kosher:         req.kosher  ?? 'none',
+      allergies:      soldier.allergies ?? [],
+      bio:            soldier.bio ?? null,
+      needSleep:      req.needSleep  ?? false,
+      needsTransport: req.transport  ?? false,
+      walkDistance:   req.walkDistance ?? false,
+      groupSize:      guestCount,
+    };
+
+    const hostingRef = db.collection('family_hostings').doc(match.host_offer_id);
+    const hostingSnap = await hostingRef.get();
+    if (!hostingSnap.exists) continue;
+
+    const existingGuests = hostingSnap.data().guests || [];
+    if (existingGuests.some(g => g.match_id === matchDoc.id)) continue; // already there
+
+    const updatedGuests = [...existingGuests, guestObj];
+    const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+    const capacity = parseInt(hostingSnap.data().soldiers) || 0;
+
+    await hostingRef.update({
+      guests: updatedGuests,
+      is_fully_booked: capacity > 0 && newTotal >= capacity,
+    });
+    await matchDoc.ref.update({ guest_object: guestObj });
+    backfilled++;
+  }
+  console.log('Matches backfilled:', backfilled, '/', matches.size);
+
   console.log('Migration complete!');
   process.exit(0);
 })();

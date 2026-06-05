@@ -3,7 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 initializeApp();
 const db = getFirestore();
@@ -246,8 +246,29 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
 
+  const guestCount = request.guestCount ?? 1;
+
+  // Build a guest object — this is what the host dashboard reads to show occupancy
+  const guestObj = {
+    match_id:      null,          // filled in below after we have the doc ref
+    soldier_id:    soldier.id ?? request.soldier_id,
+    name:          soldier.fullName ?? soldier.name ?? "חייל",
+    unit:          soldier.unit   ?? null,
+    age:           soldier.age    ?? null,
+    avatarColor:   soldier.avatarPreview ?? "#6f8f72",
+    kosher:        request.kosher  ?? "none",
+    allergies:     soldier.allergies ?? [],
+    bio:           soldier.bio ?? null,
+    needSleep:     request.needSleep  ?? false,
+    needsTransport: request.transport ?? false,
+    walkDistance:  request.walkDistance ?? false,
+    groupSize:     guestCount,
+  };
+
   // Save the match
   const matchRef = db.collection("active_matches").doc();
+  guestObj.match_id = matchRef.id;   // back-fill now that we have the id
+
   await matchRef.set({
     id: matchRef.id,
     soldier_request_id: requestId,
@@ -259,11 +280,15 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     score: best.score,
     compromise_level: compromiseLevel,
     compromise_notes: compromiseNotes,
+    guest_object: guestObj,           // stored so rematch can remove the exact entry
     created_at: new Date().toISOString(),
   });
 
   // Mark soldier request as matched
   await db.collection("soldier_hosting_searches").doc(requestId).update({ is_match: true });
+
+  // Note: family_hostings.guests is updated only when the soldier confirms arrival
+  // (via the confirmMatch callable), not at match creation time.
 
   return {
     match_id: matchRef.id,
@@ -361,6 +386,23 @@ exports.requestRematch = onCall(async (req) => {
 
   // Reject the current match
   await db.collection("active_matches").doc(match_id).update({ status: "rejected" });
+
+  // If the match was already confirmed by the soldier, free up the reserved seats
+  if (match.status === "approved" && match.host_offer_id) {
+    const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(hostingRef);
+      if (!snap.exists) return;
+      const d = snap.data();
+      const updatedGuests = (d.guests || []).filter((g) => g.match_id !== match_id);
+      const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+      const capacity = parseInt(d.soldiers) || 0;
+      tx.update(hostingRef, {
+        guests: updatedGuests,
+        is_fully_booked: capacity > 0 && newTotal >= capacity,
+      });
+    });
+  }
 
   // Load the soldier request
   const requestSnap = await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get();
@@ -486,4 +528,50 @@ exports.migrateValues = onCall(async (req) => {
     updated: stats,
     message: `עודכנו: ${stats.soldiers} חיילים, ${stats.families} משפחות, ${stats.requests} בקשות`,
   };
+});
+
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: soldier confirms arrival
+// Call with: { match_id }
+// Updates match status → "approved" and adds the guest to the
+// family_hostings.guests array so the host can see the confirmation.
+// ──────────────────────────────────────────────────────────────────
+exports.confirmMatch = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { match_id } = req.data;
+  if (!match_id) throw new HttpsError("invalid-argument", "match_id is required");
+
+  const matchSnap = await db.collection("active_matches").doc(match_id).get();
+  if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");
+  const match = matchSnap.data();
+
+  if (match.status !== "pending_soldier_approval") {
+    return { success: true, message: "Already confirmed" };
+  }
+
+  // Mark match as approved
+  await db.collection("active_matches").doc(match_id).update({ status: "approved" });
+
+  // Add guest to family hosting so the host can see it
+  const guestObj = match.guest_object;
+  if (guestObj && match.host_offer_id) {
+    const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(hostingRef);
+      if (!snap.exists) return;
+      const d = snap.data();
+      const existingGuests = d.guests || [];
+      if (existingGuests.some((g) => g.match_id === match_id)) return; // already added
+      const updatedGuests = [...existingGuests, guestObj];
+      const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+      const capacity = parseInt(d.soldiers) || 0;
+      tx.update(hostingRef, {
+        guests: updatedGuests,
+        is_fully_booked: capacity > 0 && newTotal >= capacity,
+      });
+    });
+  }
+
+  return { success: true };
 });

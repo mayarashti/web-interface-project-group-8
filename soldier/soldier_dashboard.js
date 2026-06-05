@@ -105,9 +105,10 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
           </svg>
         </button>
 
-        <SearchStatusSheet 
+        <SearchStatusSheet
           request={activeRequest}
           soldierName={soldierName}
+          soldierData={data}
           onClose={() => setActiveRequest(null)}
           onEdit={() => { setActiveRequest(null); onEditRequest(activeRequest); }}
           onCancel={(id) => { setActiveRequest(null); data.requests = data.requests.filter(r => r.id !== id); setData({...data}); }}
@@ -1087,12 +1088,14 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 }
 
 
-function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName }) {
+function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName, soldierData }) {
   const { t } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
   const [realMatch, setRealMatch] = useState(null);
   const [fullFamily, setFullFamily] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
     if (!request?.id || !request.is_match) { setRealMatch(null); setFullFamily(null); return; }
@@ -1148,6 +1151,60 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     onClose();
   };
 
+  const handleConfirmArrival = async () => {
+    if (!realMatch?.id || confirmed || realMatch.status === 'approved') return;
+    setConfirmed(true); // optimistic — green immediately
+    try {
+      if (!window.db) return;
+
+      // 1. Update match status to approved
+      await window.db.collection('active_matches').doc(realMatch.id).update({ status: 'approved' });
+
+      const hostingId = realMatch.host_offer_id;
+      if (!hostingId) return;
+
+      // 2. Build guest object — prefer match.guest_object, fall back to formData
+      const guestCount = request.guestCount ?? 1;
+      const guestObj = realMatch.guest_object ?? {
+        match_id:       realMatch.id,
+        soldier_id:     soldierData?.uid ?? null,
+        name:           soldierName || soldierData?.fullName || 'חייל',
+        unit:           soldierData?.unit    ?? null,
+        age:            soldierData?.age     ?? null,
+        avatarColor:    soldierData?.avatarPreview ?? '#6f8f72',
+        kosher:         request.kosher   ?? 'none',
+        allergies:      soldierData?.allergies ?? [],
+        bio:            soldierData?.bio ?? null,
+        needSleep:      request.needSleep  ?? false,
+        needsTransport: request.transport  ?? false,
+        walkDistance:   request.walkDistance ?? false,
+        groupSize:      guestCount,
+      };
+
+      // 3. Update family_hostings: add guest + increment occupied + recalc is_fully_booked
+      const hostingRef = window.db.collection('family_hostings').doc(hostingId);
+      const snap = await hostingRef.get();
+      if (snap.exists) {
+        const d = snap.data();
+        const existingGuests = d.guests || [];
+        const alreadyAdded = existingGuests.some(g => g.match_id === realMatch.id);
+        if (!alreadyAdded) {
+          const updatedGuests = [...existingGuests, guestObj];
+          const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+          const capacity = parseInt(d.soldiers) || 0;
+          await hostingRef.update({
+            guests:         updatedGuests,
+            occupied:       newTotal,
+            is_fully_booked: capacity > 0 && newTotal >= capacity,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Confirm error:', e);
+      setConfirmed(false); // revert on network failure
+    }
+  };
+
 
   return (
     <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)} className="max-w-md max-h-[93vh]">
@@ -1178,6 +1235,21 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
                       <p key={i} className="text-xs text-amber-800">{note}</p>
                     ))}
                   </div>
+                )}
+
+                {/* Confirm arrival button — transitions to green on click */}
+                {realMatch && (
+                  <button
+                    onClick={handleConfirmArrival}
+                    disabled={confirmed || realMatch.status === 'approved'}
+                    className={`w-full py-3.5 rounded-2xl text-base font-bold transition-all duration-300 ${
+                      confirmed || realMatch.status === 'approved'
+                        ? 'bg-green-500 text-white cursor-default shadow-sm'
+                        : 'bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-md'
+                    }`}
+                  >
+                    {confirmed || realMatch.status === 'approved' ? '✓ הגעה אושרה' : 'אישור הגעה'}
+                  </button>
                 )}
 
                 {/* Extra actions */}

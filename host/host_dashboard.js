@@ -195,7 +195,9 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
               const guests = h.guests || [];
               const capacity = parseInt(h.soldiers) || 0;
               const isCanceled = h.status === 'canceled';
-              const totalGuests = guests.reduce((sum, g) => sum + (g.groupSize || 1), 0);
+              const totalGuests = guests.length > 0
+                ? guests.reduce((sum, g) => sum + (g.groupSize || 1), 0)
+                : (h.occupied || 0);
               const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
 
               return (
