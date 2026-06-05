@@ -265,10 +265,23 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                     {isCanceled ? (
                       <button
                         onClick={() => {
-                          if (window.DB) {
-                            window.db.collection('family_hostings').doc(h.id).set({ status: 'open' }, { merge: true });
+                          if (window.db) {
+                            // Treat restore as a fresh hosting — clear all guest data
+                            window.db.collection('family_hostings').doc(h.id).update({
+                              status: 'open',
+                              guests: [],
+                              occupied: 0,
+                              is_fully_booked: false,
+                            });
                           } else {
-                            setData(prev => ({ ...prev, hostings: prev.hostings.map(h2 => h2.id === h.id ? { ...h2, status: 'open' } : h2) }))
+                            setData(prev => ({
+                              ...prev,
+                              hostings: prev.hostings.map(h2 =>
+                                h2.id === h.id
+                                  ? { ...h2, status: 'open', guests: [], occupied: 0, is_fully_booked: false }
+                                  : h2
+                              ),
+                            }));
                           }
                         }}
                         className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
