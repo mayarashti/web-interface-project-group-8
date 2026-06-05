@@ -150,13 +150,9 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 
         // 4. Reopen the soldier's request
         //    Read first to safely extend the temporarily_banned_families array
-        const reqRef = window.db.collection('soldier_hosting_searches').doc(match.soldier_request_id);
-        const reqSnap = await reqRef.get();
-        if (reqSnap.exists) {
-          const banned = reqSnap.data().temporarily_banned_families || [];
-          if (!banned.includes(match.family_id)) banned.push(match.family_id);
-          await reqRef.update({ is_match: false, temporarily_banned_families: banned });
-        }
+        await window.db.collection('soldier_hosting_searches')
+          .doc(match.soldier_request_id)
+          .update({ is_match: false });
       }
     } catch (e) {
       console.error('Cancel hosting error:', e);
@@ -264,15 +260,22 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                   <div className="px-4 py-3 bg-warm-50 flex justify-end gap-3">
                     {isCanceled ? (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           if (window.db) {
-                            // Treat restore as a fresh hosting — clear all guest data
-                            window.db.collection('family_hostings').doc(h.id).update({
+                            // 1. Reset the hosting to a fresh open state
+                            await window.db.collection('family_hostings').doc(h.id).update({
                               status: 'open',
                               guests: [],
                               occupied: 0,
                               is_fully_booked: false,
                             });
+                            // 2. Immediately trigger matching for all waiting soldiers on this date
+                            try {
+                              const fn = window.firebase.functions().httpsCallable('triggerMatchingForDate');
+                              await fn({ date: h.date });
+                            } catch (e) {
+                              console.warn('triggerMatchingForDate:', e.message);
+                            }
                           } else {
                             setData(prev => ({
                               ...prev,

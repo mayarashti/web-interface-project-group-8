@@ -581,6 +581,32 @@ exports.confirmMatch = onCall(async (req) => {
 });
 
 // ──────────────────────────────────────────────────────────────────
+// CALLABLE: trigger matching for all unmatched soldiers on a given date
+// Called after a hosting is restored so soldiers are matched immediately.
+// Call with: { date } — e.g. "2026-06-06"
+// ──────────────────────────────────────────────────────────────────
+exports.triggerMatchingForDate = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { date } = req.data;
+  if (!date) throw new HttpsError("invalid-argument", "date is required");
+
+  const unmatchedSnap = await db
+    .collection("soldier_hosting_searches")
+    .where("when", "==", date)
+    .where("is_match", "==", false)
+    .get();
+
+  let matched = 0;
+  for (const doc of unmatchedSnap.docs) {
+    const result = await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+    if (result) matched++;
+  }
+
+  return { success: true, scanned: unmatchedSnap.size, matched };
+});
+
+// ──────────────────────────────────────────────────────────────────
 // CALLABLE: family cancels a hosting → rematch all affected soldiers
 // Call with: { hosting_id }
 // ──────────────────────────────────────────────────────────────────
@@ -608,10 +634,9 @@ exports.cancelHosting = onCall(async (req) => {
     // 3. Mark match as canceled by host
     await matchDoc.ref.update({ status: "canceled_by_host" });
 
-    // 4. Reopen soldier's request + temporarily ban this family
+    // 4. Reopen soldier's request for matching
     await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
       is_match: false,
-      temporarily_banned_families: FieldValue.arrayUnion(match.family_id),
     });
 
     // 5. Try to find a new match
@@ -641,45 +666,51 @@ exports.cancelHosting = onCall(async (req) => {
 //      c. Temporarily ban this family so the soldier isn't re-matched with them
 //   3. Run the matching algorithm for each affected soldier
 // ──────────────────────────────────────────────────────────────────
-exports.onHostingCanceled = onDocumentUpdated(
+exports.onHostingStatusChange = onDocumentUpdated(
   { document: "family_hostings/{hostingId}", region: "me-west1" },
   async (event) => {
     const before = event.data.before.data();
     const after  = event.data.after.data();
 
-    // Only react when status changes TO "canceled"
-    if (before.status === after.status || after.status !== "canceled") return;
+    if (before.status === after.status) return;
 
     const hostingId = event.params.hostingId;
-    console.log("🔔 Hosting canceled:", hostingId);
 
-    // Find all non-rejected matches for this hosting
-    const matchesSnap = await db
-      .collection("active_matches")
-      .where("host_offer_id", "==", hostingId)
-      .where("status", "in", ["pending_soldier_approval", "approved"])
-      .get();
+    // ── CANCELED → rematch affected soldiers ──────────────────────
+    if (after.status === "canceled") {
+      console.log("🔔 Hosting canceled:", hostingId);
 
-    if (matchesSnap.empty) return;
-    console.log(`↩️  Re-queuing ${matchesSnap.size} soldier(s)`);
+      const matchesSnap = await db
+        .collection("active_matches")
+        .where("host_offer_id", "==", hostingId)
+        .where("status", "in", ["pending_soldier_approval", "approved"])
+        .get();
 
-    for (const matchDoc of matchesSnap.docs) {
-      const match = matchDoc.data();
+      for (const matchDoc of matchesSnap.docs) {
+        const match = matchDoc.data();
+        await matchDoc.ref.update({ status: "canceled_by_host" });
+        await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
+          is_match: false,
+        });
+        await tryAllCompromiseLevels(match.soldier_request_id);
+      }
+    }
 
-      // 1. Mark match as canceled by host
-      await matchDoc.ref.update({ status: "canceled_by_host" });
+    // ── RESTORED → scan all waiting soldiers for this date ────────
+    if (before.status === "canceled" && after.status === "open") {
+      console.log("🔔 Hosting restored:", hostingId);
 
-      // 2. Reopen the soldier's request + ban this family temporarily
-      await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
-        is_match: false,
-        temporarily_banned_families: FieldValue.arrayUnion(match.family_id),
-      });
+      const unmatchedSnap = await db
+        .collection("soldier_hosting_searches")
+        .where("when", "==", after.date)
+        .where("is_match", "==", false)
+        .get();
 
-      // 3. Find a new match for this soldier
-      const newMatch = await tryAllCompromiseLevels(match.soldier_request_id);
-      console.log(
-        `✅ Soldier ${match.soldier_id}: ${newMatch ? "new match found" : "no match yet, will retry"}`
-      );
+      console.log(`🔍 Scanning ${unmatchedSnap.size} unmatched request(s)`);
+
+      for (const doc of unmatchedSnap.docs) {
+        await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+      }
     }
   }
 );
