@@ -16,5 +16,21 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "tools/**",
+      "*.md",
+      "package.json",
+      "package-lock.json",
+      "skills-lock.json"
+    ]
   }
 }
