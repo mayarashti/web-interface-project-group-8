@@ -1178,53 +1178,14 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     if (!realMatch?.id || confirmed || realMatch.status === 'approved') return;
     setConfirmed(true); // optimistic — green immediately
     try {
-      if (!window.db) return;
-
-      // 1. Update match status to approved
-      await window.db.collection('active_matches').doc(realMatch.id).update({ status: 'approved' });
-
-      const hostingId = realMatch.host_offer_id;
-      if (!hostingId) return;
-
-      // 2. Build guest object from soldier data
-      const guestCount = request.guestCount ?? 1;
-      const guestObj = {
-        match_id:       realMatch.id,
-        soldier_id:     soldierData?.uid ?? null,
-        name:           soldierName || soldierData?.fullName || 'חייל',
-        unit:           soldierData?.unit    ?? null,
-        age:            soldierData?.age     ?? null,
-        avatarColor:    soldierData?.avatarPreview ?? '#6f8f72',
-        kosher:         request.kosher   ?? 'none',
-        allergies:      soldierData?.allergies ?? [],
-        bio:            soldierData?.bio ?? null,
-        needSleep:      request.needSleep  ?? false,
-        needsTransport: request.transport  ?? false,
-        walkDistance:   request.walkDistance ?? false,
-        groupSize:      guestCount,
-      };
-
-      // 3. Update family_hostings: add guest + increment occupied + recalc is_fully_booked
-      const hostingRef = window.db.collection('family_hostings').doc(hostingId);
-      const snap = await hostingRef.get();
-      if (snap.exists) {
-        const d = snap.data();
-        const existingGuests = d.guests || [];
-        const alreadyAdded = existingGuests.some(g => g.match_id === realMatch.id);
-        if (!alreadyAdded) {
-          const updatedGuests = [...existingGuests, guestObj];
-          const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
-          const capacity = parseInt(d.soldiers) || 0;
-          await hostingRef.update({
-            guests:         updatedGuests,
-            occupied:       newTotal,
-            is_fully_booked: capacity > 0 && newTotal >= capacity,
-          });
-        }
+      const fn = firebase.functions().httpsCallable('confirmMatch');
+      const result = await fn({ match_id: realMatch.id });
+      if (result.data?.no_spot_left) {
+        setConfirmed(false); // spot was taken — real-time listener will show notification
       }
     } catch (e) {
       console.error('Confirm error:', e);
-      setConfirmed(false); // revert on network failure
+      setConfirmed(false);
     }
   };
 
@@ -1237,6 +1198,11 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
             {/* Searching state */}
             {request.status === 'searching' && (
               <div className="text-center py-4">
+                {request.notification === 'no_spot_left' && (
+                  <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 text-right">
+                    {t('notif_no_spot_left')}
+                  </div>
+                )}
                 <div className="flex justify-center gap-1.5 mb-4">
                   {[0, 1, 2].map(i => (
                     <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />

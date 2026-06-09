@@ -246,26 +246,24 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                       <button
                         onClick={async () => {
                           if (window.db) {
-                            // 1. Reset the hosting to a fresh open state
-                            await window.db.collection('family_hostings').doc(h.id).update({
-                              status: 'open',
-                              guests: [],
-                              occupied: 0,
-                              is_fully_booked: false,
-                            });
-                            // 2. Immediately trigger matching for all waiting soldiers on this date
                             try {
-                              const fn = window.firebase.functions().httpsCallable('triggerMatchingForDate');
-                              await fn({ date: h.date });
+                              const fn = firebase.functions().httpsCallable('restoreHosting');
+                              await fn({ hosting_id: h.id });
+                              // The active listener will re-add it; remove from archived state
+                              setData(prev => ({
+                                ...prev,
+                                hostings: prev.hostings.filter(h2 => h2.id !== h.id),
+                              }));
                             } catch (e) {
-                              console.warn('triggerMatchingForDate:', e.message);
+                              console.error('Restore error:', e);
+                              alert('שגיאה בשחזור: ' + e.message);
                             }
                           } else {
                             setData(prev => ({
                               ...prev,
                               hostings: prev.hostings.map(h2 =>
                                 h2.id === h.id
-                                  ? { ...h2, status: 'open', guests: [], occupied: 0, is_fully_booked: false }
+                                  ? { ...h2, status: 'open', guests: [], occupied: 0, is_fully_booked: false, _archived: false }
                                   : h2
                               ),
                             }));

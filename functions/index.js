@@ -82,9 +82,12 @@ function passesHardFilters(soldier, request, family, hosting, bannedIds, comprom
   // Ban list (permanent + per-request)
   if (bannedIds.has(hosting.family_id)) return false;
 
-  // Capacity — hosting.soldiers can be stored as a string
+  // Capacity — only confirmed guests (in hosting.guests) count against the limit.
+  // Pending (unconfirmed) matches do NOT reserve a spot: first to confirm wins.
   const maxGuests = parseInt(hosting.soldiers) || 0;
-  if (maxGuests < (request.guestCount ?? 1)) return false;
+  const confirmedCount = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
+  const available = maxGuests - confirmedCount;
+  if (available < (request.guestCount ?? 1)) return false;
 
   // Shabbat — never compromised
   if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) return false;
@@ -261,7 +264,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     family_id: best.family.id,
     family_name: best.family.hostName ?? null,
     family_city: best.family.hostCity ?? null,
-    hosting_date: best.hosting.date ?? null,   // needed for date-based archiving
+    hosting_date: best.hosting.date ?? null,
+    group_size: request.guestCount ?? 1,        // stored so triggers can check capacity without extra reads
     status: "pending_soldier_approval",
     score: best.score,
     compromise_level: compromiseLevel,
@@ -378,6 +382,36 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
 
   for (const doc of snap.docs) {
     await tryAllCompromiseLevels(doc.id);
+  }
+
+  // Safety net: find pending matches whose hosting became full in the meantime.
+  // This catches cases where confirmMatch didn't run (e.g. direct Firestore write).
+  const pendingSnap = await db
+    .collection("active_matches")
+    .where("status", "==", "pending_soldier_approval")
+    .get();
+
+  for (const matchDoc of pendingSnap.docs) {
+    const match = matchDoc.data();
+    if (!match.host_offer_id) continue;
+
+    const hostingSnap = await db.collection("family_hostings").doc(match.host_offer_id).get();
+    if (!hostingSnap.exists || !hostingSnap.data().is_fully_booked) continue;
+
+    // Hosting is full — this pending match is no longer viable
+    await db.collection("active_match_archive").doc(matchDoc.id).set({
+      ...match,
+      final_status: "no_spot_left",
+      archived_at: new Date().toISOString(),
+    });
+    await matchDoc.ref.delete();
+
+    await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
+      is_match: false,
+      notification: "no_spot_left",
+    });
+
+    await tryAllCompromiseLevels(match.soldier_request_id);
   }
 });
 
@@ -680,9 +714,8 @@ exports.migrateValues = onCall(async (req) => {
 
 // ──────────────────────────────────────────────────────────────────
 // CALLABLE: soldier confirms arrival
-// Call with: { match_id }
-// Updates match status → "approved" and adds the guest to the
-// family_hostings.guests array so the host can see the confirmation.
+// Just marks the match as "approved". The onActiveMatchApproved
+// trigger below handles guest list update and capacity checks.
 // ──────────────────────────────────────────────────────────────────
 exports.confirmMatch = onCall(async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
@@ -694,21 +727,44 @@ exports.confirmMatch = onCall(async (req) => {
   if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");
   const match = matchSnap.data();
 
+  if (match.status === "approved") return { success: true, already_confirmed: true };
   if (match.status !== "pending_soldier_approval") {
-    return { success: true, message: "Already confirmed" };
+    return { success: false, message: "Match is no longer active" };
   }
 
-  // Mark match as approved
   await db.collection("active_matches").doc(match_id).update({ status: "approved" });
+  return { success: true };
+});
 
-  // Build guest object from request + soldier docs (not stored on the match)
-  if (match.host_offer_id) {
-    const requestSnap = await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get();
+// ──────────────────────────────────────────────────────────────────
+// TRIGGER: match approved → add guest + check capacity for others
+//
+// Fires when status changes pending_soldier_approval → approved.
+//   1. Add this soldier to family_hostings.guests (with capacity check).
+//      If no space (someone else confirmed first) → archive this match
+//      as "no_room", reopen soldier's request, rematch.
+//   2. Check all remaining pending matches for the same hosting.
+//      Space available → leave pending (soldier can still confirm).
+//      No space → archive as "no_room", reopen, rematch.
+// ──────────────────────────────────────────────────────────────────
+exports.onActiveMatchApproved = onDocumentUpdated(
+  { document: "active_matches/{matchId}", region: "me-west1" },
+  async (event) => {
+    const before = event.data.before.data();
+    const after  = event.data.after.data();
+
+    if (before.status !== "pending_soldier_approval" || after.status !== "approved") return;
+
+    const matchId = event.params.matchId;
+    if (!after.host_offer_id) return;
+
+    // Build guest object from soldier + request docs
+    const requestSnap = await db.collection("soldier_hosting_searches").doc(after.soldier_request_id).get();
     const request = requestSnap.exists ? requestSnap.data() : {};
     const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
     const soldier = soldierSnap.exists ? soldierSnap.data() : {};
     const guestObj = {
-      match_id:       match_id,
+      match_id:       matchId,
       soldier_id:     request.soldier_id ?? null,
       name:           soldier.fullName ?? soldier.name ?? "חייל",
       unit:           soldier.unit ?? null,
@@ -720,27 +776,95 @@ exports.confirmMatch = onCall(async (req) => {
       needSleep:      request.needSleep ?? false,
       needsTransport: request.transport ?? false,
       walkDistance:   request.walkDistance ?? false,
-      groupSize:      request.guestCount ?? 1,
+      groupSize:      after.group_size ?? request.guestCount ?? 1,
     };
-    const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
+
+    // 1. Add guest transactionally with a capacity check
+    const result = { added: false, full: false };
+    const hostingRef = db.collection("family_hostings").doc(after.host_offer_id);
+
     await db.runTransaction(async (tx) => {
+      result.added = false;
+      result.full = false;
       const snap = await tx.get(hostingRef);
       if (!snap.exists) return;
       const d = snap.data();
       const existingGuests = d.guests || [];
-      if (existingGuests.some((g) => g.match_id === match_id)) return; // already added
-      const updatedGuests = [...existingGuests, guestObj];
-      const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
-      const capacity = parseInt(d.soldiers) || 0;
-      tx.update(hostingRef, {
-        guests: updatedGuests,
-        is_fully_booked: capacity > 0 && newTotal >= capacity,
-      });
-    });
-  }
 
-  return { success: true };
-});
+      if (existingGuests.some((g) => g.match_id === matchId)) {
+        result.added = true;
+        result.full = !!d.is_fully_booked;
+        return;
+      }
+
+      const capacity = parseInt(d.soldiers) || 0;
+      const currentTotal = existingGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+      const guestSize = guestObj.groupSize || 1;
+
+      if (capacity > 0 && currentTotal + guestSize > capacity) return; // no space
+
+      const updatedGuests = [...existingGuests, guestObj];
+      const newTotal = currentTotal + guestSize;
+      result.added = true;
+      result.full = capacity > 0 && newTotal >= capacity;
+      tx.update(hostingRef, { guests: updatedGuests, is_fully_booked: result.full });
+    });
+
+    if (!result.added) {
+      // Someone else confirmed first — archive this match and rematch
+      await db.collection("active_match_archive").doc(matchId).set({
+        ...after,
+        final_status: "no_room",
+        archived_at: new Date().toISOString(),
+      });
+      await db.collection("active_matches").doc(matchId).delete();
+      await db.collection("soldier_hosting_searches").doc(after.soldier_request_id).update({
+        is_match: false,
+        notification: "no_spot_left",
+      });
+      await tryAllCompromiseLevels(after.soldier_request_id);
+      return;
+    }
+
+    // 2. Check all remaining pending matches for this hosting
+    const pendingSnap = await db
+      .collection("active_matches")
+      .where("host_offer_id", "==", after.host_offer_id)
+      .where("status", "==", "pending_soldier_approval")
+      .get();
+
+    if (pendingSnap.empty) return;
+
+    const hostingSnap = await db.collection("family_hostings").doc(after.host_offer_id).get();
+    const hosting = hostingSnap.exists ? hostingSnap.data() : {};
+    const capacity = parseInt(hosting.soldiers) || 0;
+    const confirmedTotal = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
+    let available = capacity - confirmedTotal;
+
+    for (const pendingDoc of pendingSnap.docs) {
+      const pendingMatch = pendingDoc.data();
+      const pendingSize = pendingMatch.group_size ?? 1;
+
+      if (available >= pendingSize) {
+        available -= pendingSize; // space exists — leave pending
+        continue;
+      }
+
+      // No space for this soldier — archive and rematch
+      await db.collection("active_match_archive").doc(pendingDoc.id).set({
+        ...pendingMatch,
+        final_status: "no_room",
+        archived_at: new Date().toISOString(),
+      });
+      await pendingDoc.ref.delete();
+      await db.collection("soldier_hosting_searches").doc(pendingMatch.soldier_request_id).update({
+        is_match: false,
+        notification: "no_spot_left",
+      });
+      await tryAllCompromiseLevels(pendingMatch.soldier_request_id);
+    }
+  }
+);
 
 // ──────────────────────────────────────────────────────────────────
 // CALLABLE: trigger matching for all unmatched soldiers on a given date
@@ -1017,17 +1141,8 @@ exports.restoreHosting = onCall(async (req) => {
   // Remove from archive
   await db.collection("family_hostings_archive").doc(hosting_id).delete();
 
-  // Trigger matching for unmatched soldiers on this date
-  if (hostingData.date) {
-    const unmatchedSnap = await db
-      .collection("soldier_hosting_searches")
-      .where("when", "==", hostingData.date)
-      .where("is_match", "==", false)
-      .get();
-    for (const doc of unmatchedSnap.docs) {
-      await runMatchingForRequest(doc.id, COMPROMISE.NONE);
-    }
-  }
+  // Matching is triggered automatically by onNewFamilyHosting (document creation above)
+  // so we don't scan here to avoid running the algorithm twice.
 
   return { success: true, date: hostingData.date };
 });

@@ -265,6 +265,7 @@ const T = {
     s15_matches_found: 'מצאנו לך משפחה מתאימה',
     s15_match_success: 'מצאנו לך משפחה מתאימה',
     s15_searching_sub: 'אנחנו מחפשים עבורך משפחה מתאימה...',
+    notif_no_spot_left: 'מצאנו לך התאמה, אך המקום התמלא לפני שאישרת. אנחנו מחפשים לך משפחה אחרת.',
     view_map: 'הצג על המפה',
     request_rematch: 'בקש חיפוש מחדש',
     s15_edit_req: 'ערוך בקשה',
@@ -742,6 +743,7 @@ const T = {
     view_map: 'View on map',
     request_rematch: 'Request Rematch',
     s15_searching_sub: 'We are looking for a suitable family for you...',
+    notif_no_spot_left: 'We found you a match, but the spot was taken before you confirmed. We are searching for another family.',
     s15_edit_req: 'Edit Request',
     s15_new_req: 'New Request',
 

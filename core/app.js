@@ -109,12 +109,29 @@ function App() {
         if (familyProfile) {
           setFormData(prev => ({ ...prev, ...familyProfile, uid: user.uid, role: 'host' }));
           
-          // Real-time listener for family hostings
+          // Real-time listener for active family hostings
           window.db.collection('family_hostings')
             .where('family_id', '==', user.uid)
             .onSnapshot(snapshot => {
-              const hostings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-              setFormData(prev => ({ ...prev, hostings: hostings }));
+              const active = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, _archived: false }));
+              setFormData(prev => {
+                const archived = (prev.hostings || []).filter(h => h._archived);
+                return { ...prev, hostings: [...active, ...archived] };
+              });
+            });
+
+          // Also load recently canceled hostings from archive so the restore button works
+          const today = new Date().toISOString().split('T')[0];
+          window.db.collection('family_hostings_archive')
+            .where('family_id', '==', user.uid)
+            .onSnapshot(snapshot => {
+              const archived = snapshot.docs
+                .map(doc => ({ ...doc.data(), id: doc.id, _archived: true }))
+                .filter(h => h.final_status === 'canceled' && h.date >= today);
+              setFormData(prev => {
+                const active = (prev.hostings || []).filter(h => !h._archived);
+                return { ...prev, hostings: [...active, ...archived] };
+              });
             });
 
           setScreen(19); // Host Home
