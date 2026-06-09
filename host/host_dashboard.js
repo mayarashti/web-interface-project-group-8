@@ -125,35 +125,19 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
     if (!window.db) {
       setData(prev => ({
         ...prev,
-        hostings: prev.hostings.map(h => h.id === id ? { ...h, status: 'canceled' } : h),
+        hostings: prev.hostings.filter(h => h.id !== id),
       }));
       return;
     }
 
     try {
-      // 1. Mark the hosting as canceled
-      await window.db.collection('family_hostings').doc(id).update({ status: 'canceled' });
-
-      // 2. Find all matches for this hosting — single-field query, no composite index needed
-      const matchesSnap = await window.db.collection('active_matches')
-        .where('host_offer_id', '==', id)
-        .get();
-
-      const activeStatuses = ['pending_soldier_approval', 'approved'];
-
-      for (const matchDoc of matchesSnap.docs) {
-        const match = matchDoc.data();
-        if (!activeStatuses.includes(match.status)) continue;
-
-        // 3. Cancel the match
-        await matchDoc.ref.update({ status: 'canceled_by_host' });
-
-        // 4. Reopen the soldier's request
-        //    Read first to safely extend the temporarily_banned_families array
-        await window.db.collection('soldier_hosting_searches')
-          .doc(match.soldier_request_id)
-          .update({ is_match: false });
-      }
+      const fn = firebase.functions().httpsCallable('cancelHosting');
+      await fn({ hosting_id: id });
+      // Remove from local state — the doc was deleted from Firestore by the function
+      setData(prev => ({
+        ...prev,
+        hostings: prev.hostings.filter(h => h.id !== id),
+      }));
     } catch (e) {
       console.error('Cancel hosting error:', e);
       alert('שגיאה בביטול: ' + e.message);

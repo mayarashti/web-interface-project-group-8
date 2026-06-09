@@ -834,6 +834,7 @@ exports.cancelSoldierRequest = onCall(async (req) => {
   // 2. Archive the soldier request itself
   await db.collection("soldier_hosting_searches_archive").doc(request_id).set({
     ...request,
+    status: "canceled",
     final_status: "canceled_by_soldier",
     archived_at: new Date().toISOString(),
   });
@@ -852,8 +853,10 @@ exports.cancelHosting = onCall(async (req) => {
   const { hosting_id } = req.data;
   if (!hosting_id) throw new HttpsError("invalid-argument", "hosting_id is required");
 
-  // 1. Mark the hosting as canceled
-  await db.collection("family_hostings").doc(hosting_id).update({ status: "canceled" });
+  // 1. Read the hosting before deleting it
+  const hostingSnap = await db.collection("family_hostings").doc(hosting_id).get();
+  if (!hostingSnap.exists) throw new HttpsError("not-found", "Hosting not found");
+  const hostingData = hostingSnap.data();
 
   // 2. Find all active matches for this hosting
   const matchesSnap = await db
@@ -867,7 +870,7 @@ exports.cancelHosting = onCall(async (req) => {
   for (const matchDoc of matchesSnap.docs) {
     const match = matchDoc.data();
 
-    // 3. Archive the match (move to active_match_archive)
+    // 3. Archive the match
     await db.collection("active_match_archive").doc(matchDoc.id).set({
       ...match,
       final_status: "canceled_by_host",
@@ -887,6 +890,15 @@ exports.cancelHosting = onCall(async (req) => {
       new_match: newMatch ? newMatch.match_id : null,
     });
   }
+
+  // 6. Archive the hosting itself
+  await db.collection("family_hostings_archive").doc(hosting_id).set({
+    ...hostingData,
+    status: "canceled",
+    final_status: "canceled",
+    archived_at: new Date().toISOString(),
+  });
+  await db.collection("family_hostings").doc(hosting_id).delete();
 
   return {
     success: true,
@@ -976,6 +988,50 @@ exports.onHostingStatusChange = onDocumentUpdated(
 //   canceled_by_host  — match canceled by the host (already handled inline, caught here as safety net)
 //   canceled_by_soldier — match rejected by soldier (same)
 // ──────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: family restores a previously canceled hosting
+// Moves the doc back from family_hostings_archive → family_hostings,
+// resets to a clean open state, and triggers matching.
+// Call with: { hosting_id }
+// ──────────────────────────────────────────────────────────────────
+exports.restoreHosting = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { hosting_id } = req.data;
+  if (!hosting_id) throw new HttpsError("invalid-argument", "hosting_id is required");
+
+  const archiveSnap = await db.collection("family_hostings_archive").doc(hosting_id).get();
+  if (!archiveSnap.exists) throw new HttpsError("not-found", "Archived hosting not found");
+
+  const { final_status, archived_at, ...hostingData } = archiveSnap.data();
+
+  // Restore to active collection with clean state
+  await db.collection("family_hostings").doc(hosting_id).set({
+    ...hostingData,
+    status: "open",
+    guests: [],
+    occupied: 0,
+    is_fully_booked: false,
+  });
+
+  // Remove from archive
+  await db.collection("family_hostings_archive").doc(hosting_id).delete();
+
+  // Trigger matching for unmatched soldiers on this date
+  if (hostingData.date) {
+    const unmatchedSnap = await db
+      .collection("soldier_hosting_searches")
+      .where("when", "==", hostingData.date)
+      .where("is_match", "==", false)
+      .get();
+    for (const doc of unmatchedSnap.docs) {
+      await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+    }
+  }
+
+  return { success: true, date: hostingData.date };
+});
+
 exports.archivePastEvents = onSchedule(
   { schedule: "every 24 hours", region: "me-west1" },
   async () => {
