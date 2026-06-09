@@ -111,7 +111,18 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
           soldierData={data}
           onClose={() => setActiveRequest(null)}
           onEdit={() => { setActiveRequest(null); onEditRequest(activeRequest); }}
-          onCancel={(id) => { setActiveRequest(null); data.requests = data.requests.filter(r => r.id !== id); setData({...data}); }}
+          onCancel={async (id) => {
+            setActiveRequest(null);
+            setData(prev => ({ ...prev, requests: (prev.requests || []).filter(r => r.id !== id) }));
+            if (window.db) {
+              try {
+                const fn = firebase.functions().httpsCallable('cancelSoldierRequest');
+                await fn({ request_id: id });
+              } catch (e) {
+                console.error('Cancel request error:', e);
+              }
+            }
+          }}
           onRematch={(req, reason) => {
             // Mock rematch logic: update request status correctly for React
             const newRequests = data.requests.map(r => r.id === req.id ? { ...r, status: 'searching' } : r);
@@ -1175,9 +1186,9 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
       const hostingId = realMatch.host_offer_id;
       if (!hostingId) return;
 
-      // 2. Build guest object — prefer match.guest_object, fall back to formData
+      // 2. Build guest object from soldier data
       const guestCount = request.guestCount ?? 1;
-      const guestObj = realMatch.guest_object ?? {
+      const guestObj = {
         match_id:       realMatch.id,
         soldier_id:     soldierData?.uid ?? null,
         name:           soldierName || soldierData?.fullName || 'חייל',

@@ -250,28 +250,9 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
 
-  const guestCount = request.guestCount ?? 1;
-
-  // Build a guest object — this is what the host dashboard reads to show occupancy
-  const guestObj = {
-    match_id:      null,          // filled in below after we have the doc ref
-    soldier_id:    soldier.id ?? request.soldier_id,
-    name:          soldier.fullName ?? soldier.name ?? "חייל",
-    unit:          soldier.unit   ?? null,
-    age:           soldier.age    ?? null,
-    avatarColor:   soldier.avatarPreview ?? "#6f8f72",
-    kosher:        request.kosher  ?? "none",
-    allergies:     soldier.allergies ?? [],
-    bio:           soldier.bio ?? null,
-    needSleep:     request.needSleep  ?? false,
-    needsTransport: request.transport ?? false,
-    walkDistance:  request.walkDistance ?? false,
-    groupSize:     guestCount,
-  };
-
-  // Save the match
+  // Save the match — guest details are NOT stored here; use soldier_request_id
+  // to look them up from soldier_hosting_searches + soldiers when needed.
   const matchRef = db.collection("active_matches").doc();
-  guestObj.match_id = matchRef.id;   // back-fill now that we have the id
 
   await matchRef.set({
     id: matchRef.id,
@@ -280,11 +261,11 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     family_id: best.family.id,
     family_name: best.family.hostName ?? null,
     family_city: best.family.hostCity ?? null,
+    hosting_date: best.hosting.date ?? null,   // needed for date-based archiving
     status: "pending_soldier_approval",
     score: best.score,
     compromise_level: compromiseLevel,
     compromise_notes: compromiseNotes,
-    guest_object: guestObj,           // stored so rematch can remove the exact entry
     created_at: new Date().toISOString(),
   });
 
@@ -304,6 +285,21 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   };
 }
 
+// ──────────────────────────────────────────────────────────────────
+// ARCHIVE HELPER — copy a doc to its archive collection, then delete
+// ──────────────────────────────────────────────────────────────────
+async function archiveDoc(sourceCollection, archiveCollection, docId, finalStatus) {
+  const ref = db.collection(sourceCollection).doc(docId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  await db.collection(archiveCollection).doc(docId).set({
+    ...snap.data(),
+    final_status: finalStatus,
+    archived_at: new Date().toISOString(),
+  });
+  await ref.delete();
+}
+
 // Try all compromise levels in order until a match is found
 async function tryAllCompromiseLevels(requestId) {
   for (const level of [COMPROMISE.NONE, COMPROMISE.RADIUS, COMPROMISE.PETS, COMPROMISE.TIME]) {
@@ -320,9 +316,15 @@ exports.onNewSoldierRequest = onDocumentCreated(
   { document: "soldier_hosting_searches/{requestId}", region: "me-west1" },
   async (event) => {
     const requestId = event.params.requestId;
-    console.log("🔔 onNewSoldierRequest triggered for:", requestId);
+    const requestDate = event.data.data().when;
+    const today    = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    const isUrgent = requestDate === today || requestDate === tomorrow;
+    console.log("🔔 onNewSoldierRequest triggered for:", requestId, "urgent:", isUrgent);
     try {
-      const result = await runMatchingForRequest(requestId, COMPROMISE.NONE);
+      const result = isUrgent
+        ? await tryAllCompromiseLevels(requestId)
+        : await runMatchingForRequest(requestId, COMPROMISE.NONE);
       console.log("✅ Matching result:", JSON.stringify(result));
     } catch (err) {
       console.error("❌ Error in onNewSoldierRequest:", err);
@@ -345,9 +347,14 @@ exports.onNewFamilyHosting = onDocumentCreated(
       .where("is_match", "==", false)
       .get();
 
+    const today    = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    const isUrgent = hosting.date === today || hosting.date === tomorrow;
+
     for (const doc of unmatchedSnap.docs) {
-      const alreadyMatched = doc.data().is_match;
-      if (!alreadyMatched) {
+      if (isUrgent) {
+        await tryAllCompromiseLevels(doc.id);
+      } else {
         await runMatchingForRequest(doc.id, COMPROMISE.NONE);
       }
     }
@@ -388,10 +395,15 @@ exports.requestRematch = onCall(async (req) => {
   if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");
   const match = matchSnap.data();
 
-  // Reject the current match
-  await db.collection("active_matches").doc(match_id).update({ status: "rejected" });
+  // Archive the rejected match (move out of active_matches)
+  await db.collection("active_match_archive").doc(match_id).set({
+    ...match,
+    final_status: "canceled_by_soldier",
+    archived_at: new Date().toISOString(),
+  });
+  await db.collection("active_matches").doc(match_id).delete();
 
-  // If the match was already confirmed by the soldier, free up the reserved seats
+  // If the match was already confirmed, free up the reserved seats and fill the slot
   if (match.status === "approved" && match.host_offer_id) {
     const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
     await db.runTransaction(async (tx) => {
@@ -406,6 +418,20 @@ exports.requestRematch = onCall(async (req) => {
         is_fully_booked: capacity > 0 && newTotal >= capacity,
       });
     });
+
+    // Slot is now free — scan for other unmatched soldiers on the same date.
+    // The canceling soldier's is_match is still true here so they won't be picked up;
+    // they get their own rematch attempt below via tryAllCompromiseLevels.
+    if (match.hosting_date) {
+      const unmatchedSnap = await db
+        .collection("soldier_hosting_searches")
+        .where("when", "==", match.hosting_date)
+        .where("is_match", "==", false)
+        .get();
+      for (const doc of unmatchedSnap.docs) {
+        await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+      }
+    }
   }
 
   // Load the soldier request
@@ -452,6 +478,124 @@ exports.requestRematch = onCall(async (req) => {
 // Call once after deploy.  Safe to call again — already-migrated
 // docs are detected and skipped.
 // ──────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: debug matching for a soldier request — returns a detailed
+// report of every family hosting checked and which filter blocked it.
+// Does NOT create a match. Call with: { request_id }
+// ──────────────────────────────────────────────────────────────────
+exports.debugMatching = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { request_id } = req.data;
+  if (!request_id) throw new HttpsError("invalid-argument", "request_id is required");
+
+  const requestSnap = await db.collection("soldier_hosting_searches").doc(request_id).get();
+  if (!requestSnap.exists) throw new HttpsError("not-found", "Request not found");
+  const request = requestSnap.data();
+
+  const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
+  if (!soldierSnap.exists) throw new HttpsError("not-found", "Soldier not found");
+  const soldier = soldierSnap.data();
+
+  const bannedIds = new Set([
+    ...(soldier.banned_families ?? []),
+    ...(request.temporarily_banned_families ?? []),
+  ]);
+
+  const hostingsSnap = await db
+    .collection("family_hostings")
+    .where("date", "==", request.when)
+    .where("is_fully_booked", "==", false)
+    .get();
+
+  const ALLERGY_TO_COOKING = { gluten: "celiac", vegetarian: "veg" };
+  const UNMATCHABLE = new Set(["peanuts", "fish", "other"]);
+  const soldierAllergies = (soldier.allergies ?? [])
+    .filter((a) => !UNMATCHABLE.has(a))
+    .map((a) => ALLERGY_TO_COOKING[a] ?? a);
+
+  const report = {
+    request: {
+      id: request_id,
+      when: request.when,
+      kosher: request.kosher,
+      shabbat: request.shabbat,
+      guestCount: request.guestCount ?? 1,
+      startTime: request.startTime,
+      endTime: request.endTime,
+      travelDistance: request.travelDistance,
+      petsComfort: request.petsComfort,
+      needSleep: request.needSleep,
+      transport: request.transport,
+      is_match: request.is_match,
+    },
+    soldier: {
+      id: request.soldier_id,
+      allergies: soldier.allergies,
+      pets: soldier.pets,
+      languages: soldier.languages,
+    },
+    hostings_found: hostingsSnap.size,
+    families: [],
+  };
+
+  for (const hostingDoc of hostingsSnap.docs) {
+    const hosting = hostingDoc.data();
+    const familySnap = await db.collection("families").doc(hosting.family_id).get();
+    const family = familySnap.exists ? familySnap.data() : {};
+
+    const checks = {};
+
+    checks.banned = bannedIds.has(hosting.family_id);
+    checks.capacity = (parseInt(hosting.soldiers) || 0) >= (request.guestCount ?? 1);
+    checks.status_not_canceled = hosting.status !== "canceled";
+    checks.shabbat = isShabbatCompatible(request.shabbat, family.hostShabbat);
+    checks.kosher = (request.kosher === "none" || !request.kosher)
+      ? true
+      : isKosherCompatible(request.kosher, family.hostKosher);
+    checks.allergies = !soldierAllergies.some((a) => !(family.hostCooking ?? []).includes(a));
+    checks.sleep = request.needSleep === true ? hosting.sleepOvernight === true : true;
+    checks.pet_allergy = !(soldier.pets === "allergy" && family.hasPets === true);
+    checks.pets_comfort = request.petsComfort !== "no" || family.hasPets !== true;
+    checks.time = isTimeCompatible(request.startTime, request.endTime, hosting.time, 0);
+    checks.time_compromise = isTimeCompatible(request.startTime, request.endTime, hosting.time, 120);
+
+    // "banned" is inverted: false = not banned = passes. All other checks: true = passes.
+    const failedStrict = Object.entries(checks)
+      .filter(([k, v]) => k !== "time_compromise" && (k === "banned" ? v === true : v === false))
+      .map(([k]) => k);
+
+    const failedWithCompromise = Object.entries(checks)
+      .filter(([k, v]) => (k === "banned" ? v === true : v === false))
+      .map(([k]) => k);
+
+    const passes = failedStrict.length === 0 ||
+      (failedStrict.length === 1 && failedStrict[0] === "time" && checks.time_compromise) ||
+      (failedStrict.length === 1 && failedStrict[0] === "pets_comfort");
+
+    report.families.push({
+      hosting_id: hostingDoc.id,
+      family_id: hosting.family_id,
+      family_name: family.hostName ?? "?",
+      hosting_date: hosting.date,
+      hosting_time: hosting.time,
+      hosting_soldiers: hosting.soldiers,
+      hosting_status: hosting.status,
+      family_kosher: family.hostKosher,
+      family_shabbat: family.hostShabbat,
+      family_hasPets: family.hasPets,
+      family_cooking: family.hostCooking,
+      family_languages: family.hostLanguages,
+      checks,
+      failed_strict: failedStrict,
+      failed_with_compromise: failedWithCompromise,
+      would_pass: passes,
+    });
+  }
+
+  return report;
+});
+
 exports.migrateValues = onCall(async (req) => {
   // Only allow signed-in users (add uid check here if you want admin-only)
   if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
@@ -557,9 +701,27 @@ exports.confirmMatch = onCall(async (req) => {
   // Mark match as approved
   await db.collection("active_matches").doc(match_id).update({ status: "approved" });
 
-  // Add guest to family hosting so the host can see it
-  const guestObj = match.guest_object;
-  if (guestObj && match.host_offer_id) {
+  // Build guest object from request + soldier docs (not stored on the match)
+  if (match.host_offer_id) {
+    const requestSnap = await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get();
+    const request = requestSnap.exists ? requestSnap.data() : {};
+    const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
+    const soldier = soldierSnap.exists ? soldierSnap.data() : {};
+    const guestObj = {
+      match_id:       match_id,
+      soldier_id:     request.soldier_id ?? null,
+      name:           soldier.fullName ?? soldier.name ?? "חייל",
+      unit:           soldier.unit ?? null,
+      age:            soldier.age ?? null,
+      avatarColor:    soldier.avatarPreview ?? "#6f8f72",
+      kosher:         request.kosher ?? "none",
+      allergies:      soldier.allergies ?? [],
+      bio:            soldier.bio ?? null,
+      needSleep:      request.needSleep ?? false,
+      needsTransport: request.transport ?? false,
+      walkDistance:   request.walkDistance ?? false,
+      groupSize:      request.guestCount ?? 1,
+    };
     const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(hostingRef);
@@ -599,11 +761,85 @@ exports.triggerMatchingForDate = onCall(async (req) => {
 
   let matched = 0;
   for (const doc of unmatchedSnap.docs) {
-    const result = await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+    const result = await tryAllCompromiseLevels(doc.id);
     if (result) matched++;
   }
 
   return { success: true, scanned: unmatchedSnap.size, matched };
+});
+
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: soldier cancels their own request
+// Call with: { request_id }
+//   - Archives any active match (freed slot → scan for replacement soldier)
+//   - Archives the soldier_hosting_searches doc itself
+// ──────────────────────────────────────────────────────────────────
+exports.cancelSoldierRequest = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { request_id } = req.data;
+  if (!request_id) throw new HttpsError("invalid-argument", "request_id is required");
+
+  const requestSnap = await db.collection("soldier_hosting_searches").doc(request_id).get();
+  if (!requestSnap.exists) throw new HttpsError("not-found", "Request not found");
+  const request = requestSnap.data();
+
+  // 1. Find and archive any active match for this request
+  const matchesSnap = await db
+    .collection("active_matches")
+    .where("soldier_request_id", "==", request_id)
+    .get();
+
+  for (const matchDoc of matchesSnap.docs) {
+    const match = matchDoc.data();
+    if (!["pending_soldier_approval", "approved"].includes(match.status)) continue;
+
+    // Archive the match
+    await db.collection("active_match_archive").doc(matchDoc.id).set({
+      ...match,
+      final_status: "canceled_by_soldier",
+      archived_at: new Date().toISOString(),
+    });
+    await matchDoc.ref.delete();
+
+    // If already confirmed, free the hosting slot and scan for a replacement
+    if (match.status === "approved" && match.host_offer_id) {
+      const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(hostingRef);
+        if (!snap.exists) return;
+        const d = snap.data();
+        const updatedGuests = (d.guests || []).filter((g) => g.match_id !== matchDoc.id);
+        const newTotal = updatedGuests.reduce((s, g) => s + (g.groupSize || 1), 0);
+        const capacity = parseInt(d.soldiers) || 0;
+        tx.update(hostingRef, {
+          guests: updatedGuests,
+          is_fully_booked: capacity > 0 && newTotal >= capacity,
+        });
+      });
+
+      if (match.hosting_date) {
+        const unmatchedSnap = await db
+          .collection("soldier_hosting_searches")
+          .where("when", "==", match.hosting_date)
+          .where("is_match", "==", false)
+          .get();
+        for (const doc of unmatchedSnap.docs) {
+          await runMatchingForRequest(doc.id, COMPROMISE.NONE);
+        }
+      }
+    }
+  }
+
+  // 2. Archive the soldier request itself
+  await db.collection("soldier_hosting_searches_archive").doc(request_id).set({
+    ...request,
+    final_status: "canceled_by_soldier",
+    archived_at: new Date().toISOString(),
+  });
+  await db.collection("soldier_hosting_searches").doc(request_id).delete();
+
+  return { success: true };
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -631,8 +867,13 @@ exports.cancelHosting = onCall(async (req) => {
   for (const matchDoc of matchesSnap.docs) {
     const match = matchDoc.data();
 
-    // 3. Mark match as canceled by host
-    await matchDoc.ref.update({ status: "canceled_by_host" });
+    // 3. Archive the match (move to active_match_archive)
+    await db.collection("active_match_archive").doc(matchDoc.id).set({
+      ...match,
+      final_status: "canceled_by_host",
+      archived_at: new Date().toISOString(),
+    });
+    await matchDoc.ref.delete();
 
     // 4. Reopen soldier's request for matching
     await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
@@ -688,7 +929,12 @@ exports.onHostingStatusChange = onDocumentUpdated(
 
       for (const matchDoc of matchesSnap.docs) {
         const match = matchDoc.data();
-        await matchDoc.ref.update({ status: "canceled_by_host" });
+        await db.collection("active_match_archive").doc(matchDoc.id).set({
+          ...match,
+          final_status: "canceled_by_host",
+          archived_at: new Date().toISOString(),
+        });
+        await matchDoc.ref.delete();
         await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
           is_match: false,
         });
@@ -712,5 +958,89 @@ exports.onHostingStatusChange = onDocumentUpdated(
         await runMatchingForRequest(doc.id, COMPROMISE.NONE);
       }
     }
+  }
+);
+
+// ──────────────────────────────────────────────────────────────────
+// SCHEDULED DAILY: archive all documents whose date has passed
+//
+// Sweeps 3 live collections:
+//   family_hostings          → family_hostings_archive
+//   soldier_hosting_searches → soldier_hosting_searches_archive
+//   active_matches           → active_match_archive
+//
+// final_status values:
+//   done              — meal happened (approved match, or hosting/request with a match)
+//   expired           — date passed with no match / no confirmation
+//   canceled          — family canceled the hosting
+//   canceled_by_host  — match canceled by the host (already handled inline, caught here as safety net)
+//   canceled_by_soldier — match rejected by soldier (same)
+// ──────────────────────────────────────────────────────────────────
+exports.archivePastEvents = onSchedule(
+  { schedule: "every 24 hours", region: "me-west1" },
+  async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const archiveAt = new Date().toISOString();
+    console.log("📦 archivePastEvents running for dates before", today);
+
+    // ── 1. Archive past family hostings ───────────────────────────
+    const hostingsSnap = await db
+      .collection("family_hostings")
+      .where("date", "<", today)
+      .get();
+
+    for (const doc of hostingsSnap.docs) {
+      const data = doc.data();
+      const finalStatus = data.status === "canceled" ? "canceled" : "done";
+      await db.collection("family_hostings_archive").doc(doc.id).set({
+        ...data,
+        final_status: finalStatus,
+        archived_at: archiveAt,
+      });
+      await doc.ref.delete();
+    }
+    console.log(`📦 Archived ${hostingsSnap.size} family hosting(s)`);
+
+    // ── 2. Archive past soldier requests ──────────────────────────
+    const requestsSnap = await db
+      .collection("soldier_hosting_searches")
+      .where("when", "<", today)
+      .get();
+
+    for (const doc of requestsSnap.docs) {
+      const data = doc.data();
+      const finalStatus = data.is_match ? "done" : "expired";
+      await db.collection("soldier_hosting_searches_archive").doc(doc.id).set({
+        ...data,
+        final_status: finalStatus,
+        archived_at: archiveAt,
+      });
+      await doc.ref.delete();
+    }
+    console.log(`📦 Archived ${requestsSnap.size} soldier request(s)`);
+
+    // ── 3. Archive past active matches (safety net) ───────────────
+    // Matches that were already canceled/rejected are archived inline by their
+    // respective functions. This sweep catches any remaining matches whose
+    // hosting date has passed (approved → done, pending → expired).
+    const matchesSnap = await db
+      .collection("active_matches")
+      .where("hosting_date", "<", today)
+      .get();
+
+    for (const doc of matchesSnap.docs) {
+      const data = doc.data();
+      let finalStatus;
+      if (data.status === "approved") finalStatus = "done";
+      else if (data.status === "pending_soldier_approval") finalStatus = "expired";
+      else finalStatus = data.status; // preserve any terminal status not yet archived
+      await db.collection("active_match_archive").doc(doc.id).set({
+        ...data,
+        final_status: finalStatus,
+        archived_at: archiveAt,
+      });
+      await doc.ref.delete();
+    }
+    console.log(`📦 Archived ${matchesSnap.size} active match(es)`);
   }
 );

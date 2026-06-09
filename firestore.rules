@@ -55,5 +55,22 @@ service cloud.firestore {
     match /rematches/{rematchId} {
       allow read, write: if request.auth != null;
     }
+
+    // Archive collections — written only by Cloud Functions (admin SDK bypasses rules).
+    // Authenticated users can read their own history.
+    match /active_match_archive/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Cloud Functions only
+    }
+
+    match /soldier_hosting_searches_archive/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /family_hostings_archive/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
   }
 }

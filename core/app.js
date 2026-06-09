@@ -273,16 +273,19 @@ function App() {
             go(24); 
           }} 
           onCancel={async (id) => {
-            if (window.DB) {
-               await window.db.collection('soldier_hosting_searches').doc(id).delete();
-            } else {
-              setFormData(prev => ({
-                ...prev,
-                requests: (prev.requests || []).filter(r => r.id !== id),
-                editingRequest: null
-              }));
+            setFormData(prev => ({
+              ...prev,
+              requests: (prev.requests || []).filter(r => r.id !== id),
+              editingRequest: null,
+            }));
+            if (window.db) {
+              try {
+                const fn = firebase.functions().httpsCallable('cancelSoldierRequest');
+                await fn({ request_id: id });
+              } catch (e) {
+                console.error('Cancel request error:', e);
+              }
             }
-            setFormData(prev => ({ ...prev, editingRequest: null }));
             go(24);
           }}
         />,
