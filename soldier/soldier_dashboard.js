@@ -629,7 +629,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
 var { useState } = React;
 
 function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const initialRequest = data.editingRequest || {
     id: Date.now(),
     when: '',
@@ -649,8 +649,27 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
     status: 'searching'
   };
 
+  const sortedRequests = [...(data.requests || [])]
+    .filter(r => r.id !== (data.editingRequest?.id))
+    .sort((a, b) => {
+      const aVal = typeof a.id === 'string' ? parseInt(a.id) : a.id;
+      const bVal = typeof b.id === 'string' ? parseInt(b.id) : b.id;
+      return bVal - aVal;
+    });
+  const mostRecentRequest = sortedRequests[0];
+
+  const handleReuseRecent = () => {
+    if (!mostRecentRequest) return;
+    setRequest({
+      ...mostRecentRequest,
+      id: Date.now(),
+      status: 'searching'
+    });
+  };
+
   const [request, setRequest] = useState(initialRequest);
   const [showRadiusMap, setShowRadiusMap] = useState(false);
+
 
   const dietaryOpts = [
     { value: 'gluten',     label: t('a_gluten')  },
@@ -682,6 +701,31 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
       <div className="px-5 mt-6 max-w-md mx-auto">
         <p className="text-base text-warm-500 mb-8 leading-6">{t('s15_form_sub')}</p>
         
+        {(!data.editingRequest && mostRecentRequest) && (
+          <div className="mb-6 bg-white border border-warm-200 rounded-2xl p-4 shadow-sm space-y-3 animate-fade-in">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              {lang === 'he' ? 'בקשה קודמת' : 'Previous Request'}
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-gray-900">
+                  {mostRecentRequest.when ? new Date(mostRecentRequest.when).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) : ''} | {mostRecentRequest.location || ''}
+                </p>
+                <p className="text-[11px] text-warm-500 mt-0.5">
+                  {mostRecentRequest.guestCount} {lang === 'he' ? 'אורחים' : 'guests'} | {mostRecentRequest.duration === 'dinner' ? (lang === 'he' ? 'ארוחה בלבד' : 'dinner only') : (lang === 'he' ? 'שבת מלאה' : 'full shabbat')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleReuseRecent}
+                className="px-4 py-2 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold rounded-xl hover:bg-brand-100 transition-all active:scale-[0.98] flex-shrink-0"
+              >
+                {lang === 'he' ? 'השתמש בבקשה הקודמת שלי' : 'Use My Previous Request'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <FridayDatePicker
             label={t('s15_when')}

@@ -389,6 +389,26 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
 
   const SOLDIER_OPTS = ['1', '2', '3', '4', '5+'];
 
+  const previousHostings = [...(data.hostings || [])]
+    .filter(h => h.id !== data.editingHostingId)
+    .sort((a, b) => {
+      const aVal = typeof a.id === 'string' ? parseInt(a.id) : a.id;
+      const bVal = typeof b.id === 'string' ? parseInt(b.id) : b.id;
+      return bVal - aVal;
+    });
+
+  const handleReuse = (prevHosting) => {
+    setFormState({
+      date: prevHosting.date || '',
+      time: prevHosting.time || '',
+      customTime: prevHosting.customTime || '',
+      soldiers: String(prevHosting.soldiers || ''),
+      note: prevHosting.note || '',
+      sleepOvernight: prevHosting.sleepOvernight || false,
+      pickup: prevHosting.pickup || false,
+    });
+  };
+
   const validate = () => {
     const e = {};
     if (!form.date)     e.date    = t('v_date');
@@ -415,7 +435,41 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
           <p className="text-sm text-warm-500 mt-1">{t('s20_sub')}</p>
         </div>
 
+        {(!editingHosting && previousHostings.length > 0) && (
+          <div className="mb-6 bg-white border border-warm-200 rounded-2xl p-4 shadow-sm space-y-3 animate-fade-in">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">אירוחים קודמים</p>
+            <p className="text-sm font-semibold text-gray-800">בחרו אירוח קודם כדי להשתמש בו כתבנית:</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {previousHostings.map(h => (
+                <div key={h.id} className="p-3 bg-warm-50 rounded-xl border border-warm-100 flex items-center justify-between gap-3 hover:border-brand-200 transition-colors">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900">
+                      {new Date(h.date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })} | {h.time === 'friday_evening' ? 'ערב שישי' : h.time === 'saturday_lunch' ? 'צהריים שבת' : h.time}
+                    </p>
+                    <p className="text-[11px] text-warm-500 mt-0.5">
+                      {h.soldiers} חיילים {h.sleepOvernight ? '• לינה' : ''} {h.pickup ? '• הסעה' : ''}
+                    </p>
+                    {h.note && (
+                      <p className="text-[11px] text-warm-400 mt-1 leading-relaxed truncate">
+                        "{h.note}"
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleReuse(h)}
+                    className="px-3 py-1.5 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold rounded-lg hover:bg-brand-100 transition-all active:scale-[0.98] flex-shrink-0"
+                  >
+                    השתמש בבקשה קודמת
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
+
           <FridayDatePicker
             label={t('s20_date_free')}
             value={form.date}
