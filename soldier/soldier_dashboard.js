@@ -1,5 +1,17 @@
 /* S15Landing â€” Landing screen for soldiers after login */
 
+/* True when `fam` is within the request's travel radius of the request's
+   chosen location. When either side lacks coordinates we can't measure the
+   distance, so we don't exclude the family (graceful fallback). */
+function familyInRange(req, fam) {
+  if (!req || req.lat == null || req.lng == null) return true;
+  if (!fam || fam.lat == null || fam.lng == null) return true;
+  const d = window.distanceKm(req.lat, req.lng, fam.lat, fam.lng);
+  if (d == null) return true;
+  const radius = typeof req.travelDistance === 'number' ? req.travelDistance : 30;
+  return d <= radius;
+}
+
 function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onLogout, data, setData }) {
   const { t, lang } = useLang();
   const [activeRequest, setActiveRequest] = useState(null);
@@ -48,6 +60,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
                     }
                     if (req.shabbat && fam.shabbat === 'secular') return false;
                     if (req.needSleep && !fam.canSleep) return false;
+                    if (!familyInRange(req, fam)) return false;
                     return true;
                   }).length;
 
@@ -529,8 +542,18 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
           if (activeRequest.shabbat === 'traditional' && fam.shabbat === 'none') return false;
         }
         if (activeRequest.needSleep && !fam.canSleep) return false;
+        if (!familyInRange(activeRequest, fam)) return false;
         return true;
       });
+
+      // Show the closest families first when we know the soldier's location.
+      if (activeRequest.lat != null && activeRequest.lng != null) {
+        filteredFamilies = [...filteredFamilies].sort((a, b) => {
+          const da = window.distanceKm(activeRequest.lat, activeRequest.lng, a.lat, a.lng);
+          const db = window.distanceKm(activeRequest.lat, activeRequest.lng, b.lat, b.lng);
+          return (da ?? Infinity) - (db ?? Infinity);
+        });
+      }
     }
   }
 
@@ -981,6 +1004,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         if (req.shabbat === 'traditional' && fam.shabbat === 'none') return false;
       }
       if (req.needSleep && !fam.canSleep) return false;
+      if (!familyInRange(req, fam)) return false;
       return true;
     }).length;
   };

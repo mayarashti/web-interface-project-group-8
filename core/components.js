@@ -4,6 +4,22 @@ var { useState, useEffect, useRef } = React;
 window.clsx = (...args) => args.filter(Boolean).join(' ');
 const clsx = window.clsx;
 
+/* Straight-line distance (km) between two lat/lng points (Haversine).
+   Shared by the soldier dashboard to filter/sort families by location. */
+window.distanceKm = function distanceKm(lat1, lng1, lat2, lng2) {
+  const isNum = (n) => typeof n === 'number' && !Number.isNaN(n);
+  if (![lat1, lng1, lat2, lng2].every(isNum)) return null;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
 function ProgressBar({ step, total }) {
   const { t } = useLang();
   const pct = Math.round((step / total) * 100);

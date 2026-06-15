@@ -8,11 +8,14 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 initializeApp();
 const db = getFirestore();
-setGlobalOptions({ maxInstances: 10 });
 
 // Google Maps key — stored as a Functions secret, never shipped to the browser.
 // Set once with:  firebase functions:secrets:set GOOGLE_MAPS_API_KEY
 const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
+
+// Bind the Maps secret to every function so the matching engine (invoked from
+// triggers, callables and the scheduler) can call the Distance Matrix API.
+setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY] });
 
 // ─── Compromise levels (applied in order after 24h) ───────────────
 const COMPROMISE = {
@@ -80,6 +83,66 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Default search radius (km) when a soldier didn't specify travelDistance.
+// Deliberately modest so "no preference" doesn't silently match across the country.
+const DEFAULT_RADIUS_KM = 30;
+
+const isNum = (n) => typeof n === "number" && !Number.isNaN(n);
+
+// Proximity bonus: closer families score higher. Full bonus (30) at the
+// soldier's location, fading linearly to 0 at the edge of their radius.
+// Unknown distance (missing coords) is neutral (0) so it neither helps nor
+// blocks the match.
+function proximityScore(distanceKm, radiusKm) {
+  if (!isNum(distanceKm) || !isNum(radiusKm) || radiusKm <= 0) return 0;
+  const ratio = Math.min(distanceKm / radiusKm, 1);
+  return Math.round((1 - ratio) * 30);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// GOOGLE DISTANCE MATRIX — real travel distance (km) from one soldier to
+// many candidate families in a single request. Returns an array aligned
+// with `destinations`; each entry is km or null when unavailable. Any
+// failure (API disabled, network, billing) returns nulls so the caller
+// falls back to straight-line haversine. Requires the Distance Matrix API
+// enabled on the project and the GOOGLE_MAPS_API_KEY secret.
+// ──────────────────────────────────────────────────────────────────
+async function fetchTravelDistancesKm(origin, destinations, mode = "driving") {
+  const nulls = destinations.map(() => null);
+  if (!isNum(origin?.lat) || !isNum(origin?.lng) || destinations.length === 0) return nulls;
+
+  let key;
+  try { key = GOOGLE_MAPS_API_KEY.value(); } catch (_) { return nulls; }
+  if (!key) return nulls;
+
+  const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
+  url.searchParams.set("origins", `${origin.lat},${origin.lng}`);
+  url.searchParams.set("destinations", destinations.map((d) => `${d.lat},${d.lng}`).join("|"));
+  url.searchParams.set("mode", mode);
+  url.searchParams.set("key", key);
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("distanceMatrix http error", res.status);
+      return nulls;
+    }
+    const json = await res.json();
+    if (json.status !== "OK") {
+      console.error("distanceMatrix google status", json.status, json.error_message);
+      return nulls;
+    }
+    const elements = json.rows?.[0]?.elements || [];
+    return destinations.map((_, i) => {
+      const el = elements[i];
+      return el && el.status === "OK" && el.distance ? el.distance.value / 1000 : null;
+    });
+  } catch (e) {
+    console.error("distanceMatrix fetch failed", e);
+    return nulls;
+  }
+}
+
 // ──────────────────────────────────────────────────────────────────
 // HARD FILTER — returns false if this family cannot host this soldier
 // ──────────────────────────────────────────────────────────────────
@@ -136,13 +199,9 @@ if (soldier.pets === "allergy" && family.hasPets === true) return false;
     if (!isTimeCompatible(request.startTime, request.endTime, hosting.time, 120)) return false;
   }
 
-  // Geographic radius — soldier's travelDistance is their max km from lat/lng
-  if (request.lat && request.lng && family.hostLat && family.hostLng) {
-    let radius = request.travelDistance ?? 50;
-    if (compromiseLevel >= COMPROMISE.RADIUS) radius *= 1.2;
-    const dist = haversineKm(request.lat, request.lng, family.hostLat, family.hostLng);
-    if (dist > radius) return false;
-  }
+  // NOTE: the geographic radius is NOT enforced here. Distance needs one
+  // batched Google Distance Matrix call for all candidates at once, so it is
+  // handled in runMatchingForRequest after the cheap hard filters run.
 
   return true;
 }
@@ -228,7 +287,7 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
 
   if (hostingsSnap.empty) return null;
 
-  const candidates = [];
+  const prelim = [];
 
   for (const hostingDoc of hostingsSnap.docs) {
     const hosting = hostingDoc.data();
@@ -243,17 +302,63 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
 
     if (!passesHardFilters(soldier, request, family, hosting, bannedIds, compromiseLevel)) continue;
 
-    candidates.push({
-      hosting,
-      family,
-      score: scoreFamily(soldier, request, family, hosting),
-    });
+    prelim.push({ hosting, family });
   }
+
+  if (prelim.length === 0) return null;
+
+  // ── LOCATION ────────────────────────────────────────────────────
+  // travelDistance is the soldier's max acceptable distance (km). In RADIUS
+  // compromise mode we widen it by 20%. Distances come from Google Distance
+  // Matrix (real road/walking distance) and fall back to straight-line
+  // haversine when the API or family coordinates are unavailable.
+  let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
+  if (compromiseLevel >= COMPROMISE.RADIUS) radius *= 1.2;
+
+  const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
+
+  // Straight-line estimate first (cheap, always available).
+  const distances = prelim.map(({ family }) =>
+    hasSoldierCoords && isNum(family.hostLat) && isNum(family.hostLng)
+      ? haversineKm(request.lat, request.lng, family.hostLat, family.hostLng)
+      : null
+  );
+
+  // Refine with real travel distance in a single Distance Matrix call.
+  if (hasSoldierCoords) {
+    const refinable = prelim
+      .map((c, i) => ({ i, family: c.family }))
+      .filter(({ family }) => isNum(family.hostLat) && isNum(family.hostLng));
+    if (refinable.length > 0) {
+      const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
+      const real = await fetchTravelDistancesKm(
+        { lat: request.lat, lng: request.lng },
+        refinable.map(({ family }) => ({ lat: family.hostLat, lng: family.hostLng })),
+        mode
+      );
+      refinable.forEach(({ i }, k) => { if (isNum(real[k])) distances[i] = real[k]; });
+    }
+  }
+
+  // Enforce the radius (only when the distance is actually known) and score,
+  // adding a proximity bonus so the closest acceptable family wins.
+  const candidates = [];
+  prelim.forEach((c, i) => {
+    const distanceKm = distances[i];
+    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) return; // too far
+    candidates.push({
+      ...c,
+      distanceKm,
+      score: scoreFamily(soldier, request, c.family, c.hosting) + proximityScore(distanceKm, radius),
+    });
+  });
 
   if (candidates.length === 0) return null;
 
-  // Pick the highest-scoring candidate
-  candidates.sort((a, b) => b.score - a.score);
+  // Highest score wins; ties broken by the closer family.
+  candidates.sort(
+    (a, b) => (b.score - a.score) || ((a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+  );
   const best = candidates[0];
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
@@ -273,6 +378,7 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     group_size: request.guestCount ?? 1,        // stored so triggers can check capacity without extra reads
     status: "pending_soldier_approval",
     score: best.score,
+    distance_km: isNum(best.distanceKm) ? Math.round(best.distanceKm * 10) / 10 : null,
     compromise_level: compromiseLevel,
     compromise_notes: compromiseNotes,
     created_at: new Date().toISOString(),
@@ -599,6 +705,15 @@ exports.debugMatching = onCall(async (req) => {
     checks.time = isTimeCompatible(request.startTime, request.endTime, hosting.time, 0);
     checks.time_compromise = isTimeCompatible(request.startTime, request.endTime, hosting.time, 120);
 
+    // Geographic radius (straight-line estimate; the real engine refines this
+    // with Google Distance Matrix). Unknown distance → treated as passing.
+    const distanceKm =
+      isNum(request.lat) && isNum(request.lng) && isNum(family.hostLat) && isNum(family.hostLng)
+        ? haversineKm(request.lat, request.lng, family.hostLat, family.hostLng)
+        : null;
+    const radiusKm = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
+    checks.within_radius = distanceKm === null ? true : distanceKm <= radiusKm;
+
     // "banned" is inverted: false = not banned = passes. All other checks: true = passes.
     const failedStrict = Object.entries(checks)
       .filter(([k, v]) => k !== "time_compromise" && (k === "banned" ? v === true : v === false))
@@ -625,6 +740,7 @@ exports.debugMatching = onCall(async (req) => {
       family_hasPets: family.hasPets,
       family_cooking: family.hostCooking,
       family_languages: family.hostLanguages,
+      distance_km: distanceKm === null ? null : Math.round(distanceKm * 10) / 10,
       checks,
       failed_strict: failedStrict,
       failed_with_compromise: failedWithCompromise,
