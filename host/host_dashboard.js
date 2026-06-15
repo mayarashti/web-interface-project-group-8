@@ -1,6 +1,247 @@
 /* S19 Host Home (Unified Dashboard) */
 
-var { useState } = React;
+var { useState, useEffect, useCallback } = React;
+
+/* ── Recipe Recommendations (family-side only) ── */
+const RECIPE_SERVER = 'http://localhost:8000';
+
+function buildPreferences(guest) {
+  const prefs = [];
+  const allergyLabels = {
+    gluten: 'ללא גלוטן', lactose: 'ללא לקטוז', nuts: 'ללא אגוזים',
+    peanuts: 'ללא בוטנים', veg: 'צמחוני', vegan: 'טבעוני',
+    fish: 'ללא דגים', other: 'אלרגיה מיוחדת',
+  };
+  const kosherLabels = { mehadrin: 'כשרות מהדרין', separated: 'כשר', none: '' };
+
+  if (guest.kosher && kosherLabels[guest.kosher]) prefs.push(kosherLabels[guest.kosher]);
+  (guest.allergies || []).forEach(a => { if (allergyLabels[a]) prefs.push(allergyLabels[a]); });
+  if (guest.shabbat === 'keeps') prefs.push('שומר שבת');
+  if (guest.bio) prefs.push(guest.bio.slice(0, 80));
+  if (prefs.length === 0) prefs.push('ארוחת שבת כללית');
+  return prefs;
+}
+
+function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
+  const [showSteps, setShowSteps] = useState(false);
+  const emojiForRecipe = ['🍲', '🥘', '🍗', '🥗', '🍞', '🥙', '🍛'][recipe.recipe_id % 7];
+
+  return (
+    <div className="recipe-card mb-4">
+      <div className="recipe-card-img-placeholder">
+        {emojiForRecipe}
+      </div>
+      <div className="p-4">
+        {/* Title row + refresh button */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="font-bold text-gray-900 text-base leading-tight flex-1">{recipe.title}</h3>
+          <button
+            className="recipe-alt-btn flex-shrink-0"
+            disabled={refreshing}
+            onClick={() => onRefresh(recipe.recipe_id - 1)}
+          >
+            {refreshing
+              ? <><span className="recipe-spin">🔄</span> מחפש...</>
+              : <>🔄 מתכון שונה</>
+            }
+          </button>
+        </div>
+
+        {/* Description */}
+        <p className="text-sm text-warm-600 leading-relaxed mb-3">{recipe.description}</p>
+
+        {/* Matching prefs tags */}
+        {recipe.matching_preferences && recipe.matching_preferences.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {recipe.matching_preferences.map((pref, i) => (
+              <span key={i} className="recipe-ingredient-pill">{pref}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Ingredients */}
+        <div className="mb-3">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">🧂 מרכיבים</p>
+          <ul className="space-y-1">
+            {recipe.ingredients.map((ing, i) => (
+              <li key={i} className="text-sm text-gray-700 flex gap-2 items-start">
+                <span className="text-brand-400 mt-0.5 flex-shrink-0">•</span>
+                <span>{ing}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Steps — collapsible */}
+        <button
+          onClick={() => setShowSteps(v => !v)}
+          className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors py-1"
+        >
+          <span>👨‍🍳 הוראות הכנה</span>
+          <span className="text-warm-400">{showSteps ? '▲' : '▼'}</span>
+        </button>
+        {showSteps && (
+          <ol className="mt-2 space-y-2 border-t border-warm-100 pt-3">
+            {recipe.instructions.map((step, i) => (
+              <li key={i} className="flex gap-2.5 text-sm text-gray-700 items-start">
+                <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span className="leading-relaxed">{step}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RecipeModal({ guest, onClose }) {
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshingIdx, setRefreshingIdx] = useState(null); // index of recipe being refreshed
+
+  const guestKey = guest?.id || guest?.name || 'soldier';
+  const prefs = guest ? buildPreferences(guest) : ['ארוחת שבת כללית'];
+
+  const fetchRecipes = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const body = JSON.stringify({ k: 2, people: { [guestKey]: prefs } });
+      const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
+      const data = await res.json();
+      setRecipes(data.recipes || []);
+    } catch (e) {
+      setError(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')
+        ? 'server_off'
+        : e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [guestKey, prefs.join(',')]);
+
+  useEffect(() => {
+    if (guest) fetchRecipes();
+  }, [guest]);
+
+  const handleRefresh = async (idx) => {
+    setRefreshingIdx(idx);
+    try {
+      const body = JSON.stringify({ k: 1, people: { [guestKey]: prefs } });
+      const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
+      const data = await res.json();
+      if (data.recipes && data.recipes[0]) {
+        const newRecipe = { ...data.recipes[0], recipe_id: idx + 1 };
+        setRecipes(prev => prev.map((r, i) => i === idx ? newRecipe : r));
+      }
+    } catch (e) {
+      // Silent fail on refresh — keep existing recipe
+    } finally {
+      setRefreshingIdx(null);
+    }
+  };
+
+  if (!guest) return null;
+
+  return (
+    <Modal
+      isOpen={!!guest}
+      onClose={onClose}
+      title={`🍽️ מתכונים עבור ${guest.name}`}
+      className="max-w-lg max-h-[92vh]"
+    >
+      <div className="space-y-1">
+        {/* Preferences badge row */}
+        <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-warm-100">
+          {prefs.slice(0, 4).map((p, i) => (
+            <span key={i} className="recipe-ingredient-pill">{p}</span>
+          ))}
+        </div>
+
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="space-y-4">
+            <p className="text-sm text-warm-500 text-center animate-pulse">⏳ מייצר המלצות מתכונים אישיות...</p>
+            {[1, 2].map(i => (
+              <div key={i} className="recipe-card overflow-hidden">
+                <div className="recipe-skeleton" style={{ height: 140 }} />
+                <div className="p-4 space-y-2">
+                  <div className="recipe-skeleton" style={{ height: 20, width: '70%' }} />
+                  <div className="recipe-skeleton" style={{ height: 14, width: '90%' }} />
+                  <div className="recipe-skeleton" style={{ height: 14, width: '60%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Server offline error */}
+        {!loading && error === 'server_off' && (
+          <div className="text-center py-8 space-y-4">
+            <div className="text-5xl">🔌</div>
+            <p className="font-bold text-gray-800">שרת המתכונים אינו פעיל</p>
+            <p className="text-sm text-warm-500 leading-relaxed">
+              הפעל את שרת ה-LLM על פורט 8000 כדי לקבל המלצות מתכונים מותאמות אישית.
+            </p>
+            <button
+              onClick={fetchRecipes}
+              className="mt-2 text-sm font-bold text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 transition-colors px-5 py-2 rounded-xl"
+            >
+              🔄 נסה שוב
+            </button>
+          </div>
+        )}
+
+        {/* Generic error */}
+        {!loading && error && error !== 'server_off' && (
+          <div className="text-center py-6 space-y-3">
+            <div className="text-4xl">⚠️</div>
+            <p className="text-sm text-warm-600">{error}</p>
+            <button onClick={fetchRecipes} className="text-sm font-bold text-brand-600 underline">
+              נסה שוב
+            </button>
+          </div>
+        )}
+
+        {/* Recipe cards */}
+        {!loading && !error && recipes.map((recipe, idx) => (
+          <RecipeCard
+            key={`${recipe.recipe_id}-${recipe.title}`}
+            recipe={recipe}
+            guestKey={guestKey}
+            prefs={prefs}
+            onRefresh={handleRefresh}
+            refreshing={refreshingIdx === idx}
+          />
+        ))}
+
+        {/* Empty state */}
+        {!loading && !error && recipes.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-warm-500 text-sm">לא נמצאו מתכונים. נסו שוב.</p>
+            <button onClick={fetchRecipes} className="mt-3 text-sm font-bold text-brand-600 underline">
+              נסה שוב
+            </button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 
 /* ── Soldier profile card modal ── */
 function SoldierProfileModal({ guest, onClose }) {
@@ -107,6 +348,7 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
   const [selectedGuest,       setSelectedGuest]       = useState(null);
   const [guestSourceHosting,  setGuestSourceHosting]  = useState(null);
   const [showPrefModal,       setShowPrefModal]       = useState(false);
+  const [selectedRecipeGuest, setSelectedRecipeGuest] = useState(null);
 
   const handleNewHosting = () => {
     // Block new hosting creation until preferences are filled
@@ -356,6 +598,12 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                     >
                       <span>💬</span> WhatsApp
                     </a>
+                    <button
+                      onClick={() => { setSelectedHosting(null); setSelectedRecipeGuest(g); }}
+                      className="flex items-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex-shrink-0"
+                    >
+                      🍽️ מתכונים
+                    </button>
                   </div>
                 </Card>
               ))
@@ -363,6 +611,12 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
           </div>
         </Modal>
       )}
+
+      {/* Recipe Recommendations Modal (family-side only) */}
+      <RecipeModal
+        guest={selectedRecipeGuest}
+        onClose={() => setSelectedRecipeGuest(null)}
+      />
 
       {/* Preferences questionnaire — blocks new hosting until filled */}
       <PreferencesPromptModal
