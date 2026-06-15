@@ -1,2 +1,15 @@
 node_modules/
 tools/
+
+# Firebase Functions secrets / local env — never commit the API key
+functions/.secret.local
+.env
+.env.*
+*.local
+
+# Local dev / emulator artifacts
+.static-server.cjs
+maps-key-test.html
+firebase-debug.log
+firebase-debug.*.log
+*-debug.log

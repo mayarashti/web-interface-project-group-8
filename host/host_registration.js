@@ -6,7 +6,6 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
   const { t } = useLang();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
-  const [showMap, setShowMap] = useState(false);
   const [showPrefModal, setShowPrefModal] = useState(false);
 
   const [customLanguages, setCustomLanguages] = useState([]);
@@ -153,27 +152,26 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
               error={errors.hostPassword}
               required
             />
-            <LocationInput
+            <AddressPicker
               label={t('s16_city')}
-              value={data.hostCity || ''}
-              onChange={set('hostCity')}
-              onMapPin={() => setShowMap(true)}
               placeholder={t('s16_city_ph')}
               hint={data.hostLat ? t('map_pin_set') : t('s16_city_hint')}
               error={errors.hostCity}
               required
-            />
-
-            <MapPinModal 
-              isOpen={showMap}
-              onClose={() => setShowMap(false)}
-              onConfirm={(pos, addr) => {
-                set('hostLat')(pos.lat);
-                set('hostLng')(pos.lng);
-                if (addr) set('hostCity')(addr.split(',')[0]); // Take city part
+              value={data.hostCity ? {
+                fullString: data.hostAddress || data.hostCity,
+                city: data.hostCity,
+                coordinates: { lat: data.hostLat, lng: data.hostLng },
+              } : null}
+              onChange={(addr) => {
+                setData(prev => ({
+                  ...prev,
+                  hostCity: addr.city || addr.fullString || '',
+                  hostAddress: addr.fullString || '',
+                  hostLat: addr.coordinates?.lat,
+                  hostLng: addr.coordinates?.lng,
+                }));
               }}
-              initialLat={data.hostLat}
-              initialLng={data.hostLng}
             />
           </div>
         )}
