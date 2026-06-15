@@ -1,16 +1,14 @@
 import os
+import logging
+from typing import Dict, Any, List
+import asyncio
+from schemas import RecipeGenerationRequest
 from generator import RecipeGenerator
 from orchestrator import RecipeRecommendationOrchestrator
-from schemas import RecipeGenerationRequest
-from typing import Dict, Any
-import asyncio
 
-
+logger = logging.getLogger("recipe_recommendation.compatibility")
 
 class Groq:
-    """
-    Legacy compatibility class wrapper to preserve the class interface in llm_api.py.
-    """
     def __init__(self):
         self._initialized = False
         self.api_key = None
@@ -24,10 +22,57 @@ class Groq:
 
     def generate_recipes_sync(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Synchronous interface for recipe generation orchestrator.
+        Synchronous interface supporting both the new format (k, people) and legacy format (soldier, host).
         """
         if not self._initialized:
             self.init_model()
+
+        # Check if the incoming request is in the legacy format
+        if "soldier" in request_data:
+            soldier = request_data.get("soldier", {})
+            prefs = []
+            
+            # Map allergies
+            for allergy in soldier.get("allergies", []):
+                mapping = {
+                    "peanuts": "ללא בוטנים",
+                    "vegan": "טבעוני",
+                    "vegetarian": "צמחוני",
+                    "celiac": "ללא גלוטן",
+                    "lactose": "ללא לקטוז",
+                    "gluten": "ללא גלוטן"
+                }
+                prefs.append(mapping.get(allergy.lower(), allergy))
+                
+            # Map dietary preferences
+            for dp in soldier.get("dietaryPreferences", []):
+                mapping = {
+                    "vegan": "טבעוני",
+                    "vegetarian": "צמחוני",
+                    "gluten-free": "ללא גלוטן"
+                }
+                prefs.append(mapping.get(dp.lower(), dp))
+                
+            # Map kosher
+            if soldier.get("isKosher"):
+                prefs.append("כשר")
+                
+            # Disliked foods
+            for df in soldier.get("dislikedFoods", []):
+                prefs.append(f"ללא {df}")
+                
+            # Deduplicate
+            prefs = list(set(prefs))
+            if not prefs:
+                prefs = ["ארוחת שבת כללית"]
+                
+            # Convert to new structure
+            request_data = {
+                "k": 2,
+                "people": {
+                    "חייל": prefs
+                }
+            }
 
         request = RecipeGenerationRequest(**request_data)
         generator = RecipeGenerator(api_key=self.api_key)

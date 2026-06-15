@@ -1,5 +1,19 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
+
+class SoldierPreferences(BaseModel):
+    favoriteFoods: List[str] = Field(default_factory=list)
+    dislikedFoods: List[str] = Field(default_factory=list)
+    allergies: List[str] = Field(default_factory=list)
+    dietaryPreferences: List[str] = Field(default_factory=list)
+    isKosher: bool = False
+
+class HostFamilyInfo(BaseModel):
+    keepsKosher: bool = False
+
+class RecipeRecommendationRequest(BaseModel):
+    soldier: SoldierPreferences
+    host: HostFamilyInfo
 
 class RecipeGenerationRequest(BaseModel):
     k: int = Field(gt=0, description="Total number of recipes to generate.")
@@ -7,28 +21,22 @@ class RecipeGenerationRequest(BaseModel):
         description="A dictionary mapping person ID/name to their list of preferences."
     )
 
-class RecipePlan(BaseModel):
-    recipe_id: int
-    target_preferences: List[str]
-    exclusion_constraints: List[str] = Field(default_factory=list)
-    satisfied_people: List[str]
-
 class RecipeDetails(BaseModel):
+    id: int
+    recipe_id: Optional[int] = None
     title: str
-    description: str
+    image: str
+    image_url: Optional[str] = ""
+    readyInMinutes: int
+    servings: int
     ingredients: List[str]
     instructions: List[str]
-    matching_preferences: List[str]
+    description: Optional[str] = ""
+    matching_preferences: Optional[List[str]] = Field(default_factory=list)
 
-class RecipeResult(BaseModel):
-    recipe_id: int
-    title: str
-    description: str
-    ingredients: List[str]
-    instructions: List[str]
-    satisfied_people: List[str]
-    matching_preferences: List[str]
+class RecipeWrapper(BaseModel):
+    recipe: RecipeDetails
 
 class FinalResponse(BaseModel):
     status: str
-    recipes: List[RecipeResult]
+    recipes: List[RecipeDetails]

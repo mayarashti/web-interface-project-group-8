@@ -25,12 +25,22 @@ function buildPreferences(guest) {
 function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
   const [showSteps, setShowSteps] = useState(false);
   const emojiForRecipe = ['🍲', '🥘', '🍗', '🥗', '🍞', '🥙', '🍛'][recipe.recipe_id % 7];
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="recipe-card mb-4">
-      <div className="recipe-card-img-placeholder">
-        {emojiForRecipe}
-      </div>
+      {recipe.image_url && !imgError ? (
+        <img
+          className="recipe-card-img"
+          src={recipe.image_url}
+          alt={recipe.title}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="recipe-card-img-placeholder">
+          {emojiForRecipe}
+        </div>
+      )}
       <div className="p-4">
         {/* Title row + refresh button */}
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -97,28 +107,37 @@ function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
   );
 }
 
-function RecipeModal({ guest, onClose }) {
+function RecipeModal({ guest, host, onClose }) {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshingIdx, setRefreshingIdx] = useState(null); // index of recipe being refreshed
 
-  const guestKey = guest?.id || guest?.name || 'soldier';
-  const prefs = guest ? buildPreferences(guest) : ['ארוחת שבת כללית'];
-
   const fetchRecipes = useCallback(async () => {
+    if (!guest) return;
     setLoading(true);
     setError(null);
     try {
-      const body = JSON.stringify({ k: 2, people: { [guestKey]: prefs } });
+      const body = JSON.stringify({
+        soldier: {
+          favoriteFoods: guest.favoriteFoods || [],
+          dislikedFoods: guest.dislikedFoods || [],
+          allergies: guest.allergies || [],
+          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          isKosher: guest.kosher && guest.kosher !== 'none'
+        },
+        host: {
+          keepsKosher: host?.kosher_level && host.kosher_level !== 'none'
+        }
+      });
       const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
       });
       if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
-      const data = await res.json();
-      setRecipes(data.recipes || []);
+      const resData = await res.json();
+      setRecipes(resData.recipes || []);
     } catch (e) {
       setError(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')
         ? 'server_off'
@@ -126,33 +145,52 @@ function RecipeModal({ guest, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [guestKey, prefs.join(',')]);
+  }, [guest, host]);
 
   useEffect(() => {
-    if (guest) fetchRecipes();
-  }, [guest]);
+    fetchRecipes();
+  }, [guest, fetchRecipes]);
 
   const handleRefresh = async (idx) => {
     setRefreshingIdx(idx);
     try {
-      const body = JSON.stringify({ k: 1, people: { [guestKey]: prefs } });
+      const existingTitles = recipes.map(r => r.title);
+      const body = JSON.stringify({
+        soldier: {
+          favoriteFoods: guest.favoriteFoods || [],
+          dislikedFoods: [...(guest.dislikedFoods || []), ...existingTitles],
+          allergies: guest.allergies || [],
+          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          isKosher: guest.kosher && guest.kosher !== 'none'
+        },
+        host: {
+          keepsKosher: host?.kosher_level && host.kosher_level !== 'none'
+        }
+      });
       const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
       });
       if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
-      const data = await res.json();
-      if (data.recipes && data.recipes[0]) {
-        const newRecipe = { ...data.recipes[0], recipe_id: idx + 1 };
+      const resData = await res.json();
+      if (resData.recipes && resData.recipes[0]) {
+        const newRecipe = { ...resData.recipes[0], recipe_id: idx + 1 };
         setRecipes(prev => prev.map((r, i) => i === idx ? newRecipe : r));
       }
     } catch (e) {
-      // Silent fail on refresh — keep existing recipe
+      // Silent fail
     } finally {
       setRefreshingIdx(null);
     }
   };
+
+  const displayPrefs = [];
+  if (guest?.kosher) displayPrefs.push(guest.kosher === 'mehadrin' ? 'כשרות מהדרין' : 'כשר');
+  (guest?.allergies || []).forEach(a => {
+    const labels = { gluten: 'ללא גלוטן', lactose: 'ללא לקטוז', nuts: 'ללא אגוזים', peanuts: 'ללא בוטנים', veg: 'צמחוני', vegan: 'טבעוני' };
+    if (labels[a]) displayPrefs.push(labels[a]);
+  });
 
   if (!guest) return null;
 
@@ -166,7 +204,7 @@ function RecipeModal({ guest, onClose }) {
       <div className="space-y-1">
         {/* Preferences badge row */}
         <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-warm-100">
-          {prefs.slice(0, 4).map((p, i) => (
+          {displayPrefs.slice(0, 4).map((p, i) => (
             <span key={i} className="recipe-ingredient-pill">{p}</span>
           ))}
         </div>
@@ -221,8 +259,8 @@ function RecipeModal({ guest, onClose }) {
           <RecipeCard
             key={`${recipe.recipe_id}-${recipe.title}`}
             recipe={recipe}
-            guestKey={guestKey}
-            prefs={prefs}
+            guestKey={guest?.id || guest?.name || 'soldier'}
+            prefs={displayPrefs}
             onRefresh={handleRefresh}
             refreshing={refreshingIdx === idx}
           />
@@ -626,6 +664,7 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
       {/* Recipe Recommendations Modal (family-side only) */}
       <RecipeModal
         guest={selectedRecipeGuest}
+        host={data}
         onClose={() => setSelectedRecipeGuest(null)}
       />
 
