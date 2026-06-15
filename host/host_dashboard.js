@@ -501,6 +501,9 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
     hostName:     data.hostName     || data.hostFullName || '',
     hostPhone:    data.hostPhone    || '',
     hostCity:     data.hostCity     || '',
+    hostAddress:  data.hostAddress  || '',
+    hostLat:      data.hostLat,
+    hostLng:      data.hostLng,
     hostKosher:   data.hostKosher   || '',
     hostShabbat:  data.hostShabbat  || '',
     hasPets:      data.hasPets      || false,
@@ -591,7 +594,22 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
           </h2>
           <Input label={t('s16_name')}  value={form.hostName}  onChange={setF('hostName')} />
           <Input label={t('s16_phone')} type="tel" value={form.hostPhone} onChange={setF('hostPhone')} />
-          <Input label={t('s16_city')}  value={form.hostCity}  onChange={setF('hostCity')} />
+          <AddressPicker
+            label={t('s16_city')}
+            placeholder={t('s16_city_ph')}
+            value={form.hostCity ? {
+              fullString: form.hostAddress || form.hostCity,
+              city: form.hostCity,
+              coordinates: { lat: form.hostLat, lng: form.hostLng },
+            } : null}
+            onChange={(addr) => setForm(prev => ({
+              ...prev,
+              hostCity: addr.city || addr.fullString || '',
+              hostAddress: addr.fullString || '',
+              hostLat: addr.coordinates?.lat,
+              hostLng: addr.coordinates?.lng,
+            }))}
+          />
         </Card>
 
         {/* Lifestyle & preferences — identical to registration steps 2+3 */}

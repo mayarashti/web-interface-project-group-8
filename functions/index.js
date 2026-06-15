@@ -2,12 +2,17 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions");
+const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 initializeApp();
 const db = getFirestore();
 setGlobalOptions({ maxInstances: 10 });
+
+// Google Maps key — stored as a Functions secret, never shipped to the browser.
+// Set once with:  firebase functions:secrets:set GOOGLE_MAPS_API_KEY
+const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 
 // ─── Compromise levels (applied in order after 24h) ───────────────
 const COMPROMISE = {
@@ -1213,5 +1218,165 @@ exports.archivePastEvents = onSchedule(
       await doc.ref.delete();
     }
     console.log(`📦 Archived ${matchesSnap.size} active match(es)`);
+  }
+);
+
+// ══════════════════════════════════════════════════════════════════
+// ADDRESS / GEOCODING PROXIES (used by the AddressPicker component)
+//
+// The Google Maps key lives only in the GOOGLE_MAPS_API_KEY secret and
+// is used here, server-side. The browser only ever talks to these
+// callables, so the key is never exposed in client code.
+// Requires "Places API (New)" and "Geocoding API" enabled on the project.
+// ══════════════════════════════════════════════════════════════════
+
+// Pull street / city / full string out of Geocoding API address_components.
+function parseGeocodeResult(result) {
+  const comps = result.address_components || [];
+  const get = (type) => comps.find((c) => (c.types || []).includes(type));
+  const streetNumber = get("street_number")?.long_name || "";
+  const route = get("route")?.long_name || "";
+  const city =
+    get("locality")?.long_name ||
+    get("postal_town")?.long_name ||
+    get("administrative_area_level_2")?.long_name ||
+    "";
+  const street = [route, streetNumber].filter(Boolean).join(" ").trim();
+  const loc = result.geometry?.location || {};
+  return {
+    fullString: result.formatted_address || "",
+    street,
+    city,
+    coordinates: { lat: loc.lat, lng: loc.lng },
+    placeId: result.place_id || "",
+  };
+}
+
+// Pull street / city out of Places API (New) addressComponents (different shape).
+function parsePlaceDetails(place) {
+  const comps = place.addressComponents || [];
+  const get = (type) => comps.find((c) => (c.types || []).includes(type));
+  const streetNumber = get("street_number")?.longText || "";
+  const route = get("route")?.longText || "";
+  const city =
+    get("locality")?.longText ||
+    get("postal_town")?.longText ||
+    get("administrative_area_level_2")?.longText ||
+    "";
+  const street = [route, streetNumber].filter(Boolean).join(" ").trim();
+  return {
+    fullString: place.formattedAddress || "",
+    street,
+    city,
+    coordinates: { lat: place.location?.latitude, lng: place.location?.longitude },
+    placeId: place.id || "",
+  };
+}
+
+// ── CALLABLE: autocomplete suggestions ────────────────────────────
+// Call with: { input, country?, languageCode?, sessionToken? }
+exports.placesAutocomplete = onCall(
+  { secrets: [GOOGLE_MAPS_API_KEY] },
+  async (req) => {
+    const { input, country = "IL", languageCode = "he", sessionToken } = req.data || {};
+    if (!input || !input.trim()) return { suggestions: [] };
+
+    const body = {
+      input,
+      includedRegionCodes: [String(country).toLowerCase()],
+      languageCode,
+    };
+    if (sessionToken) body.sessionToken = sessionToken;
+
+    const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY.value(),
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      console.error("placesAutocomplete error", res.status, await res.text());
+      throw new HttpsError("internal", "Autocomplete request failed");
+    }
+
+    const json = await res.json();
+    const suggestions = (json.suggestions || [])
+      .map((s) => s.placePrediction)
+      .filter(Boolean)
+      .map((p) => ({
+        placeId: p.placeId,
+        mainText: p.structuredFormat?.mainText?.text || p.text?.text || "",
+        secondaryText: p.structuredFormat?.secondaryText?.text || "",
+        description: p.text?.text || "",
+      }));
+
+    return { suggestions };
+  }
+);
+
+// ── CALLABLE: full details for a selected place ───────────────────
+// Call with: { placeId, languageCode?, sessionToken? }
+exports.placeDetails = onCall(
+  { secrets: [GOOGLE_MAPS_API_KEY] },
+  async (req) => {
+    const { placeId, languageCode = "he", sessionToken } = req.data || {};
+    if (!placeId) throw new HttpsError("invalid-argument", "placeId is required");
+
+    const url = new URL(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`);
+    url.searchParams.set("languageCode", languageCode);
+    if (sessionToken) url.searchParams.set("sessionToken", sessionToken);
+
+    const res = await fetch(url, {
+      headers: {
+        "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY.value(),
+        "X-Goog-FieldMask": "id,location,formattedAddress,addressComponents",
+      },
+    });
+
+    if (!res.ok) {
+      console.error("placeDetails error", res.status, await res.text());
+      throw new HttpsError("internal", "Place details request failed");
+    }
+
+    return { address: parsePlaceDetails(await res.json()) };
+  }
+);
+
+// ── CALLABLE: reverse geocode a dragged marker ────────────────────
+// Call with: { lat, lng, country?, languageCode? }
+exports.reverseGeocode = onCall(
+  { secrets: [GOOGLE_MAPS_API_KEY] },
+  async (req) => {
+    const { lat, lng, country = "IL", languageCode = "he" } = req.data || {};
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      throw new HttpsError("invalid-argument", "lat and lng (numbers) are required");
+    }
+
+    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    url.searchParams.set("latlng", `${lat},${lng}`);
+    url.searchParams.set("language", languageCode);
+    url.searchParams.set("region", String(country).toLowerCase());
+    url.searchParams.set("key", GOOGLE_MAPS_API_KEY.value());
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("reverseGeocode error", res.status, await res.text());
+      throw new HttpsError("internal", "Reverse geocode request failed");
+    }
+
+    const json = await res.json();
+    const result = (json.results || [])[0];
+    if (!result) {
+      // No match — still return the raw coordinates so the caller has something.
+      return { address: { fullString: "", street: "", city: "", coordinates: { lat, lng }, placeId: "" } };
+    }
+    // Geocoding omits geometry.location when reverse geocoding from coords we
+    // already have, so keep the requested point.
+    const parsed = parseGeocodeResult(result);
+    parsed.coordinates = { lat, lng };
+    return { address: parsed };
   }
 );
