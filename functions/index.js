@@ -1368,6 +1368,13 @@ exports.reverseGeocode = onCall(
     }
 
     const json = await res.json();
+    // The Geocoding API returns HTTP 200 even on auth/billing errors, with the
+    // real outcome in `status`. Surface anything that isn't a success or an
+    // empty (but valid) result, so failures don't masquerade as "no address".
+    if (json.status && json.status !== "OK" && json.status !== "ZERO_RESULTS") {
+      console.error("reverseGeocode google status", json.status, json.error_message);
+      throw new HttpsError("internal", `Geocoding failed: ${json.status}`);
+    }
     const result = (json.results || [])[0];
     if (!result) {
       // No match — still return the raw coordinates so the caller has something.
