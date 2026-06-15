@@ -569,14 +569,15 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
               <p className="text-center text-sm text-warm-500 py-6">{t('s19_no_guests_yet')}</p>
             ) : (
               selectedHosting.guests.map(g => (
-                <Card key={g.id} className="p-3 bg-warm-50">
-                  <div className="flex justify-between items-center gap-3">
+                <Card key={g.id} className="p-4 bg-white border border-warm-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                  {/* Top area: Profile + Name */}
+                  <div className="flex items-center gap-3 pb-3 mb-3 border-b border-warm-50">
                     <button
                       onClick={() => { setGuestSourceHosting(selectedHosting); setSelectedHosting(null); setSelectedGuest(g); }}
-                      className="flex items-center gap-2.5 min-w-0 flex-1 text-start group"
+                      className="flex items-center gap-3 min-w-0 flex-1 text-start group"
                     >
                       <div
-                        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold overflow-hidden"
+                        className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold overflow-hidden shadow-inner"
                         style={{ background: g.avatarColor || '#6f8f72' }}
                       >
                         {g.profile_img_url ? (
@@ -586,23 +587,33 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-brand-600 text-sm group-hover:underline underline-offset-2 truncate">{g.name}</p>
-                        {g.unit && <p className="text-xs text-warm-500 mt-0.5">{t('s19_unit')} {g.unit}</p>}
+                        <p className="font-bold text-gray-800 text-sm group-hover:text-brand-600 group-hover:underline underline-offset-2 truncate">
+                          {g.name}
+                        </p>
+                        {g.unit ? (
+                          <p className="text-xs text-warm-500 mt-0.5">{t('s19_unit')} {g.unit}</p>
+                        ) : (
+                          <p className="text-xs text-warm-400 mt-0.5">חייל משרת</p>
+                        )}
                       </div>
                     </button>
+                  </div>
+
+                  {/* Bottom area: Actions */}
+                  <div className="flex gap-2">
                     <a
                       href={`https://wa.me/972${(g.phone || '').replace(/\D/g, '').replace(/^0/, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-[#1ebd5b] transition-colors flex-shrink-0"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] text-white py-2 px-3 rounded-xl text-xs font-bold hover:bg-[#1ebd5b] transition-colors"
                     >
                       <span>💬</span> WhatsApp
                     </a>
                     <button
                       onClick={() => { setSelectedHosting(null); setSelectedRecipeGuest(g); }}
-                      className="flex items-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex-shrink-0"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors"
                     >
-                      🍽️ מתכונים
+                      <span>🍽️</span> הצעה למתכונים
                     </button>
                   </div>
                 </Card>

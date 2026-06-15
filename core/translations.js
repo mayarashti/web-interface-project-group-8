@@ -533,7 +533,7 @@ const T = {
     pref_prompt_decline: 'לא עכשיו',
 
     /* Recipe Recommendations (family dashboard only) */
-    recipe_btn: '🍽️ מתכונים',
+    recipe_btn: 'הצעה למתכונים',
     recipe_modal_title: (name) => `מתכונים מומלצים עבור ${name}`,
     recipe_loading: 'מייצר המלצות מתכונים...',
     recipe_error: 'לא הצלחנו לייצר מתכונים. ודאו שהשרת פעיל ונסו שוב.',
