@@ -1,0 +1,4 @@
+groq
+pydantic
+tenacity
+python-dotenv

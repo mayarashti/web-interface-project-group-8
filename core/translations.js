@@ -531,6 +531,23 @@ const T = {
     pref_prompt_first_req_sub: 'כדי לשלוח בקשת אירוח, יש למלא את שאלון ההעדפות קודם. ללא מילוי השאלון לא ניתן להגיש בקשה.',
     pref_prompt_host_sub: 'כדי לפתוח אירוח חדש, יש למלא את שאלון ההעדפות קודם. ללא מילוי השאלון לא ניתן לפתוח אירוח.',
     pref_prompt_decline: 'לא עכשיו',
+
+    /* Recipe Recommendations (family dashboard only) */
+    recipe_btn: '🍽️ מתכונים',
+    recipe_modal_title: (name) => `מתכונים מומלצים עבור ${name}`,
+    recipe_loading: 'מייצר המלצות מתכונים...',
+    recipe_error: 'לא הצלחנו לייצר מתכונים. ודאו שהשרת פעיל ונסו שוב.',
+    recipe_retry: 'נסה שוב',
+    recipe_ingredients: '🧂 מרכיבים',
+    recipe_steps: '👨‍🍳 הוראות הכנה',
+    recipe_server_off: 'שרת המתכונים אינו פעיל',
+    recipe_server_off_desc: 'הפעל את שרת ה-LLM על פורט 8000 כדי לקבל המלצות מתכונים מותאמות אישית.',
+    recipe_alt_btn: '🔄 מתכון שונה',
+    recipe_alt_loading: 'מחפש מתכון אחר...',
+    recipe_no_prefs: 'ארוחת שבת כללית',
+    recipe_pref_label: 'העדפות: ',
+    recipe_close: 'סגור',
+    recipe_generated_for: 'הומלץ עבור',
   },
 
   /* ══════════════════════════════════════════
@@ -925,6 +942,23 @@ const T = {
     pref_prompt_first_req_sub: 'To submit an accommodation request, you need to fill out the preferences questionnaire first. Without it, you cannot send a request.',
     pref_prompt_host_sub: 'To create a new hosting, you need to fill out the preferences questionnaire first. Without it, you cannot open a hosting.',
     pref_prompt_decline: 'Not now',
+
+    /* Recipe Recommendations (family dashboard only) */
+    recipe_btn: '🍽️ Recipes',
+    recipe_modal_title: (name) => `Recipe Ideas for ${name}`,
+    recipe_loading: 'Generating recipe recommendations...',
+    recipe_error: 'Could not generate recipes. Make sure the server is running and try again.',
+    recipe_retry: 'Try Again',
+    recipe_ingredients: '🧂 Ingredients',
+    recipe_steps: '👨‍🍳 Preparation Steps',
+    recipe_server_off: 'Recipe server is offline',
+    recipe_server_off_desc: 'Start the LLM server on port 8000 to get personalized recipe recommendations.',
+    recipe_alt_btn: '🔄 Different Recipe',
+    recipe_alt_loading: 'Finding another recipe...',
+    recipe_no_prefs: 'General Shabbat meal',
+    recipe_pref_label: 'Preferences: ',
+    recipe_close: 'Close',
+    recipe_generated_for: 'Recommended for',
   }
 
     /* Migrated Host Screens */
