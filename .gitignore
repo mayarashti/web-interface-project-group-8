@@ -9,6 +9,7 @@ functions/.secret.local
 
 # Local dev / emulator artifacts
 .static-server.cjs
+maps-key-test.html
 firebase-debug.log
 firebase-debug.*.log
 *-debug.log
