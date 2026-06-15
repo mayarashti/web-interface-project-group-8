@@ -16,6 +16,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const functions = firebase.functions();
+const storage = firebase.storage();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // During local development, route Cloud Functions calls to the local emulator.
@@ -29,4 +30,5 @@ if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
 window.auth = auth;
 window.db = db;
 window.functions = functions;
+window.storage = storage;
 window.googleProvider = googleProvider;

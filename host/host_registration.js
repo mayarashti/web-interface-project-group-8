@@ -1,6 +1,6 @@
 /* S16 Host Registration Wizard (3 Steps) */
 
-var { useState, useEffect } = React;
+var { useState, useEffect, useRef } = React;
 
 function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences, onInfo }) {
   const { t } = useLang();
@@ -10,8 +10,20 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
 
   const [customLanguages, setCustomLanguages] = useState([]);
   const [newLanguageText, setNewLanguageText] = useState('');
+  const fileInputRef = useRef(null);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setData(prev => ({ 
+        ...prev, 
+        hostFile: file, 
+        hostPreview: URL.createObjectURL(file) 
+      }));
+    }
+  };
 
   useEffect(() => {
     if (!data.hostLanguages) {
@@ -278,10 +290,25 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
 
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_photo_label')}</label>
-              <div className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors">
-                <span className="text-3xl mb-2">📷</span>
-                <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
-                <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange} 
+              />
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
+                style={data.hostPreview ? { backgroundImage: `url(${data.hostPreview})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
+              >
+                {!data.hostPreview && (
+                  <>
+                    <span className="text-3xl mb-2">📷</span>
+                    <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
+                    <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>

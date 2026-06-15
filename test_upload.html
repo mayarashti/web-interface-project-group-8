@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <!-- Initialize Firebase -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzbphGj57tXjorZ-QuitbLi2HfqGaBXeI",
+      authDomain: "memulaim-88a26.firebaseapp.com",
+      projectId: "memulaim-88a26",
+      storageBucket: "memulaim-88a26.firebasestorage.app",
+      messagingSenderId: "682248918203",
+      appId: "1:682248918203:web:2793453fff33fbf2a2459e",
+      measurementId: "G-Y67N0SXRVG"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+</head>
+<body>
+  <div id="status">Starting...</div>
+  <script>
+    async function runTest() {
+      const statusDiv = document.getElementById('status');
+      try {
+        // 1. Create a temporary user
+        const email = 'testuser_' + Date.now() + '@example.com';
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, 'password123');
+        const uid = cred.user.uid;
+        statusDiv.innerHTML += `<br>Created user: ${uid}`;
+
+        // 2. Create dummy file blob
+        const blob = new Blob(['hello world'], { type: 'text/plain' });
+        
+        // 3. Try to upload to own folder
+        const myPath = `profile_images/soldiers/${uid}/test.txt`;
+        const myRef = firebase.storage().ref().child(myPath);
+        await myRef.put(blob);
+        statusDiv.innerHTML += `<br>Upload to own path SUCCESS`;
+
+        // 4. Try to download it
+        const url = await myRef.getDownloadURL();
+        statusDiv.innerHTML += `<br>Download SUCCESS: ${url}`;
+
+        // 5. Try to upload to someone else's folder
+        const otherPath = `profile_images/soldiers/HACKER_UID/test.txt`;
+        const otherRef = firebase.storage().ref().child(otherPath);
+        let hackerFailed = false;
+        try {
+          await otherRef.put(blob);
+        } catch(e) {
+          hackerFailed = true;
+          statusDiv.innerHTML += `<br>Upload to other path FAILED as expected: ${e.message}`;
+        }
+        
+        if (!hackerFailed) {
+          throw new Error('Upload to other path succeeded when it should have failed!');
+        }
+
+        statusDiv.innerHTML += `<br><b>ALL TESTS PASSED</b>`;
+      } catch (err) {
+        statusDiv.innerHTML += `<br><b>TEST FAILED:</b> ${err.message}`;
+      }
+    }
+    
+    setTimeout(runTest, 1000);
+  </script>
+</body>
+</html>

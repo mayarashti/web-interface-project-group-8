@@ -197,7 +197,15 @@ function App() {
       }
       if (uid) {
         try {
-          const toSave = { ...formData, soldierPreferencesSkipped: skipped };
+          let profileUrl = null;
+          if (formData.avatarFile) {
+            profileUrl = await window.DB.uploadProfileImage(uid, formData.avatarFile, 'soldiers');
+          }
+          
+          const { avatarFile, avatarPreview, ...restData } = formData;
+          const toSave = { ...restData, soldierPreferencesSkipped: skipped };
+          if (profileUrl) toSave.profile_img_url = profileUrl;
+
           await window.DB.saveSoldierProfile(uid, toSave);
           setFormData(prev => ({ ...prev, role: 'soldier', soldierPreferencesSkipped: skipped }));
           go(nextScreen);
@@ -229,8 +237,18 @@ function App() {
       }
       if (uid) {
         try {
-          const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, ...hostFields } = formData;
+          let profileUrl = null;
+          if (formData.hostFile) {
+            profileUrl = await window.DB.uploadProfileImage(uid, formData.hostFile, 'families');
+          }
+
+          const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, hostFile, hostPreview, ...hostFields } = formData;
           const toSave = { ...hostFields, hostPreferencesSkipped: skipped };
+          if (profileUrl) {
+            toSave.profile_img_url = profileUrl;
+            toSave.img_urls = [profileUrl];
+          }
+
           await window.DB.saveFamilyProfile(uid, toSave);
           setFormData(prev => ({ ...prev, role: 'host', hostPreferencesSkipped: skipped }));
           go(nextScreen);

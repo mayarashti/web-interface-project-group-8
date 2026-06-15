@@ -301,7 +301,7 @@ function FamilyInfoCard({ family, onClose }) {
     <aside className="family-info-card">
       <div className="family-info-card-header">
         <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor || '#f3e2d3' }}>
-          <img src={familyAvatarUrl(family.imageColor, family.id)} alt={family.name} />
+          <img src={family.profile_img_url || (family.img_urls && family.img_urls[0]) || familyAvatarUrl(family.imageColor, family.id)} alt={family.name} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
         </div>
         <div className="min-w-0 flex-1">
           <h2>{family.name}</h2>
@@ -389,7 +389,7 @@ function FamilyStrip({ families, selectedId, onSelect, onHover }) {
           >
             <div className="family-strip-avatar">
               <div className="family-strip-avatar-inner">
-                <img src={familyAvatarUrl(fam.imageColor, fam.id)} alt={fam.name} className="family-strip-image" />
+                <img src={fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)} alt={fam.name} className="family-strip-image" style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
               </div>
             </div>
             <p>{fam.name}</p>
@@ -433,7 +433,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 
       const makeIcon = (selected, hovered) => L.divIcon({
         className: '',
-        html: `<div class="host-marker-outer${selected ? ' selected' : hovered ? ' hovered' : ''}"><img class="host-marker-inner" src="${familyAvatarUrl(fam.imageColor, fam.id)}" alt="${fam.name}"/></div>`,
+        html: `<div class="host-marker-outer${selected ? ' selected' : hovered ? ' hovered' : ''}"><img class="host-marker-inner" src="${fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)}" style="object-fit:cover; width:100%; height:100%; border-radius:50%;" alt="${fam.name}"/></div>`,
         iconSize: [56, 56],
         iconAnchor: [28, 56],
         popupAnchor: [0, -52],
@@ -886,7 +886,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
 
 /* S21SoldierProfile — Soldier profile and request dashboard */
-var { useState } = React;
+var { useState, useRef } = React;
 
 function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest, onDeleteRequest, onViewMatches, onLogout }) {
   const { t, lang } = useLang();
@@ -902,13 +902,34 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
   });
 
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef(null);
 
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm(prev => ({ 
+        ...prev, 
+        avatarFile: file, 
+        avatarPreview: URL.createObjectURL(file) 
+      }));
+    }
+  };
+
   const handleSave = async () => {
     const hasPending = !!data.pendingNewRequest;
+    
+    // Upload image if present
+    let profileUrl = null;
+    if (form.avatarFile && window.DB && data.uid) {
+      profileUrl = await window.DB.uploadProfileImage(data.uid, form.avatarFile, 'soldiers');
+    }
+
+    const { avatarFile, avatarPreview, ...restForm } = form;
     const updatedData = {
-      ...form,
+      ...restForm,
+      ...(profileUrl ? { profile_img_url: profileUrl } : {}),
       ...(hasPending ? { soldierPreferencesSkipped: false, pendingNewRequest: false } : {}),
     };
 
@@ -1065,6 +1086,23 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         {/* Personal Details Section */}
         <Card className="space-y-4">
           <h2 className="section-label">{t('s12_personal')}</h2>
+          
+          <div className="flex justify-center mb-6 mt-2">
+            <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
+              {form.avatarPreview || data.profile_img_url ? (
+                <img src={form.avatarPreview || data.profile_img_url} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                  <span className="text-xl text-warm-500 font-bold">{(form.fullName || '?')[0]}</span>
+                </div>
+              )}
+              <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs">✎</span>
+              </div>
+            </div>
+          </div>
+
           <Input label={t('s3_first')} value={form.fullName} onChange={setF('fullName')} />
           <Input label={t('s3_phone')} value={form.phone} onChange={setF('phone')} />
         </Card>
@@ -1169,6 +1207,8 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               capacity,
               occupied,
               compromise_notes: match.compromise_notes,
+              profile_img_url: d.profile_img_url,
+              img_urls: d.img_urls,
             });
           });
         }

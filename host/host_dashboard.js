@@ -33,10 +33,14 @@ function SoldierProfileModal({ guest, onClose }) {
         {/* Avatar + unit + group — compact horizontal row */}
         <div className="flex items-center gap-3 pb-3 border-b border-warm-100">
           <div
-            className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-sm"
+            className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-sm overflow-hidden"
             style={{ background: guest.avatarColor || '#6f8f72' }}
           >
-            {(guest.name || '?')[0]}
+            {guest.profile_img_url ? (
+              <img src={guest.profile_img_url} alt={guest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              (guest.name || '?')[0]
+            )}
           </div>
           <div>
             <p className="text-xs text-warm-500">
@@ -330,10 +334,14 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                       className="flex items-center gap-2.5 min-w-0 flex-1 text-start group"
                     >
                       <div
-                        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold"
+                        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-bold overflow-hidden"
                         style={{ background: g.avatarColor || '#6f8f72' }}
                       >
-                        {(g.name || '?')[0]}
+                        {g.profile_img_url ? (
+                          <img src={g.profile_img_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          (g.name || '?')[0]
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-brand-600 text-sm group-hover:underline underline-offset-2 truncate">{g.name}</p>
@@ -569,8 +577,20 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
   const [saved, setSaved] = useState(false);
   const [newLanguageText, setNewLanguageText] = useState('');
   const [customLanguages, setCustomLanguages] = useState([]);
+  const fileInputRef = useRef(null);
 
   const setF = (key) => (val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm(prev => ({ 
+        ...prev, 
+        hostFile: file, 
+        hostPreview: URL.createObjectURL(file) 
+      }));
+    }
+  };
 
   const staticLanguages = [
     { id: 'he', label: t('lang_he') },
@@ -595,8 +615,16 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
 
   const handleSave = async () => {
     const hasPending = !!data.pendingNewHosting;
+
+    let profileUrl = null;
+    if (form.hostFile && window.DB && data.uid) {
+      profileUrl = await window.DB.uploadProfileImage(data.uid, form.hostFile, 'families');
+    }
+
+    const { hostFile, hostPreview, ...restForm } = form;
     const updatedData = {
-      ...form,
+      ...restForm,
+      ...(profileUrl ? { profile_img_url: profileUrl, img_urls: [profileUrl] } : {}),
       ...(hasPending ? { hostPreferencesSkipped: false, pendingNewHosting: false } : {}),
     };
 
@@ -719,10 +747,29 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
 
         {/* Vibe / bio */}
         <Card className="p-5 space-y-3">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
             {t('s16_3_title')}
           </h2>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_vibe_label')}</label>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_photo_label')}</label>
+            <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
+              style={(form.hostPreview || data.profile_img_url) ? { backgroundImage: `url(${form.hostPreview || data.profile_img_url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
+            >
+              {!(form.hostPreview || data.profile_img_url) && (
+                <>
+                  <span className="text-3xl mb-2">📷</span>
+                  <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
+                  <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <label className="block text-sm font-semibold text-gray-800 mb-2 mt-4">{t('s16_vibe_label')}</label>
           <textarea
             value={form.hostVibe}
             onChange={e => setF('hostVibe')(e.target.value)}

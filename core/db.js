@@ -3,6 +3,20 @@
 // Assumes window.db and window.auth are initialized from core/firebase.js
 
 window.DB = {
+  // Storage
+  async uploadProfileImage(uid, file, role) {
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `profile_images/${role}/${uid}/profile_${Date.now()}.${ext}`;
+      const storageRef = window.storage.ref().child(filePath);
+      await storageRef.put(file);
+      return await storageRef.getDownloadURL();
+    } catch (e) {
+      console.error("Error uploading profile image:", e);
+      return null;
+    }
+  },
+
   // Soldiers
   async getSoldierProfile(uid) {
     try {

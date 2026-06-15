@@ -78,12 +78,24 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
 }
 
 /* S7Preferences — Consolidated preferences page */
-var { useState } = React;
+var { useState, useRef } = React;
 
 function S7Preferences({ data, setData, onNext, onBack }) {
   const { t, lang } = useLang();
+  const fileInputRef = useRef(null);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setData(prev => ({ 
+        ...prev, 
+        avatarFile: file, 
+        avatarPreview: URL.createObjectURL(file) 
+      }));
+    }
+  };
 
   const langOpts = [
     { value: 'he',    label: t('lang_he')    },
@@ -192,18 +204,25 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           <p className="text-sm font-semibold text-warm-600 mb-4">{t('s11_title')}</p>
 
           <div className="flex justify-center mb-6">
-            <div onClick={() => {
-              const colors = ['#b86442', '#6f8f72', '#687076', '#d59f83', '#5e7b61'];
-              const col = colors[Math.floor(Math.random() * colors.length)];
-              set('avatarPreview')(col);
-            }} className="relative w-20 h-20 rounded-full cursor-pointer group">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={handleFileChange} 
+            />
+            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
               {data.avatarPreview ? (
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
-                  style={{ background: data.avatarPreview }}
-                >
-                  {(data.fullName || '?')[0]}
-                </div>
+                data.avatarPreview.startsWith('blob:') ? (
+                  <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
+                ) : (
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                    style={{ background: data.avatarPreview }}
+                  >
+                    {(data.fullName || '?')[0]}
+                  </div>
+                )
               ) : (
                 <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
                   <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
