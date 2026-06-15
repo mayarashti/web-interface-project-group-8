@@ -587,7 +587,8 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
       setForm(prev => ({ 
         ...prev, 
         hostFile: file, 
-        hostPreview: URL.createObjectURL(file) 
+        hostPreview: URL.createObjectURL(file),
+        removePhoto: false
       }));
     }
   };
@@ -621,12 +622,20 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
       profileUrl = await window.DB.uploadProfileImage(data.uid, form.hostFile, 'families');
     }
 
-    const { hostFile, hostPreview, ...restForm } = form;
+    const { hostFile, hostPreview, removePhoto, ...restForm } = form;
     const updatedData = {
       ...restForm,
       ...(profileUrl ? { profile_img_url: profileUrl, img_urls: [profileUrl] } : {}),
       ...(hasPending ? { hostPreferencesSkipped: false, pendingNewHosting: false } : {}),
     };
+
+    if (removePhoto && window.DB && !profileUrl) {
+      if (data.profile_img_url) {
+        await window.DB.deleteProfileImage(data.profile_img_url);
+      }
+      updatedData.profile_img_url = null;
+      updatedData.img_urls = [];
+    }
 
     if (window.DB && data.uid) {
       try {
@@ -757,9 +766,9 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
             <div 
               onClick={() => fileInputRef.current?.click()}
               className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
-              style={(form.hostPreview || data.profile_img_url) ? { backgroundImage: `url(${form.hostPreview || data.profile_img_url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
+              style={((form.hostPreview || data.profile_img_url) && !form.removePhoto) ? { backgroundImage: `url(${form.hostPreview || data.profile_img_url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
             >
-              {!(form.hostPreview || data.profile_img_url) && (
+              {!((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
                 <>
                   <span className="text-3xl mb-2">📷</span>
                   <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
@@ -767,6 +776,16 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
                 </>
               )}
             </div>
+            {((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
+              <div className="mt-2 flex justify-end">
+                <button 
+                  onClick={() => setForm(prev => ({ ...prev, removePhoto: true, hostFile: null, hostPreview: null }))}
+                  className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1.5 rounded-lg border border-red-100"
+                >
+                  {t('remove_photo') || 'הסר תמונה'}
+                </button>
+              </div>
+            )}
           </div>
 
           <label className="block text-sm font-semibold text-gray-800 mb-2 mt-4">{t('s16_vibe_label')}</label>

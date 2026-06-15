@@ -321,11 +321,11 @@ function S13Pending({ onHome, autoApprove }) {
   }, []);
 
   React.useEffect(() => {
-    if (approved) {
+    if (approved && autoApprove) {
       const tm = setTimeout(() => autoApprove(), 1200);
       return () => clearTimeout(tm);
     }
-  }, [approved]);
+  }, [approved, autoApprove]);
 
   return (
     <div className="screen-enter min-h-screen flex flex-col">

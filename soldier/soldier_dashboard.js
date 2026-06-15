@@ -912,7 +912,8 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
       setForm(prev => ({ 
         ...prev, 
         avatarFile: file, 
-        avatarPreview: URL.createObjectURL(file) 
+        avatarPreview: URL.createObjectURL(file),
+        removePhoto: false
       }));
     }
   };
@@ -926,12 +927,19 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
       profileUrl = await window.DB.uploadProfileImage(data.uid, form.avatarFile, 'soldiers');
     }
 
-    const { avatarFile, avatarPreview, ...restForm } = form;
+    const { avatarFile, avatarPreview, removePhoto, ...restForm } = form;
     const updatedData = {
       ...restForm,
       ...(profileUrl ? { profile_img_url: profileUrl } : {}),
       ...(hasPending ? { soldierPreferencesSkipped: false, pendingNewRequest: false } : {}),
     };
+
+    if (removePhoto && window.DB && !profileUrl) {
+      if (data.profile_img_url) {
+        await window.DB.deleteProfileImage(data.profile_img_url);
+      }
+      updatedData.profile_img_url = null;
+    }
 
     if (window.DB && data.uid) {
       try {
@@ -1087,10 +1095,10 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         <Card className="space-y-4">
           <h2 className="section-label">{t('s12_personal')}</h2>
           
-          <div className="flex justify-center mb-6 mt-2">
+          <div className="flex flex-col items-center justify-center mb-6 mt-2">
             <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
-              {form.avatarPreview || data.profile_img_url ? (
+            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group mb-2">
+              {(form.avatarPreview || data.profile_img_url) && !form.removePhoto ? (
                 <img src={form.avatarPreview || data.profile_img_url} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar" />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
@@ -1101,6 +1109,14 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
                 <span className="text-white text-xs">✎</span>
               </div>
             </div>
+            {((form.avatarPreview || data.profile_img_url) && !form.removePhoto) && (
+              <button 
+                onClick={() => setForm(prev => ({ ...prev, removePhoto: true, avatarFile: null, avatarPreview: null }))}
+                className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1 rounded-full border border-red-100 mt-1"
+              >
+                {t('remove_photo') || 'הסר תמונה'}
+              </button>
+            )}
           </div>
 
           <Input label={t('s3_first')} value={form.fullName} onChange={setF('fullName')} />

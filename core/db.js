@@ -17,6 +17,18 @@ window.DB = {
     }
   },
 
+  async deleteProfileImage(url) {
+    if (!url) return false;
+    try {
+      const storageRef = window.storage.refFromURL(url);
+      await storageRef.delete();
+      return true;
+    } catch (e) {
+      console.error("Error deleting profile image:", e);
+      return false;
+    }
+  },
+
   // Soldiers
   async getSoldierProfile(uid) {
     try {
