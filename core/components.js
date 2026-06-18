@@ -635,7 +635,7 @@ function SectionTitle({ title, sub }) {
 function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo }) {
   const { lang, setLang, t } = useLang();
   return (
-    <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-600)' }}>
+    <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
       <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
 
         {/* Left — Language toggle + info + profile / logout / extra actions */}
