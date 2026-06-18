@@ -34,6 +34,17 @@
       "package.json",
       "package-lock.json",
       "skills-lock.json"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|html|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
     ]
   }
 }
