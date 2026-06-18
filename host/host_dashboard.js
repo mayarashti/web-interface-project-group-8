@@ -1,6 +1,209 @@
 /* S19 Host Home (Unified Dashboard) */
 
-var { useState, useEffect, useCallback } = React;
+var { useState, useEffect, useCallback, useRef } = React;
+
+// Clean line-art SVG icons
+const CalendarIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const ClockIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+const MapPinIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const UsersIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const UserIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const EditIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
+const TrashIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
+const MessageSquareIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const ChefHatIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 18H18A2 2 0 0 0 20 16V14C20 10 16 9 15 9C15 6 12 5 9 6C7 6 5.5 8 5 9C4 9 4 10 4 14V16A2 2 0 0 0 6 18Z" />
+    <path d="M6 17V21H18V17" />
+  </svg>
+);
+
+const UtensilsIcon = ({ className = "w-5 h-5", strokeWidth = 2 }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4.79 13.47a3 3 0 0 0 1.25 1.8 3.32 3.32 0 0 0 2.22.73 3 3 0 0 0 2.22-.73 3 3 0 0 0 1.25-1.8L13 3H3z" />
+    <path d="M9 3v10" />
+    <path d="M19 15v7" />
+    <path d="M20 3v12h-3V3" />
+    <path d="M7 16v6" />
+  </svg>
+);
+
+const CrownIcon = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+    <path d="M3 20h18" />
+  </svg>
+);
+
+const SproutIcon = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 22a8 8 0 0 1 8-8h4a8 8 0 0 1 8 8" />
+    <path d="M12 2v12" />
+    <path d="M12 8c2.9-3 4-5 4-5s-1 2-4 5z" />
+    <path d="M12 8c-2.9-3-4-5-4-5s1 2 4 5z" />
+  </svg>
+);
+
+const RotateCcwIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 4v6h6" />
+    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+  </svg>
+);
+
+const CarIcon = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="3" width="22" height="13" rx="2" ry="2" />
+    <path d="M5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+    <path d="M19 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+    <path d="M5 16V9h14v7" />
+    <path d="M9 16h6" />
+  </svg>
+);
+
+const BedIcon = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 4v16" />
+    <path d="M2 8h18a2 2 0 0 1 2 2v10" />
+    <path d="M2 17h20" />
+    <path d="M6 8v4" />
+  </svg>
+);
+
+const AlertTriangleIcon = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const SendIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+);
+
+const ActivityIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
+
+const renderAllergyBadge = (allergyKey, lang = 'he') => {
+  const labels = {
+    gluten: lang === 'he' ? 'ללא גלוטן' : 'Gluten Free',
+    lactose: lang === 'he' ? 'ללא לקטוז' : 'Lactose Free',
+    nuts: lang === 'he' ? 'ללא אגוזים' : 'Nut Free',
+    peanuts: lang === 'he' ? 'ללא בוטנים' : 'Peanut Free',
+    veg: lang === 'he' ? 'צמחוני' : 'Vegetarian',
+    vegan: lang === 'he' ? 'טבעוני' : 'Vegan',
+    fish: lang === 'he' ? 'ללא דגים' : 'Fish Free',
+    other: lang === 'he' ? 'אלרגיה' : 'Allergy'
+  };
+  
+  const label = labels[allergyKey] || allergyKey;
+  let icon = <AlertTriangleIcon className="w-2.5 h-2.5 text-amber-600" />;
+  
+  if (allergyKey === 'veg' || allergyKey === 'vegan') {
+    icon = <SproutIcon className="w-2.5 h-2.5 text-green-600" />;
+  } else if (allergyKey === 'gluten') {
+    icon = <SproutIcon className="w-2.5 h-2.5 text-amber-600" />;
+  }
+  
+  return (
+    <span key={allergyKey} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-lg shadow-2xs">
+      {icon}
+      <span>{label}</span>
+    </span>
+  );
+};
+
+const renderKosherBadge = (kosherVal, lang = 'he') => {
+  switch (kosherVal) {
+    case 'mehadrin':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-gray-800 font-bold">
+          <CrownIcon className="w-4 h-4 text-brand-600" />
+          <span>{lang === 'he' ? 'מהדרין' : 'Mehadrin'}</span>
+        </span>
+      );
+    case 'separated':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-gray-800 font-bold">
+          <SproutIcon className="w-4 h-4 text-brand-600" />
+          <span>{lang === 'he' ? 'כשר' : 'Kosher'}</span>
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 text-gray-800 font-bold">
+          <UtensilsIcon className="w-4 h-4 text-brand-400" strokeWidth={2.2} />
+          <span>{lang === 'he' ? 'רגיל' : 'Regular'}</span>
+        </span>
+      );
+  }
+};
 
 /* ── Recipe Recommendations (family-side only) ── */
 
@@ -22,22 +225,35 @@ function buildPreferences(guest) {
 }
 
 function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
+  const { t, lang } = useLang();
   const [showSteps, setShowSteps] = useState(false);
-  const emojiForRecipe = ['🍲', '🥘', '🍗', '🥗', '🍞', '🥙', '🍛'][recipe.recipe_id % 7];
   const [imgError, setImgError] = useState(false);
 
+  // Programmatic difficulty calculation
+  const stepsCount = recipe.instructions ? recipe.instructions.length : 0;
+  const difficultyText = stepsCount <= 4 
+    ? (lang === 'he' ? 'קל' : 'Easy') 
+    : stepsCount <= 8 
+      ? (lang === 'he' ? 'בינוני' : 'Medium') 
+      : (lang === 'he' ? 'מאתגר' : 'Challenging');
+
+  // Ingredients summary
+  const ingredientsSummary = recipe.ingredients && recipe.ingredients.length > 0
+    ? recipe.ingredients.slice(0, 3).join(', ') + (recipe.ingredients.length > 3 ? '...' : '')
+    : '';
+
   return (
-    <div className="recipe-card mb-4">
+    <div className="recipe-card mb-4 border border-warm-200/80 shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow bg-white">
       {recipe.image_url && !imgError ? (
         <img
-          className="recipe-card-img"
+          className="recipe-card-img h-40 w-full object-cover"
           src={recipe.image_url}
           alt={recipe.title}
           onError={() => setImgError(true)}
         />
       ) : (
-        <div className="recipe-card-img-placeholder">
-          {emojiForRecipe}
+        <div className="recipe-card-img-placeholder h-40 bg-gradient-to-br from-brand-50 to-warm-100 flex items-center justify-center">
+          <ChefHatIcon className="w-12 h-12 text-brand-400" />
         </div>
       )}
       <div className="p-4">
@@ -45,61 +261,102 @@ function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="font-bold text-gray-900 text-base leading-tight flex-1">{recipe.title}</h3>
           <button
-            className="recipe-alt-btn flex-shrink-0"
+            className="recipe-alt-btn flex-shrink-0 flex items-center gap-1.5"
             disabled={refreshing}
             onClick={() => onRefresh(recipe.recipe_id - 1)}
           >
-            {refreshing
-              ? <><span className="recipe-spin">🔄</span> מחפש...</>
-              : <>🔄 מתכון שונה</>
-            }
+            <RotateCcwIcon className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{lang === 'he' ? 'שנה' : 'Change'}</span>
           </button>
         </div>
 
         {/* Description */}
-        <p className="text-sm text-warm-600 leading-relaxed mb-3">{recipe.description}</p>
+        <p className="text-xs text-warm-600 leading-relaxed mb-3">{recipe.description}</p>
+
+        {/* Prep Time & Difficulty Row */}
+        <div className="grid grid-cols-2 gap-2 mb-3 bg-warm-50/50 p-2.5 rounded-xl border border-warm-100/50 text-xs">
+          <div>
+            <span className="text-[10px] text-warm-400 font-bold flex items-center gap-1 mb-0.5">
+              <ClockIcon className="w-3.5 h-3.5 text-warm-400" />
+              <span>{lang === 'he' ? 'זמן הכנה' : 'Prep Time'}</span>
+            </span>
+            <span className="font-bold text-gray-800">{recipe.readyInMinutes || 30} {lang === 'he' ? 'דק׳' : 'mins'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-warm-400 font-bold flex items-center gap-1 mb-0.5">
+              <ActivityIcon className="w-3.5 h-3.5 text-warm-400" />
+              <span>{lang === 'he' ? 'רמת קושי' : 'Difficulty'}</span>
+            </span>
+            <span className="font-bold text-gray-800">{difficultyText}</span>
+          </div>
+        </div>
 
         {/* Matching prefs tags */}
         {recipe.matching_preferences && recipe.matching_preferences.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {recipe.matching_preferences.map((pref, i) => (
-              <span key={i} className="recipe-ingredient-pill">{pref}</span>
+              <span key={i} className="recipe-ingredient-pill bg-brand-50 border-brand-100 text-brand-700 text-[10px] px-2 py-0.5 rounded-full font-bold">{pref}</span>
             ))}
           </div>
         )}
 
-        {/* Ingredients */}
-        <div className="mb-3">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">🧂 מרכיבים</p>
-          <ul className="space-y-1">
-            {recipe.ingredients.map((ing, i) => (
-              <li key={i} className="text-sm text-gray-700 flex gap-2 items-start">
-                <span className="text-brand-400 mt-0.5 flex-shrink-0">•</span>
-                <span>{ing}</span>
-              </li>
-            ))}
-          </ul>
+        {/* Ingredients Summary */}
+        <div className="mb-3 text-xs">
+          <span className="text-[10px] text-warm-400 font-bold flex items-center gap-1 mb-0.5">
+            <UtensilsIcon className="w-3.5 h-3.5 text-warm-400" strokeWidth={2.2} />
+            <span>{lang === 'he' ? 'רכיבים עיקריים' : 'Main Ingredients'}</span>
+          </span>
+          <p className="text-gray-700 font-medium truncate">{ingredientsSummary}</p>
         </div>
 
-        {/* Steps — collapsible */}
+        {/* Details Toggle Button */}
         <button
           onClick={() => setShowSteps(v => !v)}
-          className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors py-1"
+          className="w-full flex items-center justify-center gap-1.5 bg-warm-50 hover:bg-warm-100 border border-warm-200 text-xs font-bold text-gray-700 transition-colors py-2 rounded-xl"
         >
-          <span>👨‍🍳 הוראות הכנה</span>
-          <span className="text-warm-400">{showSteps ? '▲' : '▼'}</span>
+          <span className="inline-flex items-center gap-1">
+            <ChefHatIcon className="w-3.5 h-3.5 text-gray-500" />
+            <span>{showSteps ? (lang === 'he' ? 'סגור פרטי מתכון' : 'Hide Recipe Details') : (lang === 'he' ? 'צפה במתכון המלא' : 'View Full Recipe')}</span>
+          </span>
+          <span className="text-warm-400 text-[9px]">{showSteps ? '▲' : '▼'}</span>
         </button>
+
         {showSteps && (
-          <ol className="mt-2 space-y-2 border-t border-warm-100 pt-3">
-            {recipe.instructions.map((step, i) => (
-              <li key={i} className="flex gap-2.5 text-sm text-gray-700 items-start">
-                <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="leading-relaxed">{step}</span>
-              </li>
-            ))}
-          </ol>
+          <div className="mt-3 space-y-4 border-t border-warm-100 pt-3">
+            {/* Ingredients Full List */}
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <UtensilsIcon className="w-3.5 h-3.5 text-gray-400" strokeWidth={2.2} />
+                <span>{lang === 'he' ? 'כל המרכיבים' : 'All Ingredients'}</span>
+              </p>
+              <ul className="space-y-1">
+                {recipe.ingredients.map((ing, i) => (
+                  <li key={i} className="text-sm text-gray-700 flex gap-2 items-start">
+                     <span className="text-brand-400 mt-1 flex-shrink-0">•</span>
+                     <span>{ing}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Steps */}
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <ChefHatIcon className="w-3.5 h-3.5 text-gray-400" />
+                <span>{lang === 'he' ? 'הוראות הכנה' : 'Instructions'}</span>
+              </p>
+              <ol className="space-y-2">
+                {recipe.instructions.map((step, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm text-gray-700 items-start">
+                    <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed flex-1">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -107,6 +364,7 @@ function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
 }
 
 function RecipeModal({ guest, host, onClose }) {
+  const { t, lang } = useLang();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -179,34 +437,74 @@ function RecipeModal({ guest, host, onClose }) {
     }
   };
 
-  const displayPrefs = [];
-  if (guest?.kosher) displayPrefs.push(guest.kosher === 'mehadrin' ? 'כשרות מהדרין' : 'כשר');
-  (guest?.allergies || []).forEach(a => {
-    const labels = { gluten: 'ללא גלוטן', lactose: 'ללא לקטוז', nuts: 'ללא אגוזים', peanuts: 'ללא בוטנים', veg: 'צמחוני', vegan: 'טבעוני' };
-    if (labels[a]) displayPrefs.push(labels[a]);
-  });
-
   if (!guest) return null;
+
+  const favs = guest.favoriteFoods || [];
+  const dislikes = guest.dislikedFoods || [];
 
   return (
     <Modal
       isOpen={!!guest}
       onClose={onClose}
-      title={`🍽️ מתכונים עבור ${guest.name}`}
+      title={lang === 'he' ? `המלצות מתכונים עבור ${guest.name}` : `Recipe Recommendations for ${guest.name}`}
       className="max-w-lg max-h-[92vh]"
     >
-      <div className="space-y-1">
-        {/* Preferences badge row */}
-        <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-warm-100">
-          {displayPrefs.slice(0, 4).map((p, i) => (
-            <span key={i} className="recipe-ingredient-pill">{p}</span>
-          ))}
+      <div className="space-y-4">
+        {/* Soldier Preferences Summary Block */}
+        <div className="p-4 bg-warm-50/60 rounded-2xl border border-warm-100 text-xs space-y-2.5">
+          <h4 className="font-bold text-gray-800 text-[13px] border-b border-warm-100 pb-1.5 flex items-center gap-1.5">
+            <SproutIcon className="w-4 h-4 text-brand-600" />
+            <span>{lang === 'he' ? 'העדפות ומגבלות תזונה של החייל' : "Soldier's Dietary Preferences"}</span>
+          </h4>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'כשרות' : 'Kosher'}</span>
+              <span className="font-semibold text-gray-700">{renderKosherBadge(guest.kosher, lang)}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'אלרגיות' : 'Allergies'}</span>
+              {(guest.allergies || []).length > 0 ? (
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {(guest.allergies || []).map(a => renderAllergyBadge(a, lang))}
+                </div>
+              ) : (
+                <span className="text-gray-500 font-medium flex items-center gap-1">
+                  <UtensilsIcon className="w-3.5 h-3.5 text-gray-400" strokeWidth={2.2} />
+                  <span>{lang === 'he' ? 'אין הגבלות' : 'None'}</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {(favs.length > 0 || dislikes.length > 0) && (
+            <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-warm-100/50">
+              {favs.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'אוכל מועדף' : 'Favorite Foods'}</span>
+                  <span className="text-gray-700 font-medium">{favs.join(', ')}</span>
+                </div>
+              )}
+              {dislikes.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'פחות אוהב' : 'Disliked Foods'}</span>
+                  <span className="text-gray-700 font-medium">{dislikes.join(', ')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Loading skeletons */}
         {loading && (
           <div className="space-y-4">
-            <p className="text-sm text-warm-500 text-center animate-pulse">⏳ מייצר המלצות מתכונים אישיות...</p>
+            <p className="text-sm text-warm-500 text-center flex items-center justify-center gap-2 animate-pulse">
+              <svg className="animate-spin h-4 w-4 text-brand-600" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>{lang === 'he' ? 'מייצר המלצות מתכונים אישיות...' : 'Generating personalized recipes...'}</span>
+            </p>
             {[1, 2].map(i => (
               <div key={i} className="recipe-card overflow-hidden">
                 <div className="recipe-skeleton" style={{ height: 140 }} />
@@ -223,16 +521,17 @@ function RecipeModal({ guest, host, onClose }) {
         {/* Server offline error */}
         {!loading && error === 'server_off' && (
           <div className="text-center py-8 space-y-4">
-            <div className="text-5xl">🔌</div>
+            <AlertTriangleIcon className="w-12 h-12 text-amber-500 mx-auto" />
             <p className="font-bold text-gray-800">שרת המתכונים אינו פעיל</p>
             <p className="text-sm text-warm-500 leading-relaxed">
               הפעל את שרת ה-LLM על פורט 8000 כדי לקבל המלצות מתכונים מותאמות אישית.
             </p>
             <button
               onClick={fetchRecipes}
-              className="mt-2 text-sm font-bold text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 transition-colors px-5 py-2 rounded-xl"
+              className="mt-2 text-sm font-bold text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 transition-colors px-5 py-2 rounded-xl flex items-center justify-center gap-1.5 mx-auto"
             >
-              🔄 נסה שוב
+              <RotateCcwIcon className="w-3.5 h-3.5" />
+              <span>נסה שוב</span>
             </button>
           </div>
         )}
@@ -240,7 +539,7 @@ function RecipeModal({ guest, host, onClose }) {
         {/* Generic error */}
         {!loading && error && error !== 'server_off' && (
           <div className="text-center py-6 space-y-3">
-            <div className="text-4xl">⚠️</div>
+            <AlertTriangleIcon className="w-10 h-10 text-red-500 mx-auto" />
             <p className="text-sm text-warm-600">{error}</p>
             <button onClick={fetchRecipes} className="text-sm font-bold text-brand-600 underline">
               נסה שוב
@@ -254,7 +553,7 @@ function RecipeModal({ guest, host, onClose }) {
             key={`${recipe.recipe_id}-${recipe.title}`}
             recipe={recipe}
             guestKey={guest?.id || guest?.name || 'soldier'}
-            prefs={displayPrefs}
+            prefs={guest.allergies || []}
             onRefresh={handleRefresh}
             refreshing={refreshingIdx === idx}
           />
@@ -307,7 +606,7 @@ function SoldierProfileModal({ guest, onClose }) {
         <div className="flex items-center gap-3 pb-3 border-b border-warm-100">
           <div
             className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-sm overflow-hidden"
-            style={{ background: guest.avatarColor || '#6f8f72' }}
+            style={{ background: guest.avatarColor || '#B0BA99' }}
           >
             {guest.profile_img_url ? (
               <img src={guest.profile_img_url} alt={guest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -319,11 +618,13 @@ function SoldierProfileModal({ guest, onClose }) {
             <p className="text-xs text-warm-500">
               {[guest.unit, guest.age ? t('s3_age') + ' ' + guest.age : null].filter(Boolean).join(' · ')}
             </p>
-            <p className="text-sm font-medium text-gray-800 mt-0.5">
-              <span className="me-1">👥</span>
-              {(guest.groupSize || 1) > 1
-                ? t('guest_group_with', (guest.groupSize || 1) - 1)
-                : t('guest_group_solo')}
+            <p className="text-sm font-medium text-gray-800 mt-0.5 flex items-center gap-1">
+              {(guest.groupSize || 1) > 1 ? <UsersIcon className="w-4 h-4 text-gray-500" /> : <UserIcon className="w-4 h-4 text-gray-500" />}
+              <span>
+                {(guest.groupSize || 1) > 1
+                  ? t('guest_group_with', (guest.groupSize || 1) - 1)
+                  : t('guest_group_solo')}
+              </span>
             </p>
           </div>
         </div>
@@ -376,11 +677,15 @@ function SoldierProfileModal({ guest, onClose }) {
 function S19HostHome({ data, setData, onProfile, onLogout }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
-  const [selectedHosting,     setSelectedHosting]     = useState(null);
-  const [selectedGuest,       setSelectedGuest]       = useState(null);
-  const [guestSourceHosting,  setGuestSourceHosting]  = useState(null);
-  const [showPrefModal,       setShowPrefModal]       = useState(false);
+  
+  const [selectedHostingId, setSelectedHostingId] = useState(null);
+  const [selectedChatGuest, setSelectedChatGuest] = useState(null);
   const [selectedRecipeGuest, setSelectedRecipeGuest] = useState(null);
+  const [showPrefModal,       setShowPrefModal]       = useState(false);
+  const [conversations,       setConversations]       = useState({}); // { [soldierKey]: [messages] }
+
+  // Resolve current active hosting from data
+  const selectedHosting = hostings.find(h => h.id === selectedHostingId);
 
   const handleNewHosting = () => {
     // Block new hosting creation until preferences are filled
@@ -399,6 +704,8 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 
   const handleCancel = async (id) => {
     if (!confirm(t('s19_confirm_cancel'))) return;
+    
+    setSelectedHostingId(null); // Close details view
 
     if (!window.db) {
       setData(prev => ({
@@ -411,7 +718,6 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
     try {
       const fn = firebase.functions().httpsCallable('cancelHosting');
       await fn({ hosting_id: id });
-      // Remove from local state — the doc was deleted from Firestore by the function
       setData(prev => ({
         ...prev,
         hostings: prev.hostings.filter(h => h.id !== id),
@@ -421,6 +727,58 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
       alert('שגיאה בביטול: ' + e.message);
     }
   };
+
+  const handleRestore = async (id) => {
+    if (window.db) {
+      try {
+        const fn = firebase.functions().httpsCallable('restoreHosting');
+        await fn({ hosting_id: id });
+        setData(prev => ({
+          ...prev,
+          hostings: prev.hostings.filter(h2 => h2.id !== id),
+        }));
+        setSelectedHostingId(null);
+      } catch (e) {
+        console.error('Restore error:', e);
+        alert('שגיאה בשחזור: ' + e.message);
+      }
+    } else {
+      setData(prev => ({
+        ...prev,
+        hostings: prev.hostings.map(h2 =>
+          h2.id === id
+            ? { ...h2, status: 'open', guests: [], occupied: 0, is_fully_booked: false, _archived: false }
+            : h2
+        ),
+      }));
+    }
+  };
+
+  const handleCancelOrRestore = async (id) => {
+    const h = hostings.find(x => x.id === id);
+    if (!h) return;
+    if (h.status === 'canceled') {
+      await handleRestore(id);
+    } else {
+      await handleCancel(id);
+    }
+  };
+
+  if (selectedHosting) {
+    return (
+      <HostingDetailsView
+        hosting={selectedHosting}
+        host={data}
+        onBack={() => setSelectedHostingId(null)}
+        onEdit={handleEdit}
+        onCancel={handleCancelOrRestore}
+        onOpenRecipes={(g) => setSelectedRecipeGuest(g)}
+        onOpenChat={(g) => setSelectedChatGuest(g)}
+        lang={lang}
+        t={t}
+      />
+    );
+  }
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-20">
@@ -470,7 +828,9 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         {/* Hostings List */}
         {hostings.length === 0 ? (
           <Card className="text-center py-10 border-dashed">
-            <span className="text-3xl block mb-3 opacity-50">🍽️</span>
+            <div className="w-12 h-12 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-3 opacity-80">
+              <UtensilsIcon className="w-6 h-6 text-warm-400" strokeWidth={2.2} />
+            </div>
             <p className="text-sm font-medium text-warm-500">{t('s19_no_hostings')}</p>
             <button
               onClick={handleNewHosting}
@@ -491,89 +851,40 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
               const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
 
               return (
-                <Card key={h.id} className={`p-0 overflow-hidden${isCanceled ? ' opacity-60' : ''}`}>
-                  {/* Hosting Info */}
-                  <div
-                    className="p-4 border-b border-warm-100 cursor-pointer hover:bg-warm-50 transition-colors"
-                    onClick={() => setSelectedHosting(h)}
-                  >
+                <Card 
+                  key={h.id} 
+                  className={`cursor-pointer transition-all hover:shadow-md hover:border-brand-300 ${isCanceled ? ' opacity-70' : ''}`}
+                  onClick={() => setSelectedHostingId(h.id)}
+                >
+                  <div className="p-5">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">
-                          {new Date(h.date).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
+                        <p className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                          <CalendarIcon className="w-4 h-4 text-brand-600" />
+                          <span>
+                            {new Date(h.date).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
+                          </span>
                         </p>
-                        <p className="text-xs text-warm-500 mt-0.5">
-                          {h.time === 'friday_evening' ? t('s20_fri_eve') : h.time === 'saturday_lunch' ? t('s20_sat_lun') : h.customTime || h.time}
+                        <p className="text-xs text-warm-500 mt-1.5 flex items-center gap-1.5">
+                          <ClockIcon className="w-4 h-4 text-brand-600" />
+                          <span>
+                            {h.time === 'friday_evening' ? t('s20_fri_eve') : h.time === 'saturday_lunch' ? t('s20_sat_lun') : h.customTime || h.time}
+                          </span>
                         </p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                      <span className={`text-[10px] font-bold px-2.5 py-1.5 rounded-full ${
                         isCanceled ? 'bg-warm-100 text-warm-500' :
                         isFull ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
                       }`}>
                         {isCanceled
-                          ? t('canceled_label')
+                          ? (lang === 'he' ? 'מבוטל' : 'Canceled')
                           : `${totalGuests}/${capacity} ${t('s19_spots_taken')}`}
                       </span>
                     </div>
-                    {h.note && <p className="text-xs text-warm-400 mt-2 leading-relaxed line-clamp-1">"{h.note}"</p>}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="px-4 py-3 bg-warm-50 flex justify-end gap-3">
-                    {isCanceled ? (
-                      <button
-                        onClick={async () => {
-                          if (window.db) {
-                            try {
-                              const fn = firebase.functions().httpsCallable('restoreHosting');
-                              await fn({ hosting_id: h.id });
-                              // The active listener will re-add it; remove from archived state
-                              setData(prev => ({
-                                ...prev,
-                                hostings: prev.hostings.filter(h2 => h2.id !== h.id),
-                              }));
-                            } catch (e) {
-                              console.error('Restore error:', e);
-                              alert('שגיאה בשחזור: ' + e.message);
-                            }
-                          } else {
-                            setData(prev => ({
-                              ...prev,
-                              hostings: prev.hostings.map(h2 =>
-                                h2.id === h.id
-                                  ? { ...h2, status: 'open', guests: [], occupied: 0, is_fully_booked: false, _archived: false }
-                                  : h2
-                              ),
-                            }));
-                          }
-                        }}
-                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
-                      >
-                        {t('restore_hosting')}
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleCancel(h.id)}
-                          className="text-xs font-semibold text-warm-500 hover:text-red-600 transition-colors py-1"
-                        >
-                          {t('s19_cancel')}
-                        </button>
-                        <button
-                          onClick={() => handleEdit(h.id)}
-                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors py-1"
-                        >
-                          {t('s19_edit')}
-                        </button>
-                        {guests.length > 0 && (
-                          <button
-                            onClick={() => setSelectedHosting(h)}
-                            className="text-xs font-semibold bg-white border border-warm-200 rounded-lg px-3 py-1 text-gray-700 shadow-xs hover:bg-warm-50 transition-colors"
-                          >
-                            {t('s19_view_guests')} ({totalGuests})
-                          </button>
-                        )}
-                      </>
+                    {h.note && (
+                      <p className="text-xs text-warm-400 mt-3 leading-relaxed line-clamp-1 italic bg-warm-50/50 p-2.5 rounded-xl border border-warm-100/40">
+                        "{h.note}"
+                      </p>
                     )}
                   </div>
                 </Card>
@@ -583,77 +894,17 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         )}
       </div>
 
-      {/* Soldier profile card */}
-      <SoldierProfileModal
-        guest={selectedGuest}
-        onClose={() => { setSelectedGuest(null); setSelectedHosting(guestSourceHosting); setGuestSourceHosting(null); }}
+      {/* Communication Modal */}
+      <CommunicationModal
+        isOpen={!!selectedChatGuest}
+        soldier={selectedChatGuest}
+        host={data}
+        conversations={conversations}
+        setConversations={setConversations}
+        onClose={() => setSelectedChatGuest(null)}
+        lang={lang}
+        t={t}
       />
-
-      {/* Guest Details Modal */}
-      {selectedHosting && (
-        <Modal
-          isOpen={!!selectedHosting}
-          onClose={() => setSelectedHosting(null)}
-          title={t('s19_guests_title')}
-        >
-          <div className="space-y-3">
-            {(!selectedHosting.guests || selectedHosting.guests.length === 0) ? (
-              <p className="text-center text-sm text-warm-500 py-6">{t('s19_no_guests_yet')}</p>
-            ) : (
-              selectedHosting.guests.map(g => (
-                <Card key={g.id} className="p-4 bg-white border border-warm-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-                  {/* Top area: Profile + Name */}
-                  <div className="flex items-center gap-3 pb-3 mb-3 border-b border-warm-50">
-                    <button
-                      onClick={() => { setGuestSourceHosting(selectedHosting); setSelectedHosting(null); setSelectedGuest(g); }}
-                      className="flex items-center gap-3 min-w-0 flex-1 text-start group"
-                    >
-                      <div
-                        className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold overflow-hidden shadow-inner"
-                        style={{ background: g.avatarColor || '#6f8f72' }}
-                      >
-                        {g.profile_img_url ? (
-                          <img src={g.profile_img_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          (g.name || '?')[0]
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-gray-800 text-sm group-hover:text-brand-600 group-hover:underline underline-offset-2 truncate">
-                          {g.name}
-                        </p>
-                        {g.unit ? (
-                          <p className="text-xs text-warm-500 mt-0.5">{t('s19_unit')} {g.unit}</p>
-                        ) : (
-                          <p className="text-xs text-warm-400 mt-0.5">חייל משרת</p>
-                        )}
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Bottom area: Actions */}
-                  <div className="flex gap-2">
-                    <a
-                      href={`https://wa.me/972${(g.phone || '').replace(/\D/g, '').replace(/^0/, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] text-white py-2 px-3 rounded-xl text-xs font-bold hover:bg-[#1ebd5b] transition-colors"
-                    >
-                      <span>💬</span> WhatsApp
-                    </a>
-                    <button
-                      onClick={() => { setSelectedHosting(null); setSelectedRecipeGuest(g); }}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors"
-                    >
-                      <span>🍽️</span> הצעה למתכונים
-                    </button>
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
-        </Modal>
-      )}
 
       {/* Recipe Recommendations Modal (family-side only) */}
       <RecipeModal
@@ -674,6 +925,528 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         onLater={() => setShowPrefModal(false)}
       />
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   S19.5 Hosting Details View
+───────────────────────────────────────── */
+function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRecipes, onOpenChat, lang, t }) {
+  const guests = hosting.guests || [];
+  const capacity = parseInt(hosting.soldiers) || 0;
+  const isCanceled = hosting.status === 'canceled';
+  
+  const totalGuests = guests.length > 0
+    ? guests.reduce((sum, g) => sum + (g.groupSize || 1), 0)
+    : (hosting.occupied || 0);
+    
+  const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
+  const remainingSpots = Math.max(0, capacity - totalGuests);
+
+  // Formatting date
+  const formattedDate = new Date(hosting.date).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
+
+  const timeString = hosting.time === 'friday_evening' 
+    ? t('s20_fri_eve') 
+    : hosting.time === 'saturday_lunch' 
+      ? t('s20_sat_lun') 
+      : hosting.customTime || hosting.time;
+
+  // Resolved Location
+  const locationString = host.hostAddress || host.hostCity || (lang === 'he' ? 'לא עודכן מיקום' : 'No location specified');
+
+  return (
+    <div className="screen-enter min-h-screen bg-warm-50 pb-24">
+      <AppHeader
+        title={t('s19_details_title')}
+        onBack={onBack}
+      />
+
+      <div className="max-w-md mx-auto px-5 mt-6 space-y-6">
+        {/* Section 1 - Overview Card */}
+        <Card className="p-5 border border-warm-200/80 shadow-md relative overflow-hidden bg-white">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-brand-600" />
+          
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                {t('s19_overview')}
+              </span>
+              <h2 className="text-lg font-bold text-gray-900 mt-0.5">
+                {timeString}
+              </h2>
+            </div>
+            
+            <span className={`text-[10px] font-bold px-2.5 py-1.5 rounded-full ${
+              isCanceled ? 'bg-red-50 text-red-600' :
+              isFull ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'
+            }`}>
+              {isCanceled ? t('s19_status_canceled') : isFull ? t('s19_status_full') : t('s19_status_open')}
+            </span>
+          </div>
+
+          <div className="space-y-3.5 text-sm text-gray-700">
+            <div className="flex items-start gap-3">
+              <CalendarIcon className="w-5 h-5 text-brand-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-gray-800">{lang === 'he' ? 'תאריך:' : 'Date:'}</p>
+                <p className="text-warm-600 mt-0.5">{formattedDate}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <ClockIcon className="w-5 h-5 text-brand-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-gray-800">{lang === 'he' ? 'שעות האירוח:' : 'Time:'}</p>
+                <p className="text-warm-600 mt-0.5">{timeString}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MapPinIcon className="w-5 h-5 text-brand-600 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800">{lang === 'he' ? 'מיקום:' : 'Location:'}</p>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 hover:text-brand-700 hover:underline inline-flex items-center gap-1 mt-0.5 truncate"
+                >
+                  {locationString} ↗
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <UsersIcon className="w-5 h-5 text-brand-600 mt-0.5" />
+              <div className="flex-1">
+                <div className="flex justify-between items-baseline mb-1.5">
+                  <p className="font-semibold text-gray-800">
+                    {lang === 'he' ? 'תפוסה:' : 'Capacity:'} {totalGuests} / {capacity}
+                  </p>
+                  <span className="text-xs font-bold text-brand-600">
+                    {isCanceled ? '' : t('s19_spots_left', remainingSpots)}
+                  </span>
+                </div>
+                
+                <div className="h-2.5 w-full bg-warm-100 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${isCanceled ? 'bg-gray-300' : isFull ? 'bg-amber-500' : 'bg-brand-500'}`}
+                    style={{ width: `${Math.min(100, (totalGuests / (capacity || 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {hosting.note && (
+            <div className="mt-5 pt-4 border-t border-warm-100">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                {lang === 'he' ? 'הערות לאירוח:' : 'Hosting Notes:'}
+              </p>
+              <p className="text-xs text-warm-600 leading-relaxed italic bg-warm-50/50 p-2.5 rounded-xl border border-warm-100/40">
+                "{hosting.note}"
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* Section 2 - Action controls */}
+        <div className="flex gap-3">
+          {isCanceled ? (
+            <button
+              onClick={() => onCancel(hosting.id)}
+              className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <RotateCcwIcon className="w-4 h-4" />
+              <span>{lang === 'he' ? 'שחזר אירוח' : 'Restore Hosting'}</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => onEdit(hosting.id)}
+                className="flex-1 py-3 px-4 bg-white border border-warm-200 text-gray-700 rounded-xl text-sm font-bold shadow-xs hover:bg-warm-50 hover:border-warm-300 transition-all flex items-center justify-center gap-1.5"
+              >
+                <EditIcon className="w-4 h-4 text-gray-500" />
+                <span>{t('s19_edit_btn')}</span>
+              </button>
+              <button
+                onClick={() => onCancel(hosting.id)}
+                className="py-3 px-5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <TrashIcon className="w-4 h-4 text-red-500" />
+                <span>{lang === 'he' ? 'ביטול' : 'Cancel'}</span>
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Section 3 - Registered Soldiers */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-baseline border-b border-warm-200/80 pb-2">
+            <h3 className="font-bold text-gray-900 text-base">
+              {t('s19_registered_soldiers')}
+            </h3>
+            <span className="text-xs font-bold text-warm-500">
+              ({guests.length} {lang === 'he' ? 'חיילים' : 'soldiers'})
+            </span>
+          </div>
+
+          {guests.length === 0 ? (
+            <Card className="text-center py-12 px-6 border-dashed border-warm-300/80">
+              <div className="w-12 h-12 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-3 opacity-80">
+                <UtensilsIcon className="w-6 h-6 text-warm-400" strokeWidth={2.2} />
+              </div>
+              <p className="text-sm font-semibold text-gray-700">
+                {t('s19_no_guests_yet')}
+              </p>
+              <p className="text-xs text-warm-400 mt-2 max-w-xs mx-auto leading-relaxed">
+                {t('s19_no_soldiers_desc')}
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {guests.map(g => {
+                const logisticsItems = [];
+                if (g.needsTransport) {
+                  logisticsItems.push({
+                    id: 'transport',
+                    label: lang === 'he' ? 'צריך הסעה' : 'Needs Ride',
+                    icon: <CarIcon className="w-3.5 h-3.5 text-brand-600" />
+                  });
+                }
+                if (g.needSleep) {
+                  logisticsItems.push({
+                    id: 'sleep',
+                    label: lang === 'he' ? 'צריך לינה' : 'Needs Lodging',
+                    icon: <BedIcon className="w-3.5 h-3.5 text-brand-600" />
+                  });
+                }
+
+                const joinDateText = g.registrationDate || new Date().toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', {
+                  day: 'numeric',
+                  month: 'short'
+                });
+
+                return (
+                  <Card key={g.id || g.soldier_id || g.name} className="p-4 border border-warm-200 shadow-sm bg-white hover:border-brand-200 transition-colors">
+                    {/* Soldier Info Row */}
+                    <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
+                      <div
+                        className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
+                        style={{ background: g.avatarColor || '#B0BA99' }}
+                      >
+                        {g.profile_img_url ? (
+                          <img src={g.profile_img_url} alt={g.name} className="w-full h-full object-cover" />
+                        ) : (
+                          (g.name || '?')[0]
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-baseline gap-2">
+                          <h4 className="font-bold text-gray-800 text-sm truncate">
+                            {g.name}
+                          </h4>
+                          <span className="text-[10px] text-warm-400 flex-shrink-0">
+                            {lang === 'he' ? 'נרשם ב-' : 'Joined '} {joinDateText}
+                          </span>
+                        </div>
+                        
+                        <p className="text-xs text-warm-500 mt-0.5">
+                          {[g.unit ? `${t('s19_unit')} ${g.unit}` : null, g.age ? `${g.age} ${lang === 'he' ? 'שנים' : 'y/o'}` : null].filter(Boolean).join(' · ') || (lang === 'he' ? 'חייל משרת' : 'Serving Soldier')}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
+                            {(g.groupSize || 1) > 1 ? <UsersIcon className="w-3.5 h-3.5 text-gray-500" /> : <UserIcon className="w-3.5 h-3.5 text-gray-500" />}
+                            <span>
+                              {(g.groupSize || 1) > 1 
+                                ? (lang === 'he' ? `קבוצה של ${g.groupSize}` : `Group of ${g.groupSize}`)
+                                : (lang === 'he' ? 'יחיד' : 'Solo')}
+                            </span>
+                          </span>
+                          {logisticsItems.map(item => (
+                            <span key={item.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded-md border border-brand-100">
+                              {item.icon}
+                              <span>{item.label}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Soldier Preferences */}
+                    <div className="space-y-3 text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+                          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">
+                            {lang === 'he' ? 'רמת כשרות' : 'Kosher Level'}
+                          </span>
+                          <span className="font-bold text-gray-800">{renderKosherBadge(g.kosher, lang)}</span>
+                        </div>
+
+                        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100 flex flex-col justify-center">
+                          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">
+                            {lang === 'he' ? 'אלרגיות ומגבלות' : 'Allergies'}
+                          </span>
+                          {(g.allergies || []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {(g.allergies || []).map(a => renderAllergyBadge(a, lang))}
+                            </div>
+                          ) : (
+                            <span className="font-medium text-gray-500 flex items-center gap-1 mt-0.5">
+                              <UtensilsIcon className="w-3.5 h-3.5 text-gray-400" strokeWidth={2.2} />
+                              <span>{lang === 'he' ? 'אין הגבלות' : 'None'}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {g.bio && (
+                        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-1 leading-relaxed">
+                          "{g.bio}"
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => onOpenChat(g)}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-warm-200 rounded-xl py-2 px-3 text-gray-700 hover:bg-warm-50 transition-colors font-bold shadow-xs active:scale-[0.98]"
+                        >
+                          <WhatsAppIcon className="w-4 h-4 text-[#25D366]" />
+                          <span>{t('s19_send_msg')}</span>
+                        </button>
+                        <button
+                          onClick={() => onOpenRecipes(g)}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl hover:bg-brand-100 transition-colors font-bold active:scale-[0.98]"
+                        >
+                          <ChefHatIcon className="w-4 h-4 text-brand-700" />
+                          <span>{t('s19_view_recipes')}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   S19.6 Communication/Chat Simulator Modal
+───────────────────────────────────────── */
+function CommunicationModal({ isOpen, onClose, soldier, host, conversations, setConversations, lang, t }) {
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const soldierKey = soldier ? (soldier.id || soldier.soldier_id || soldier.name) : '';
+  const currentMessages = soldier ? (conversations[soldierKey] || [
+    { sender: 'soldier', text: lang === 'he' ? `היי, שמח מאוד להצטרף אליכם לארוחה השבת!` : `Hi, really glad to join you for the Shabbat meal!`, time: '14:22' }
+  ]) : [];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages, isTyping]);
+
+  if (!isOpen || !soldier) return null;
+
+  const handleSendMessage = (textToSend) => {
+    const trimmed = textToSend.trim();
+    if (!trimmed) return;
+
+    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMsg = { sender: 'host', text: trimmed, time: timeString };
+    
+    setConversations(prev => ({
+      ...prev,
+      [soldierKey]: [...currentMessages, newMsg]
+    }));
+
+    setInputText('');
+
+    // Trigger typing simulator after 800ms
+    setTimeout(() => {
+      setIsTyping(true);
+      
+      // Trigger reply after another 1500ms
+      setTimeout(() => {
+        setIsTyping(false);
+        
+        let replyText = '';
+        const lower = trimmed.toLowerCase();
+        if (lower.includes('הגעה') || lower.includes('מתי') || lower.includes('שעה') || lower.includes('arrive') || lower.includes('time')) {
+          replyText = lang === 'he' 
+            ? "אני מתכנן להגיע בסביבות שעה וחצי לפני כניסת שבת, בערך ב-17:30. זה מסתדר?" 
+            : "I plan to arrive about an hour and a half before Shabbat starts, around 5:30 PM. Does that work?";
+        } else if (lower.includes('אוכל') || lower.includes('לאכול') || lower.includes('אוהב') || lower.includes('מגבלות') || lower.includes('אלרג') || lower.includes('food') || lower.includes('eat') || lower.includes('prefer')) {
+          replyText = lang === 'he' 
+            ? "הכל נראה מצוין! אני לא בעייתי באוכל, אוכל מה שמכינים. המון תודה!" 
+            : "Everything looks great! I'm not picky at all, I will happily eat whatever you prepare. Thank you!";
+        } else if (lower.includes('כתובת') || lower.includes('איפה') || lower.includes('בית') || lower.includes('address') || lower.includes('location') || lower.includes('where')) {
+          replyText = lang === 'he' 
+            ? "קיבלתי, תודה רבה! אנווט לכתובת הזו ביום שישי." 
+            : "Got it, thank you so much! I will navigate to this address on Friday.";
+        } else {
+          replyText = lang === 'he'
+            ? "מעולה, תודה רבה על העדכון! מעריך את זה מאוד ונתראה בקרוב."
+            : "Great, thank you for the update! I really appreciate it and see you soon.";
+        }
+
+        const replyMsg = { sender: 'soldier', text: replyText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+        setConversations(prev => ({
+          ...prev,
+          [soldierKey]: [...(prev[soldierKey] || []), replyMsg]
+        }));
+      }, 1500);
+    }, 800);
+  };
+
+  const handlePresetClick = (presetText) => {
+    handleSendMessage(presetText);
+  };
+
+  const handleWhatsAppRedirect = (text) => {
+    const cleanPhone = (soldier.phone || '').replace(/\D/g, '').replace(/^0/, '');
+    const encodedText = encodeURIComponent(text || inputText);
+    const url = `https://wa.me/972${cleanPhone}${encodedText ? `?text=${encodedText}` : ''}`;
+    window.open(url, '_blank');
+  };
+
+  const presets = [
+    { 
+      id: 'time',
+      label: lang === 'he' ? 'תיאום הגעה' : 'Arrival Time', 
+      icon: <ClockIcon className="w-3.5 h-3.5 text-brand-600" />,
+      text: lang === 'he' ? "היי! נשמח לתאם איתך שעת הגעה ביום שישי הקרוב." : "Hi! We would love to coordinate your arrival time this Friday."
+    },
+    { 
+      id: 'food',
+      label: lang === 'he' ? 'שאלת תפריט' : 'Food Preferences', 
+      icon: <UtensilsIcon className="w-3.5 h-3.5 text-brand-600" strokeWidth={2.2} />,
+      text: lang === 'he' ? "שלום, רצינו לדעת אם יש מאכלים מסוימים שאתה מעדיף בארוחה?" : "Hello, we wanted to check if there are any specific foods you prefer for the meal?"
+    },
+    { 
+      id: 'address',
+      label: lang === 'he' ? 'כתובת והסברים' : 'Send Address', 
+      icon: <MapPinIcon className="w-3.5 h-3.5 text-brand-600" />,
+      text: host.hostAddress 
+        ? (lang === 'he' ? `היי, הנה הכתובת המלאה שלנו: ${host.hostAddress}. נתראה בקרוב!` : `Hi, here is our full address: ${host.hostAddress}. See you soon!`)
+        : (lang === 'he' ? "היי, הנה הכתובת והוראות הגעה אלינו. נשמח לעזור אם תצטרך." : "Hi, here is our address and directions to our home. Let us know if you need help finding us.")
+    }
+  ];
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${t('s19_chat_with')} ${soldier.name}`}
+      className="max-w-md max-h-[85vh] flex flex-col"
+    >
+      <div className="flex flex-col h-[60vh]">
+        {/* Chat Messages Log */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-warm-50/50 rounded-2xl border border-warm-100">
+          {currentMessages.map((msg, i) => {
+            const isHost = msg.sender === 'host';
+            return (
+              <div 
+                key={i} 
+                className={`flex flex-col max-w-[80%] ${isHost ? 'ms-auto items-end' : 'me-auto items-start'}`}
+              >
+                <div 
+                  className={`p-3 rounded-2xl text-sm leading-relaxed shadow-xs ${
+                    isHost 
+                      ? 'bg-brand-600 text-white rounded-te-none' 
+                      : 'bg-white text-gray-800 border border-warm-200 rounded-ts-none'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+                <span className="text-[10px] text-warm-400 mt-1 px-1 flex items-center gap-1">
+                  {msg.time} {isHost && <span className="text-brand-500">✓✓</span>}
+                </span>
+              </div>
+            );
+          })}
+          {isTyping && (
+            <div className="me-auto items-start max-w-[80%] flex flex-col">
+              <div className="p-3 bg-white text-gray-800 border border-warm-200 rounded-2xl rounded-ts-none text-xs flex items-center gap-1">
+                <span className="animate-bounce font-bold">.</span>
+                <span className="animate-bounce delay-100 font-bold">.</span>
+                <span className="animate-bounce delay-200 font-bold">.</span>
+                <span className="text-warm-400 ms-1">{t('s19_chat_typing')}</span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick Message Presets */}
+        <div className="py-2.5">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
+            {t('s19_quick_msgs')}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => handlePresetClick(p.text)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-semibold rounded-lg hover:bg-brand-100 transition-colors"
+              >
+                {p.icon}
+                <span>{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-warm-100 pt-3 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder={t('s19_chat_placeholder')}
+              rows={1}
+              className="flex-1 px-3 py-2.5 rounded-xl border border-warm-200 bg-white text-sm focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-300 resize-none transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(inputText);
+                }
+              }}
+            />
+            <button
+              onClick={() => handleSendMessage(inputText)}
+              disabled={!inputText.trim()}
+              className="px-4 bg-brand-600 text-white rounded-xl flex items-center justify-center hover:bg-brand-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <SendIcon className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleWhatsAppRedirect()}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] text-white py-2 px-3 rounded-xl text-xs font-bold hover:bg-[#1ebd5b] transition-colors shadow-xs active:scale-[0.98]"
+            >
+              <WhatsAppIcon className="w-4 h-4 text-white" />
+              <span>{t('s19_send_wa')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
