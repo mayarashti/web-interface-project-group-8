@@ -970,7 +970,7 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
       <div className="max-w-md mx-auto px-5 mt-6 space-y-6">
         {/* Section 1 - Overview Card */}
         <Card className="p-5 border border-warm-200/80 shadow-md relative overflow-hidden bg-white">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-brand-600" />
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-brand-500" />
           
           <div className="flex justify-between items-start mb-4">
             <div>
