@@ -1503,3 +1503,330 @@ exports.reverseGeocode = onCall(
     return { address: parsed };
   }
 );
+
+// ── HELPER FUNCTIONS FOR RECIPE RECOMMENDATION ──────────────────
+
+async function callGroq(messages, jsonMode = true, temperature = 0.0) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("GROQ_API_KEY is not defined in process.env");
+    throw new HttpsError("failed-precondition", "GROQ_API_KEY is not configured on the server.");
+  }
+
+  const maxRetries = 5;
+  let attempt = 0;
+
+  while (true) {
+    attempt++;
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages,
+        response_format: jsonMode ? { type: "json_object" } : undefined,
+        temperature
+      })
+    });
+
+    if (response.status === 429 && attempt < maxRetries) {
+      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+      console.warn(`Groq rate limit hit (429). Retrying attempt ${attempt} in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      continue;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Groq API error:", response.status, errorText);
+      throw new HttpsError("internal", `Groq API request failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new HttpsError("internal", "Groq API returned an empty completion.");
+    }
+
+    return jsonMode ? JSON.parse(content) : content;
+  }
+}
+
+async function searchSpoonacular(queryParams) {
+  const apiKey = process.env.SPOONACULAR_API_KEY;
+  if (!apiKey) {
+    console.error("SPOONACULAR_API_KEY is not defined in process.env");
+    throw new HttpsError("failed-precondition", "SPOONACULAR_API_KEY is not configured on the server.");
+  }
+
+  const url = new URL("https://api.spoonacular.com/recipes/complexSearch");
+  url.searchParams.set("apiKey", apiKey);
+  url.searchParams.set("addRecipeInformation", "true");
+  url.searchParams.set("fillIngredients", "true");
+  url.searchParams.set("number", "30");
+  url.searchParams.set("instructionsRequired", "true");
+
+  if (queryParams.query) {
+    url.searchParams.set("query", queryParams.query);
+  }
+  if (queryParams.includeIngredients && queryParams.includeIngredients.length > 0) {
+    url.searchParams.set("includeIngredients", queryParams.includeIngredients.join(","));
+  }
+  if (queryParams.excludeIngredients && queryParams.excludeIngredients.length > 0) {
+    url.searchParams.set("excludeIngredients", queryParams.excludeIngredients.join(","));
+  }
+  if (queryParams.diet) {
+    url.searchParams.set("diet", queryParams.diet);
+  }
+
+  console.log("Spoonacular complexSearch url:", url.toString().replace(apiKey, "HIDDEN"));
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Spoonacular API error:", response.status, errorText);
+    throw new HttpsError("internal", `Spoonacular API request failed: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.results || [];
+}
+
+async function translateAndFormatRecipe(candidate, soldier) {
+  const systemPromptTranslate = 
+    "You are a professional chef and translation expert.\n" +
+    "Your task is to translate an English recipe into high-quality, warm, and natural Hebrew (עברית).\n" +
+    "You must return ONLY a valid JSON object matching the target schema.\n\n" +
+    "Target JSON structure:\n" +
+    "{\n" +
+    '  "title": "Hebrew recipe title",\n' +
+    '  "description": "Hebrew validation summary explaining why this recipe matches the soldier\'s requirements and preferences",\n' +
+    '  "ingredients": [\n' +
+    '    "Hebrew translated ingredient with quantities",\n' +
+    '    "Hebrew translated ingredient with quantities"\n' +
+    '  ],\n' +
+    '  "instructions": [\n' +
+    '    "Hebrew translated instruction step 1",\n' +
+    '    "Hebrew translated instruction step 2"\n' +
+    '  ],\n' +
+    '  "matching_preferences": [\n' +
+    '    "Matched preferences in Hebrew (e.g., כשר, ללא גלוטן, צמחוני, אהוב)"\n' +
+    '  ]\n' +
+    "}";
+
+  const rawIngredients = (candidate.extendedIngredients || []).map(i => i.original).slice(0, 20);
+  
+  let instructionsList = [];
+  const analyzed = candidate.analyzedInstructions || [];
+  if (analyzed && Array.isArray(analyzed) && analyzed.length > 0) {
+    for (const step of (analyzed[0].steps || [])) {
+      if (step.step) instructionsList.push(step.step);
+    }
+  } else {
+    const rawInst = candidate.instructions || "";
+    if (rawInst) {
+      instructionsList = rawInst
+        .replace(/<ol>/g, "")
+        .replace(/<\/ol>/g, "")
+        .replace(/<li>/g, "")
+        .replace(/<\/li>/g, "")
+        .split("\n")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    }
+  }
+  instructionsList = instructionsList.slice(0, 15);
+  if (instructionsList.length === 0) {
+    instructionsList = ["Cook according to taste."];
+  }
+
+  const userPromptTranslate = 
+    `Original English Recipe details:\n` +
+    `Title: ${candidate.title}\n` +
+    `Ingredients:\n${rawIngredients.map(ing => `- ${ing}`).join("\n")}\n` +
+    `Instructions:\n${instructionsList.map((step, idx) => `${idx + 1}. ${step}`).join("\n")}\n\n` +
+    `Please translate all details into Hebrew. Keep translations brief and concise. The ingredients and instructions list must be fully translated. Ensure the description explains why it matches the soldier's preferences in Hebrew.`;
+
+  const translated = await callGroq([
+    { role: "system", content: systemPromptTranslate },
+    { role: "user", content: userPromptTranslate }
+  ], true, 0.2);
+
+  return {
+    id: candidate.id,
+    recipe_id: candidate.id,
+    title: translated.title || candidate.title,
+    description: translated.description || "",
+    ingredients: translated.ingredients || [],
+    instructions: translated.instructions || [],
+    matching_preferences: translated.matching_preferences || [],
+    image_url: candidate.image || "",
+    readyInMinutes: candidate.readyInMinutes || 30,
+    servings: candidate.servings || 4
+  };
+}
+
+// ── CALLABLE: generate personalized recipes ────────────────────────
+
+exports.generateRecipes = onCall(
+  async (req) => {
+    const { soldier, host, count = 2 } = req.data || {};
+    
+    const kosherRequired = host?.keepsKosher || soldier?.isKosher;
+    console.log(`Starting recipe generation. Kosher Required: ${kosherRequired}, count: ${count}`);
+
+    // Step 2: Use LLM to analyze preferences and generate Spoonacular API search parameters
+    const systemPromptQuery = 
+      "You are a translation and culinary assistant. Your task is to analyze food preferences and restrictions " +
+      "and generate optimized English search parameters for the Spoonacular API to find matching recipes.\n" +
+      "You must return ONLY a JSON object and nothing else.\n\n" +
+      "JSON structure:\n" +
+      "{\n" +
+      '  "query": "English search term like chicken or pasta or salad or beef or empty string",\n' +
+      '  "includeIngredients": ["english ingredient 1", "english ingredient 2"],\n' +
+      '  "excludeIngredients": ["english allergen/disliked 1", "english allergen/disliked 2"],\n' +
+      '  "diet": "vegetarian or vegan or gluten free or empty string"\n' +
+      "}";
+
+    const userPromptQuery = 
+      `Analyze these preferences:\n` +
+      `- Favorite Foods (often in Hebrew): ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
+      `- Disliked Foods (often in Hebrew): ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
+      `- Allergies (often in Hebrew): ${JSON.stringify(soldier?.allergies || [])}\n` +
+      `- Dietary Preferences (often in Hebrew): ${JSON.stringify(soldier?.dietaryPreferences || [])}\n` +
+      `- Kosher Required: ${kosherRequired ? "Yes" : "No"}`;
+
+    let queryParams = { query: "", includeIngredients: [], excludeIngredients: [], diet: "" };
+    try {
+      queryParams = await callGroq([
+        { role: "system", content: systemPromptQuery },
+        { role: "user", content: userPromptQuery }
+      ]);
+      console.log("Generated Spoonacular query parameters from Groq:", queryParams);
+    } catch (err) {
+      console.error("Error generating query parameters via Groq, using basic fallback:", err);
+      queryParams.excludeIngredients = [...(soldier?.allergies || []), ...(soldier?.dislikedFoods || [])];
+    }
+
+    // Step 3: Query Spoonacular API for candidate recipes
+    let candidates = [];
+    try {
+      candidates = await searchSpoonacular(queryParams);
+      console.log(`Retrieved ${candidates.length} recipe candidates from Spoonacular.`);
+
+      // If no candidates, try relaxing the query parameters (e.g. drop query and includeIngredients)
+      if ((!candidates || candidates.length === 0) && (queryParams.includeIngredients?.length > 0 || queryParams.query)) {
+        console.log("No candidates returned from initial search. Relaxing search filters.");
+        candidates = await searchSpoonacular({
+          excludeIngredients: queryParams.excludeIngredients,
+          diet: queryParams.diet
+        });
+        console.log(`Retrieved ${candidates.length} relaxed candidates.`);
+      }
+    } catch (err) {
+      console.error("Spoonacular search failed completely:", err);
+      throw new HttpsError("internal", "Failed to retrieve recipes from Spoonacular.");
+    }
+
+    // Step 4 & 5: Recipe Validation Loop by Groq
+    const validRecipes = [];
+    const maxAttempts = 15;
+    let attempts = 0;
+
+    const systemPromptValidate = 
+      "You are an expert culinary safety inspector. Your task is to validate if a recipe is completely safe, " +
+      "matches the soldier's and host family's requirements. You must return ONLY a JSON object and nothing else.\n\n" +
+      "JSON structure:\n" +
+      "{\n" +
+      '  "is_valid": true or false,\n' +
+      '  "reason": "brief explanation in English of your decision"\n' +
+      "}";
+
+    for (const candidate of candidates) {
+      if (validRecipes.length >= count) break;
+      if (attempts >= maxAttempts) {
+        console.warn("Reached maximum number of LLM validation attempts.");
+        break;
+      }
+
+      attempts++;
+      
+      // Enforce distinctiveness by checking titles (both English and Hebrew)
+      const selectedTitlesEng = validRecipes.map(r => r.titleEng);
+      
+      let userPromptValidate = 
+        `Soldier & Host Family Constraints:\n` +
+        `- Favorite Foods: ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
+        `- Disliked Foods: ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
+        `- Allergies: ${JSON.stringify(soldier?.allergies || [])}\n` +
+        `- Dietary Restrictions: ${JSON.stringify(soldier?.dietaryPreferences || [])}\n` +
+        `- Is Kosher Required: ${kosherRequired ? "Yes" : "No"}\n\n` +
+        `Recipe to Validate:\n` +
+        `- Title: ${candidate.title}\n` +
+        `- Ingredients: ${JSON.stringify((candidate.extendedIngredients || []).map(i => i.original))}\n` +
+        `- Instructions: ${candidate.instructions || ""}\n\n`;
+
+      if (selectedTitlesEng.length > 0) {
+        userPromptValidate += 
+          `Already Selected Recipes in this session: ${JSON.stringify(selectedTitlesEng)}\n` +
+          `CRITICAL: The new recipe must be a completely different type of dish and cannot be a minor variation or similar type of dish to the already selected recipes (e.g. no similar pasta types, no similar chicken dishes, etc.).\n\n`;
+      }
+
+      userPromptValidate += 
+        `Validate against these rules:\n` +
+        `1. Must NOT contain any allergens.\n` +
+        `2. Must NOT contain any disliked ingredients.\n` +
+        `3. If Kosher required: Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.) and MUST NOT mix meat and dairy.\n` +
+        `4. Must match dietary restrictions (e.g. vegetarian, vegan).\n` +
+        `5. Must be a distinct type of dish from any already selected recipes.\n`;
+
+      try {
+        const validationResult = await callGroq([
+          { role: "system", content: systemPromptValidate },
+          { role: "user", content: userPromptValidate }
+        ]);
+
+        if (validationResult.is_valid) {
+          console.log(`Recipe '${candidate.title}' is valid! Translating...`);
+          const translatedRecipe = await translateAndFormatRecipe(candidate, soldier);
+          translatedRecipe.titleEng = candidate.title;
+          validRecipes.push(translatedRecipe);
+        } else {
+          console.log(`Recipe '${candidate.title}' rejected. Reason: ${validationResult.reason}`);
+        }
+      } catch (err) {
+        console.error(`Error validating recipe '${candidate.title}':`, err);
+      }
+    }
+
+    // Step 6 fallback: if we couldn't find enough validated distinct recipes, fill list with remaining candidates
+    if (validRecipes.length < count) {
+      console.log(`Could only validate ${validRecipes.length} recipes. Finding next candidate to fill list without strict validation.`);
+      for (const candidate of candidates) {
+        if (validRecipes.length >= count) break;
+        const isAlreadySelected = validRecipes.some(r => r.id === candidate.id);
+        if (!isAlreadySelected) {
+          try {
+            const translatedRecipe = await translateAndFormatRecipe(candidate, soldier);
+            translatedRecipe.titleEng = candidate.title;
+            validRecipes.push(translatedRecipe);
+            console.log(`Added candidate '${candidate.title}' as fallback.`);
+          } catch (err) {
+            console.error("Error formatting fallback recipe:", err);
+          }
+        }
+      }
+    }
+
+    // Remove the temporary titleEng field before returning to frontend
+    const cleanedRecipes = validRecipes.map(r => {
+      const { titleEng, ...rest } = r;
+      return rest;
+    });
+
+    return { recipes: cleanedRecipes };
+  }
+);
+

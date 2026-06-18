@@ -3,7 +3,6 @@
 var { useState, useEffect, useCallback } = React;
 
 /* ── Recipe Recommendations (family-side only) ── */
-const RECIPE_SERVER = 'http://localhost:8000';
 
 function buildPreferences(guest) {
   const prefs = [];
@@ -118,7 +117,7 @@ function RecipeModal({ guest, host, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const body = JSON.stringify({
+      const data = {
         soldier: {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: guest.dislikedFoods || [],
@@ -128,20 +127,18 @@ function RecipeModal({ guest, host, onClose }) {
         },
         host: {
           keepsKosher: host?.kosher_level && host.kosher_level !== 'none'
-        }
-      });
-      const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
-      const resData = await res.json();
-      setRecipes(resData.recipes || []);
+        },
+        count: 2
+      };
+      const generateRecipesFn = firebase.functions().httpsCallable('generateRecipes');
+      const result = await generateRecipesFn(data);
+      const recipesList = ((result.data && result.data.recipes) || []).map((recipe, idx) => ({
+        ...recipe,
+        recipe_id: idx + 1
+      }));
+      setRecipes(recipesList);
     } catch (e) {
-      setError(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')
-        ? 'server_off'
-        : e.message);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -155,7 +152,7 @@ function RecipeModal({ guest, host, onClose }) {
     setRefreshingIdx(idx);
     try {
       const existingTitles = recipes.map(r => r.title);
-      const body = JSON.stringify({
+      const data = {
         soldier: {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: [...(guest.dislikedFoods || []), ...existingTitles],
@@ -165,21 +162,18 @@ function RecipeModal({ guest, host, onClose }) {
         },
         host: {
           keepsKosher: host?.kosher_level && host.kosher_level !== 'none'
-        }
-      });
-      const res = await fetch(`${RECIPE_SERVER}/generate-recipes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
-      const resData = await res.json();
-      if (resData.recipes && resData.recipes[0]) {
-        const newRecipe = { ...resData.recipes[0], recipe_id: idx + 1 };
+        },
+        count: 1
+      };
+      const generateRecipesFn = firebase.functions().httpsCallable('generateRecipes');
+      const result = await generateRecipesFn(data);
+      const newRecipes = (result.data && result.data.recipes) || [];
+      if (newRecipes && newRecipes[0]) {
+        const newRecipe = { ...newRecipes[0], recipe_id: idx + 1 };
         setRecipes(prev => prev.map((r, i) => i === idx ? newRecipe : r));
       }
     } catch (e) {
-      // Silent fail
+      console.error("Failed to refresh recipe:", e);
     } finally {
       setRefreshingIdx(null);
     }
