@@ -347,9 +347,9 @@ function RadiusMapModal({ isOpen, onClose, onConfirm, initialLat, initialLng, in
 
         const initRadius = initialRadius || 10;
         const circle = L.circle(center, {
-          radius: initRadius * 1000,
-          color: '#6B8F71',
-          fillColor: '#6B8F71',
+          radius: 	initRadius * 1000,
+          color: '#B0BA99',
+          fillColor: '#B0BA99',
           fillOpacity: 0.15,
           weight: 2,
         }).addTo(map);
