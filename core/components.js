@@ -635,95 +635,100 @@ function SectionTitle({ title, sub }) {
 function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo }) {
   const { lang, setLang, t } = useLang();
   return (
-    <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
-      <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
+    <>
+      <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
+        <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
 
-        {/* Left — Language toggle + info + profile / logout / extra actions */}
-        <div className="relative flex items-center gap-1 z-10 flex-shrink-0">
-          <button
-            onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
-            style={{ color: 'var(--warm-600)' }}
-            aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
-          >
-            {lang === 'he' ? 'EN' : 'עב'}
-          </button>
-          {onInfo && (
+          {/* Left — Language toggle + info + profile / extra actions */}
+          <div className="relative flex items-center gap-1 z-10 flex-shrink-0">
             <button
-              onClick={onInfo}
-              className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
+              onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
               style={{ color: 'var(--warm-600)' }}
-              aria-label={t('info_btn_title')}
-              title={t('info_btn_title')}
+              aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
+              {lang === 'he' ? 'EN' : 'עב'}
             </button>
-          )}
-          {profileAction || (onProfile && (
-            <button
-              onClick={onProfile}
-              className="app-icon-btn"
-              aria-label={lang === 'he' ? 'פרופיל' : 'Profile'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
-                <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
-              </svg>
-            </button>
-          ))}
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="app-icon-btn"
-              aria-label={t('logout')}
-              title={t('logout')}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
-          )}
-          {actions}
-        </div>
-
-        {/* Logo — absolutely centred so it never gets displaced by side buttons */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md pointer-events-none" />
-        </div>
-
-        {/* Right — Title + optional back button */}
-        <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
-          <div className="min-w-0 text-end">
-            {eyebrow && (
-              <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {eyebrow}
-              </p>
+            {onInfo && (
+              <button
+                onClick={onInfo}
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
+                style={{ color: 'var(--warm-600)' }}
+                aria-label={t('info_btn_title')}
+                title={t('info_btn_title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+              </button>
             )}
-            {title && (
-              <h1 className="text-base font-bold tracking-tight truncate leading-tight" style={{ color: '#fff' }}>
-                {title}
-              </h1>
+            {profileAction || (onProfile && (
+              <button
+                onClick={onProfile}
+                className="app-icon-btn"
+                aria-label={lang === 'he' ? 'פרופיל' : 'Profile'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256">
+                  <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
+                </svg>
+              </button>
+            ))}
+            {actions}
+          </div>
+
+          {/* Logo — absolutely centred so it never gets displaced by side buttons */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md pointer-events-none" />
+          </div>
+
+          {/* Right — Title + optional back button */}
+          <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
+            <div className="min-w-0 text-end">
+              {eyebrow && (
+                <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  {eyebrow}
+                </p>
+              )}
+              {title && (
+                <h1 className="text-base font-bold tracking-tight truncate leading-tight" style={{ color: '#fff' }}>
+                  {title}
+                </h1>
+              )}
+            </div>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="app-icon-btn flex-shrink-0"
+                aria-label={lang === 'he' ? 'חזור' : 'Back'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"
+                  style={lang === 'he' ? {} : { transform: 'scaleX(-1)' }}>
+                  <path d="M237.66,122.34l-96-96A8,8,0,0,0,128,32V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16h80v40a8,8,0,0,0,13.66,5.66l96-96A8,8,0,0,0,237.66,122.34ZM144,204.69V176a8,8,0,0,0-8-8H48V88h88a8,8,0,0,0,8-8V51.31L220.69,128Z"/>
+                </svg>
+              </button>
             )}
           </div>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="app-icon-btn flex-shrink-0"
-              aria-label={lang === 'he' ? 'חזור' : 'Back'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"
-                style={lang === 'he' ? {} : { transform: 'scaleX(-1)' }}>
-                <path d="M237.66,122.34l-96-96A8,8,0,0,0,128,32V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16h80v40a8,8,0,0,0,13.66,5.66l96-96A8,8,0,0,0,237.66,122.34ZM144,204.69V176a8,8,0,0,0-8-8H48V88h88a8,8,0,0,0,8-8V51.31L220.69,128Z"/>
-              </svg>
-            </button>
-          )}
-        </div>
 
+        </div>
       </div>
-    </div>
+
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center gap-2 w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full bg-white text-red-600 shadow-lg border border-red-100 transition-all hover:bg-red-50 hover:text-red-700 active:scale-95 hover:scale-105"
+          style={{ direction: lang === 'he' ? 'rtl' : 'ltr' }}
+          aria-label={t('logout')}
+          title={t('logout')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span className="hidden md:inline text-sm font-semibold tracking-wide">{t('logout')}</span>
+        </button>
+      )}
+    </>
   );
 }
 
