@@ -888,6 +888,7 @@ exports.onActiveMatchApproved = onDocumentUpdated(
       match_id:       matchId,
       soldier_id:     request.soldier_id ?? null,
       name:           soldier.fullName ?? soldier.name ?? "חייל",
+      phone:          soldier.phone ?? null,
       unit:           soldier.unit ?? null,
       age:            soldier.age ?? null,
       avatarColor:    soldier.avatarPreview ?? "#6f8f72",

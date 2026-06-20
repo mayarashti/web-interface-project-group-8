@@ -386,6 +386,7 @@ const T = {
     s19_chat_placeholder:'הקלד הודעה...',
     s19_chat_typing:'מקליד/ה...',
     s19_chat_sent_success:'הודעה נשלחה בהצלחה!',
+    s19_phone_missing_msg:'לא ניתן לשלוח הודעה - מספר הטלפון של החייל אינו זמין במערכת',
 
     /* S20 New Hosting */
     s20_title:'פתיחת אירוח חדש', s20_sub:'מלאו את הפרטים וחיילים יוכלו להירשם',
@@ -938,6 +939,7 @@ const T = {
     s19_chat_placeholder:'Type a message...',
     s19_chat_typing:'is typing...',
     s19_chat_sent_success:'Message sent successfully!',
+    s19_phone_missing_msg:'Cannot send message - soldier\'s phone number is not available',
 
     /* S20 New Hosting */
     s20_title:'Create New Hosting', s20_sub:'Fill in the details and soldiers can sign up',
