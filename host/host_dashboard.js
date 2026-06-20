@@ -679,10 +679,8 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
   const hostings = data.hostings || [];
   
   const [selectedHostingId, setSelectedHostingId] = useState(null);
-  const [selectedChatGuest, setSelectedChatGuest] = useState(null);
   const [selectedRecipeGuest, setSelectedRecipeGuest] = useState(null);
   const [showPrefModal,       setShowPrefModal]       = useState(false);
-  const [conversations,       setConversations]       = useState({}); // { [soldierKey]: [messages] }
 
   // Resolve current active hosting from data
   const selectedHosting = hostings.find(h => h.id === selectedHostingId);
@@ -766,17 +764,24 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 
   if (selectedHosting) {
     return (
-      <HostingDetailsView
-        hosting={selectedHosting}
-        host={data}
-        onBack={() => setSelectedHostingId(null)}
-        onEdit={handleEdit}
-        onCancel={handleCancelOrRestore}
-        onOpenRecipes={(g) => setSelectedRecipeGuest(g)}
-        onOpenChat={(g) => setSelectedChatGuest(g)}
-        lang={lang}
-        t={t}
-      />
+      <>
+        <HostingDetailsView
+          hosting={selectedHosting}
+          host={data}
+          onBack={() => setSelectedHostingId(null)}
+          onEdit={handleEdit}
+          onCancel={handleCancelOrRestore}
+          onOpenRecipes={(g) => setSelectedRecipeGuest(g)}
+          lang={lang}
+          t={t}
+        />
+
+        <RecipeModal
+          guest={selectedRecipeGuest}
+          host={data}
+          onClose={() => setSelectedRecipeGuest(null)}
+        />
+      </>
     );
   }
 
@@ -894,18 +899,6 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         )}
       </div>
 
-      {/* Communication Modal */}
-      <CommunicationModal
-        isOpen={!!selectedChatGuest}
-        soldier={selectedChatGuest}
-        host={data}
-        conversations={conversations}
-        setConversations={setConversations}
-        onClose={() => setSelectedChatGuest(null)}
-        lang={lang}
-        t={t}
-      />
-
       {/* Recipe Recommendations Modal (family-side only) */}
       <RecipeModal
         guest={selectedRecipeGuest}
@@ -931,10 +924,56 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 /* ─────────────────────────────────────────
    S19.5 Hosting Details View
 ───────────────────────────────────────── */
-function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRecipes, onOpenChat, lang, t }) {
+function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRecipes, lang, t }) {
   const guests = hosting.guests || [];
   const capacity = parseInt(hosting.soldiers) || 0;
   const isCanceled = hosting.status === 'canceled';
+
+  const [resolvedPhones, setResolvedPhones] = useState({});
+
+  useEffect(() => {
+    guests.forEach(async (g) => {
+      const sId = g.soldier_id || g.id;
+      if (!g.phone && sId && !resolvedPhones[sId]) {
+        try {
+          const doc = await window.db.collection('soldiers').doc(sId).get();
+          if (doc.exists && doc.data().phone) {
+            setResolvedPhones(prev => ({ ...prev, [sId]: doc.data().phone }));
+          }
+        } catch (e) {
+          console.error("Failed to fetch phone for soldier:", sId, e);
+        }
+      }
+    });
+  }, [guests]);
+
+  const getGuestPhone = (g) => g.phone || resolvedPhones[g.soldier_id || g.id];
+
+  const handleWhatsAppRedirect = (g) => {
+    const phone = getGuestPhone(g);
+    if (!g || !phone) return;
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '972' + cleanPhone.slice(1);
+    } else if (cleanPhone.startsWith('972')) {
+      // Already has 972
+    } else if (cleanPhone.length === 9 && cleanPhone.startsWith('5')) {
+      cleanPhone = '972' + cleanPhone;
+    }
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    const message = lang === 'he' 
+      ? 'שלום! אנחנו המשפחה המארחת שלך לשבת. נשמח לתאם פרטים.' 
+      : 'Hello! We are your host family for Shabbat. Let\'s coordinate details.';
+    const encodedText = encodeURIComponent(message);
+
+    const baseUrl = isMobile 
+      ? `https://wa.me/${cleanPhone}?text=${encodedText}`
+      : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+      
+    window.open(baseUrl, '_blank');
+  };
+
   
   const totalGuests = guests.length > 0
     ? guests.reduce((sum, g) => sum + (g.groupSize || 1), 0)
@@ -1214,22 +1253,40 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
                         </div>
                       )}
 
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={() => onOpenChat(g)}
-                          className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-warm-200 rounded-xl py-2 px-3 text-gray-700 hover:bg-warm-50 transition-colors font-bold shadow-xs active:scale-[0.98]"
-                        >
-                          <WhatsAppIcon className="w-4 h-4 text-[#25D366]" />
-                          <span>{t('s19_send_msg')}</span>
-                        </button>
-                        <button
-                          onClick={() => onOpenRecipes(g)}
-                          className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl hover:bg-brand-100 transition-colors font-bold active:scale-[0.98]"
-                        >
-                          <ChefHatIcon className="w-4 h-4 text-brand-700" />
-                          <span>{t('s19_view_recipes')}</span>
-                        </button>
-                      </div>
+                      {(() => {
+                        const phone = getGuestPhone(g);
+                        return (
+                          <div className="flex flex-col gap-1.5 pt-2">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleWhatsAppRedirect(g)}
+                                disabled={!phone}
+                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 font-bold shadow-xs active:scale-[0.98] transition-all ${
+                                  phone
+                                    ? "bg-white border border-warm-200 text-gray-700 hover:bg-warm-50"
+                                    : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed opacity-60"
+                                }`}
+                                title={!phone ? t('s19_phone_missing_msg') : ''}
+                              >
+                                <WhatsAppIcon className={`w-4 h-4 ${phone ? 'text-[#25D366]' : 'text-gray-400'}`} />
+                                <span>{t('s19_send_msg')}</span>
+                              </button>
+                              <button
+                                onClick={() => onOpenRecipes(g)}
+                                className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl hover:bg-brand-100 transition-colors font-bold active:scale-[0.98]"
+                              >
+                                <ChefHatIcon className="w-4 h-4 text-brand-700" />
+                                <span>{t('s19_view_recipes')}</span>
+                              </button>
+                            </div>
+                            {!phone && (
+                              <p className="text-[10px] text-red-500 font-medium px-1 mt-0.5">
+                                ⚠️ {t('s19_phone_missing_msg')}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Card>
                 );
@@ -1242,213 +1299,7 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
   );
 }
 
-/* ─────────────────────────────────────────
-   S19.6 Communication/Chat Simulator Modal
-───────────────────────────────────────── */
-function CommunicationModal({ isOpen, onClose, soldier, host, conversations, setConversations, lang, t }) {
-  const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef(null);
 
-  const soldierKey = soldier ? (soldier.id || soldier.soldier_id || soldier.name) : '';
-  const currentMessages = soldier ? (conversations[soldierKey] || [
-    { sender: 'soldier', text: lang === 'he' ? `היי, שמח מאוד להצטרף אליכם לארוחה השבת!` : `Hi, really glad to join you for the Shabbat meal!`, time: '14:22' }
-  ]) : [];
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages, isTyping]);
-
-  if (!isOpen || !soldier) return null;
-
-  const handleSendMessage = (textToSend) => {
-    const trimmed = textToSend.trim();
-    if (!trimmed) return;
-
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMsg = { sender: 'host', text: trimmed, time: timeString };
-    
-    setConversations(prev => ({
-      ...prev,
-      [soldierKey]: [...currentMessages, newMsg]
-    }));
-
-    setInputText('');
-
-    // Trigger typing simulator after 800ms
-    setTimeout(() => {
-      setIsTyping(true);
-      
-      // Trigger reply after another 1500ms
-      setTimeout(() => {
-        setIsTyping(false);
-        
-        let replyText = '';
-        const lower = trimmed.toLowerCase();
-        if (lower.includes('הגעה') || lower.includes('מתי') || lower.includes('שעה') || lower.includes('arrive') || lower.includes('time')) {
-          replyText = lang === 'he' 
-            ? "אני מתכנן להגיע בסביבות שעה וחצי לפני כניסת שבת, בערך ב-17:30. זה מסתדר?" 
-            : "I plan to arrive about an hour and a half before Shabbat starts, around 5:30 PM. Does that work?";
-        } else if (lower.includes('אוכל') || lower.includes('לאכול') || lower.includes('אוהב') || lower.includes('מגבלות') || lower.includes('אלרג') || lower.includes('food') || lower.includes('eat') || lower.includes('prefer')) {
-          replyText = lang === 'he' 
-            ? "הכל נראה מצוין! אני לא בעייתי באוכל, אוכל מה שמכינים. המון תודה!" 
-            : "Everything looks great! I'm not picky at all, I will happily eat whatever you prepare. Thank you!";
-        } else if (lower.includes('כתובת') || lower.includes('איפה') || lower.includes('בית') || lower.includes('address') || lower.includes('location') || lower.includes('where')) {
-          replyText = lang === 'he' 
-            ? "קיבלתי, תודה רבה! אנווט לכתובת הזו ביום שישי." 
-            : "Got it, thank you so much! I will navigate to this address on Friday.";
-        } else {
-          replyText = lang === 'he'
-            ? "מעולה, תודה רבה על העדכון! מעריך את זה מאוד ונתראה בקרוב."
-            : "Great, thank you for the update! I really appreciate it and see you soon.";
-        }
-
-        const replyMsg = { sender: 'soldier', text: replyText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-        setConversations(prev => ({
-          ...prev,
-          [soldierKey]: [...(prev[soldierKey] || []), replyMsg]
-        }));
-      }, 1500);
-    }, 800);
-  };
-
-  const handlePresetClick = (presetText) => {
-    handleSendMessage(presetText);
-  };
-
-  const handleWhatsAppRedirect = (text) => {
-    const cleanPhone = (soldier.phone || '').replace(/\D/g, '').replace(/^0/, '');
-    const encodedText = encodeURIComponent(text || inputText);
-    const url = `https://wa.me/972${cleanPhone}${encodedText ? `?text=${encodedText}` : ''}`;
-    window.open(url, '_blank');
-  };
-
-  const presets = [
-    { 
-      id: 'time',
-      label: lang === 'he' ? 'תיאום הגעה' : 'Arrival Time', 
-      icon: <ClockIcon className="w-3.5 h-3.5 text-brand-600" />,
-      text: lang === 'he' ? "היי! נשמח לתאם איתך שעת הגעה ביום שישי הקרוב." : "Hi! We would love to coordinate your arrival time this Friday."
-    },
-    { 
-      id: 'food',
-      label: lang === 'he' ? 'שאלת תפריט' : 'Food Preferences', 
-      icon: <UtensilsIcon className="w-3.5 h-3.5 text-brand-600" strokeWidth={2.2} />,
-      text: lang === 'he' ? "שלום, רצינו לדעת אם יש מאכלים מסוימים שאתה מעדיף בארוחה?" : "Hello, we wanted to check if there are any specific foods you prefer for the meal?"
-    },
-    { 
-      id: 'address',
-      label: lang === 'he' ? 'כתובת והסברים' : 'Send Address', 
-      icon: <MapPinIcon className="w-3.5 h-3.5 text-brand-600" />,
-      text: host.hostAddress 
-        ? (lang === 'he' ? `היי, הנה הכתובת המלאה שלנו: ${host.hostAddress}. נתראה בקרוב!` : `Hi, here is our full address: ${host.hostAddress}. See you soon!`)
-        : (lang === 'he' ? "היי, הנה הכתובת והוראות הגעה אלינו. נשמח לעזור אם תצטרך." : "Hi, here is our address and directions to our home. Let us know if you need help finding us.")
-    }
-  ];
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`${t('s19_chat_with')} ${soldier.name}`}
-      className="max-w-md max-h-[85vh] flex flex-col"
-    >
-      <div className="flex flex-col h-[60vh]">
-        {/* Chat Messages Log */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-warm-50/50 rounded-2xl border border-warm-100">
-          {currentMessages.map((msg, i) => {
-            const isHost = msg.sender === 'host';
-            return (
-              <div 
-                key={i} 
-                className={`flex flex-col max-w-[80%] ${isHost ? 'ms-auto items-end' : 'me-auto items-start'}`}
-              >
-                <div 
-                  className={`p-3 rounded-2xl text-sm leading-relaxed shadow-xs ${
-                    isHost 
-                      ? 'bg-brand-600 text-white rounded-te-none' 
-                      : 'bg-white text-gray-800 border border-warm-200 rounded-ts-none'
-                  }`}
-                >
-                  {msg.text}
-                </div>
-                <span className="text-[10px] text-warm-400 mt-1 px-1 flex items-center gap-1">
-                  {msg.time} {isHost && <span className="text-brand-500">✓✓</span>}
-                </span>
-              </div>
-            );
-          })}
-          {isTyping && (
-            <div className="me-auto items-start max-w-[80%] flex flex-col">
-              <div className="p-3 bg-white text-gray-800 border border-warm-200 rounded-2xl rounded-ts-none text-xs flex items-center gap-1">
-                <span className="animate-bounce font-bold">.</span>
-                <span className="animate-bounce delay-100 font-bold">.</span>
-                <span className="animate-bounce delay-200 font-bold">.</span>
-                <span className="text-warm-400 ms-1">{t('s19_chat_typing')}</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Quick Message Presets */}
-        <div className="py-2.5">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
-            {t('s19_quick_msgs')}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {presets.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => handlePresetClick(p.text)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-semibold rounded-lg hover:bg-brand-100 transition-colors"
-              >
-                {p.icon}
-                <span>{p.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <div className="border-t border-warm-100 pt-3 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={t('s19_chat_placeholder')}
-              rows={1}
-              className="flex-1 px-3 py-2.5 rounded-xl border border-warm-200 bg-white text-sm focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-300 resize-none transition-all"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(inputText);
-                }
-              }}
-            />
-            <button
-              onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText.trim()}
-              className="px-4 bg-brand-600 text-white rounded-xl flex items-center justify-center hover:bg-brand-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <SendIcon className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleWhatsAppRedirect()}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] text-white py-2 px-3 rounded-xl text-xs font-bold hover:bg-[#1ebd5b] transition-colors shadow-xs active:scale-[0.98]"
-            >
-              <WhatsAppIcon className="w-4 h-4 text-white" />
-              <span>{t('s19_send_wa')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 /* ─────────────────────────────────────────
    S20 New Hosting / Edit Hosting

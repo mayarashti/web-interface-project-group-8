@@ -83,6 +83,7 @@ const LR = { 'עברית': 'he', 'אנגלית': 'en', 'רוסית': 'ru', 'ספ
       match_id:       matchDoc.id,
       soldier_id:     req.soldier_id,
       name:           soldier.fullName ?? soldier.name ?? 'חייל',
+      phone:          soldier.phone ?? null,
       unit:           soldier.unit    ?? null,
       age:            soldier.age     ?? null,
       avatarColor:    soldier.avatarPreview ?? '#6f8f72',
