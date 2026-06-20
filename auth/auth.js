@@ -203,7 +203,7 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
       {/* ── Top Navbar ── */}
       <header
         dir="ltr"
-        style={{ backgroundColor: 'var(--brand-600)' }}
+        style={{ backgroundColor: 'var(--brand-500)' }}
         className="w-full shadow-sm"
       >
         {/* full-width grid — no max-width so buttons reach the screen edges */}
