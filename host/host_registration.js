@@ -330,6 +330,17 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
 /* S17 Host Summary */
 function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
   const { t } = useLang();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNext = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const Row = ({ label, value }) => value ? (
     <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
@@ -367,7 +378,8 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
   return (
     <ScreenLayout
       onBack={onBack}
-      onNext={onSubmit}
+      onNext={handleNext}
+      isNextLoading={isSubmitting}
       nextLabel={t('s16_submit')}
       icon="📋"
       title={t('s16_sum_title')}

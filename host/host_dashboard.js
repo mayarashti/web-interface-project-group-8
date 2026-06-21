@@ -930,24 +930,34 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
   const isCanceled = hosting.status === 'canceled';
 
   const [resolvedPhones, setResolvedPhones] = useState({});
+  const [resolvedImages, setResolvedImages] = useState({});
 
   useEffect(() => {
     guests.forEach(async (g) => {
       const sId = g.soldier_id || g.id;
-      if (!g.phone && sId && !resolvedPhones[sId]) {
+      if (sId && (!g.phone || !g.profile_img_url) && (!resolvedPhones[sId] || !resolvedImages[sId])) {
         try {
           const doc = await window.db.collection('soldiers').doc(sId).get();
-          if (doc.exists && doc.data().phone) {
-            setResolvedPhones(prev => ({ ...prev, [sId]: doc.data().phone }));
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.phone) setResolvedPhones(prev => ({ ...prev, [sId]: data.phone }));
+            if (data.profile_img_url) setResolvedImages(prev => ({ ...prev, [sId]: data.profile_img_url }));
           }
         } catch (e) {
-          console.error("Failed to fetch phone for soldier:", sId, e);
+          console.error("Failed to fetch data for soldier:", sId, e);
         }
       }
     });
   }, [guests]);
 
   const getGuestPhone = (g) => g.phone || resolvedPhones[g.soldier_id || g.id];
+  const getGuestImage = (g) => g.profile_img_url || resolvedImages[g.soldier_id || g.id];
+
+  const enrichedGuests = guests.map(g => ({
+    ...g,
+    phone: getGuestPhone(g),
+    profile_img_url: getGuestImage(g)
+  }));
 
   const handleWhatsAppRedirect = (g) => {
     const phone = getGuestPhone(g);
@@ -1150,7 +1160,7 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
             </Card>
           ) : (
             <div className="space-y-4">
-              {guests.map(g => {
+              {enrichedGuests.map(g => {
                 const logisticsItems = [];
                 if (g.needsTransport) {
                   logisticsItems.push({

@@ -254,6 +254,17 @@ function S7Preferences({ data, setData, onNext, onBack }) {
 
 function S12Summary({ data, onEdit, onSubmit, onBack }) {
   const { t } = useLang();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNext = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const Row = ({ label, value }) => value ? (
     <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
@@ -269,7 +280,8 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
   return (
     <ScreenLayout
       onBack={onBack}
-      onNext={onSubmit}
+      onNext={handleNext}
+      isNextLoading={isSubmitting}
       nextLabel={t('s12_submit')}
       step={3}
       total={3}

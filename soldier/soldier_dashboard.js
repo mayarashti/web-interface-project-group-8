@@ -199,20 +199,6 @@ const familyAvatarUrl = (bgColor, familyId) => {
 /* —— Mock host-family data (neighbourhood-level coords for privacy) —— */
 window.MAP_FAMILIES = [
   {
-    id: 1, name: 'משפחת לוי', city: 'חיפה — הכרמל',
-    lat: 32.7943, lng: 34.9890,
-    kosher: 'separated', shabbat: 'traditional', capacity: 3, occupied: 1,
-    canSleep: false, canTransport: true, hasPets: false,
-    hostingTypes: ['friday_dinner'],
-    tags: ['kids', 'singing'],
-    rating: 4.9,
-    shortDescription: 'אירוח חם עם נוף לים וקצת שירה משותפת',
-    vibe: 'אנחנו משפחה חמה שאוהבת לארח ולשיר סביב שולחן שישי. תמיד יש מקום לעוד אחד!',
-    phoneDisplay: '+972528765432',
-    waDigits: '972528765432',
-    imageColor: '#fdeedd',
-  },
-  {
     id: 2, name: 'משפחת כהן', city: 'קריית אתא',
     lat: 32.8072, lng: 35.1073,
     kosher: 'mehadrin', shabbat: 'keeps', capacity: 2, occupied: 2,
@@ -1209,12 +1195,13 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     if (!window.db) return;
     window.db.collection('active_matches')
       .where('soldier_request_id', '==', request.id)
-      .where('status', '==', 'pending_soldier_approval')
+      .where('status', 'in', ['pending_soldier_approval', 'approved'])
       .limit(1)
       .get()
       .then(snap => {
         if (snap.empty) return;
         const match = snap.docs[0].data();
+        match.id = snap.docs[0].id; // Ensure we have the ID for confirmation
         setRealMatch(match);
         // Fetch family profile + hosting capacity in parallel
         if (match.family_id) {
