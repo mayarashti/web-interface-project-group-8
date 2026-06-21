@@ -681,9 +681,8 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
             <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md pointer-events-none" />
           </div>
 
-          {/* Right — Title + optional back button */}
           <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
-            <div className="min-w-0 text-end">
+            <div className="min-w-0 text-right" dir={lang === 'he' ? 'rtl' : 'ltr'}>
               {eyebrow && (
                 <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
                   {eyebrow}

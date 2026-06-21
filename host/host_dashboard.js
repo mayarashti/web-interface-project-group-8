@@ -789,8 +789,8 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
     <div className="screen-enter min-h-screen bg-warm-50 pb-20">
       {/* Header — matches AppHeader styling */}
       <AppHeader
-        eyebrow={`${t('s19_greeting')} ${data.hostName || 'משפחה'}`}
-        title={t('s19_status')}
+        eyebrow={t('s19_greeting')}
+        title={data.hostName || 'משפחה'}
         onProfile={onProfile}
         onLogout={onLogout}
       />
