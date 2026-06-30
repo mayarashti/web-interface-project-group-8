@@ -19,12 +19,7 @@ const functions = firebase.functions();
 const storage = firebase.storage();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-// During local development, route Cloud Functions calls to the local emulator.
-// (Production hosting uses the deployed functions automatically.)
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-  functions.useEmulator('127.0.0.1', 5001);
-  console.info('[firebase] Cloud Functions → local emulator at 127.0.0.1:5001');
-}
+// Note: emulator routing removed — all calls go directly to production Firebase.
 
 // Expose to window so our Babel components can use them
 window.auth = auth;
