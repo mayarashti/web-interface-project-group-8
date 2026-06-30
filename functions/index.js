@@ -649,7 +649,37 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     } catch (e) { console.error("notification error (meal_12h):", e); }
   }
 
-  // ── REMINDER C: family hosting 18h away with no confirmed guests ──
+  // ── REMINDER C: family guest details 12h before hosting ──────────
+  const familyHostingsFor12hSnap = await db.collection("family_hostings")
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+
+  for (const hostingDoc of familyHostingsFor12hSnap.docs) {
+    const hosting = hostingDoc.data();
+    if (hosting.status === "canceled") continue;
+    if (!hosting.guests || hosting.guests.length === 0) continue;
+    if ((hosting.reminders_sent ?? []).includes("guest_details_12h")) continue;
+
+    const hostingTime = hosting.time ?? "18:00";
+    const hostingDatetime = new Date(`${hosting.date}T${hostingTime}:00`);
+    const msUntil = hostingDatetime - now;
+    if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
+
+    const guestCount = hosting.guests.reduce((s, g) => s + (g.groupSize || 1), 0);
+    const guestNames = hosting.guests.map(g => g.name).filter(Boolean).join(", ");
+
+    try {
+      await createNotification(
+        hosting.family_id, "host",
+        `תזכורת 🗓️ ${guestCount} חייל/ים צפויים להגיע אליכם היום בשעה ${hostingTime}: ${guestNames}. שבת שלום ומבורכת!`,
+        "guest_details_reminder",
+        "פרטי החיילים המגיעים אליכם היום"
+      );
+      await hostingDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("guest_details_12h") });
+    } catch (e) { console.error("notification error (guest_details_12h):", e); }
+  }
+
+  // ── REMINDER E: family hosting 18h away with no confirmed guests ──
   const eigteenHoursFromNow = new Date(now.getTime() + 18 * 60 * 60 * 1000);
   const upcomingHostingsSnap = await db.collection("family_hostings")
     .where("date", "in", [todayStr, tomorrowStr])
@@ -677,7 +707,7 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     } catch (e) { console.error("notification error (no_guests_18h):", e); }
   }
 
-  // ── REMINDER C: unmatched soldier 25h before event ────────────────
+  // ── REMINDER F: unmatched soldier 25h before event ────────────────
   const twentyFiveHoursDate = new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString().split("T")[0];
   const checkDates = [...new Set([todayStr, tomorrowStr, twentyFiveHoursDate])];
 
@@ -2128,42 +2158,4 @@ exports.sendWednesdayHostingReminder = onSchedule(
   }
 );
 
-// ──────────────────────────────────────────────────────────────────
-// SCHEDULED: every Thursday at 12:00 Israel time
-// Remind families with confirmed guests of the soldier details.
-// ──────────────────────────────────────────────────────────────────
-exports.sendThursdayGuestDetails = onSchedule(
-  { schedule: "0 12 * * 4", timeZone: "Asia/Jerusalem" },
-  async () => {
-    // Find this coming Friday
-    const now = new Date();
-    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
-    const friday = new Date(now);
-    friday.setDate(friday.getDate() + daysUntilFriday);
-    const fridayStr = friday.toISOString().split("T")[0];
-
-    const hostingsSnap = await db.collection("family_hostings")
-      .where("date", "==", fridayStr)
-      .get();
-
-    for (const hostingDoc of hostingsSnap.docs) {
-      const hosting = hostingDoc.data();
-      if (hosting.status === "canceled") continue;
-      if (!hosting.guests || hosting.guests.length === 0) continue;
-
-      const guestCount = hosting.guests.reduce((s, g) => s + (g.groupSize || 1), 0);
-      const guestNames = hosting.guests.map(g => g.name).filter(Boolean).join(", ");
-      const arrivalTime = hosting.time ?? "לפי תיאום";
-
-      try {
-        await createNotification(
-          hosting.family_id, "host",
-          `תזכורת לקראת מחר 🗓️ ${guestCount} חייל/ים צפוי/ים להגיע אליכם: ${guestNames}. שעת הגעה: ${arrivalTime}. שבת שלום ומבורכת!`,
-          "thursday_reminder",
-          "פרטי החיילים המגיעים מחר"
-        );
-      } catch (e) { console.error("notification error (thursday_reminder):", e); }
-    }
-  }
-);
 
