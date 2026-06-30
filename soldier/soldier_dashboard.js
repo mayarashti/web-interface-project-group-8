@@ -37,6 +37,13 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        onNotificationClick={(notif) => {
+          const reqId = notif.payload?.request_id;
+          const req = reqId
+            ? (data.requests || []).find(r => r.id === reqId)
+            : (data.requests || []).find(r => r.is_match);
+          if (req) setActiveRequest(req);
+        }}
       />
       <AppHeader
         eyebrow={t('s15_hi')}
@@ -567,6 +574,13 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        onNotificationClick={(notif) => {
+          const reqId = notif.payload?.request_id;
+          const req = reqId
+            ? (data.requests || []).find(r => r.id === reqId)
+            : (data.requests || []).find(r => r.is_match);
+          if (req) onBack(); // go back to S15Landing which will show the request sheet
+        }}
       />
       <AppHeader
         eyebrow={t('s15_hi')}

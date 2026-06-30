@@ -33,13 +33,14 @@ setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY] });
 // Usage inside any Cloud Function:
 //   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
 // ─────────────────────────────────────────────────────────────────────────────
-async function createNotification(userId, role, content, type = 'general', title = '') {
+async function createNotification(userId, role, content, type = 'general', title = '', payload = {}) {
   await db.collection('notifications').add({
     user_id: userId,
     role,
     title,
     content,
     type,
+    payload,
     read: false,
     sent_at: FieldValue.serverTimestamp(),
   });
@@ -423,7 +424,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
       request.soldier_id, "soldier",
       `נמצאה לך משפחה מארחת: ${best.family.hostName ?? "משפחה"} ב${best.family.hostCity ?? ""}. היכנס לאפליקציה כדי לאשר את הגעתך.`,
       "new_match",
-      "שיבוץ חדש!"
+      "שיבוץ חדש!",
+      { request_id: requestId }
     );
   } catch (e) { console.error("notification error (new_match):", e); }
 
@@ -571,7 +573,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
           soldierId, "soldier",
           `המקום אצל משפחת ${match.family_name ?? "המשפחה"} נתפס. אנחנו מחפשים לך משפחה חדשה!`,
           "spot_taken",
-          "המקום נתפס — מחפשים לך חלופה"
+          "המקום נתפס — מחפשים לך חלופה",
+          { request_id: match.soldier_request_id }
         );
       }
     } catch (e) { console.error("notification error (spot_taken scheduler):", e); }
@@ -600,7 +603,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
         soldierId, "soldier",
         `נמצאה לך משפחה מארחת: ${match.family_name ?? "משפחה"} ב${match.family_city ?? ""}. עדיין לא אישרת הגעה — אנא אשר בהקדם כדי שלא תאבד את המקום!`,
         "confirm_reminder",
-        "תזכורת: עדיין לא אישרת הגעה"
+        "תזכורת: עדיין לא אישרת הגעה",
+        { request_id: match.soldier_request_id }
       );
       await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("confirm_24h") });
     } catch (e) { console.error("notification error (confirm_24h):", e); }
@@ -643,7 +647,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
         soldierId, "soldier",
         `יש לך אירוח היום בשעה ${hostingTime} אצל משפחת ${match.family_name ?? "המשפחה"}${address ? ` בכתובת ${address}` : ""}. שבת שלום!`,
         "meal_reminder",
-        "תזכורת לאירוח הערב 🍽️"
+        "תזכורת לאירוח הערב 🍽️",
+        { request_id: match.soldier_request_id }
       );
       await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("meal_12h") });
     } catch (e) { console.error("notification error (meal_12h):", e); }
@@ -673,7 +678,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
         hosting.family_id, "host",
         `תזכורת 🗓️ ${guestCount} חייל/ים צפויים להגיע אליכם היום בשעה ${hostingTime}: ${guestNames}. שבת שלום ומבורכת!`,
         "guest_details_reminder",
-        "פרטי החיילים המגיעים אליכם היום"
+        "פרטי החיילים המגיעים אליכם היום",
+        { hosting_id: hostingDoc.id }
       );
       await hostingDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("guest_details_12h") });
     } catch (e) { console.error("notification error (guest_details_12h):", e); }
@@ -701,7 +707,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
         hosting.family_id, "host",
         `האירוח שלך ב${hosting.date} מתקרב ועדיין אין חיילים מאושרים. האם תרצו לשנות משהו בהגדרות כדי שנוכל לשבץ אליכם חיילים?`,
         "no_guests_reminder",
-        "עדיין אין חיילים לאירוח שלך"
+        "עדיין אין חיילים לאירוח שלך",
+        { hosting_id: hostingDoc.id }
       );
       await hostingDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("no_guests_18h") });
     } catch (e) { console.error("notification error (no_guests_18h):", e); }
@@ -729,7 +736,8 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
         req.soldier_id, "soldier",
         "עדיין מחפשים לך משפחה מארחת לשבת הקרובה. אנחנו ממשיכים לנסות ולא שכחנו אותך! 💪",
         "searching_reminder",
-        "עדיין מחפשים לך משפחה"
+        "עדיין מחפשים לך משפחה",
+        { request_id: reqDoc.id }
       );
       await reqDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("unmatched_25h") });
     } catch (e) { console.error("notification error (unmatched_25h):", e); }
@@ -767,7 +775,8 @@ exports.requestRematch = onCall(async (req) => {
           match.family_id, "host",
           `חייל שאישר הגעה לאירוח שלך ב${match.hosting_date ?? ""} שינה את תוכניותיו ולא יוכל להגיע. אנחנו נעדכן אותך אם יגיע חייל אחר.`,
           "soldier_canceled",
-          "חייל ביטל הגעה"
+          "חייל ביטל הגעה",
+          { hosting_id: match.host_offer_id }
         );
       }
     } catch (e) { console.error("notification error (rematch_family):", e); }
@@ -1173,7 +1182,8 @@ exports.onActiveMatchApproved = onDocumentUpdated(
           request.soldier_id, "soldier",
           `המקום אצל משפחת ${after.family_name ?? "המשפחה"} נתפס על ידי חייל אחר שאישר מהר יותר. אנחנו מחפשים לך משפחה חדשה!`,
           "spot_taken",
-          "המקום נתפס — מחפשים לך חלופה"
+          "המקום נתפס — מחפשים לך חלופה",
+          { request_id: after.soldier_request_id }
         );
       } catch (e) { console.error("notification error (spot_taken):", e); }
 
@@ -1189,7 +1199,8 @@ exports.onActiveMatchApproved = onDocumentUpdated(
           after.family_id, "host",
           `${guestObj.name}${groupLabel} אישר הגעה לאירוח שלך ב${after.hosting_date ?? ""}. תוכלו לראות את הפרטים המלאים בדשבורד.`,
           "soldier_confirmed",
-          "חייל אישר הגעה!"
+          "חייל אישר הגעה!",
+          { hosting_id: after.host_offer_id }
         );
       }
     } catch (e) { console.error("notification error (soldier_confirmed):", e); }
@@ -1303,7 +1314,8 @@ exports.cancelSoldierRequest = onCall(async (req) => {
             match.family_id, "host",
             `חייל שאישר הגעה לאירוח שלך ב${match.hosting_date ?? ""} ביטל את ההגעה. אנחנו נעדכן אותך אם יגיע חייל אחר במקומו.`,
             "soldier_canceled",
-            "חייל ביטל הגעה"
+            "חייל ביטל הגעה",
+            { hosting_id: match.host_offer_id }
           );
         }
       } catch (e) { console.error("notification error (soldier_canceled):", e); }
@@ -1396,7 +1408,8 @@ exports.cancelHosting = onCall(async (req) => {
           soldierIdForNotif, "soldier",
           `האירוח שנקצה לך ב${match.hosting_date ?? ""} בוטל על ידי המשפחה. אנחנו כבר מחפשים לך משפחה חדשה!`,
           "hosting_canceled",
-          "האירוח בוטל — מחפשים לך חלופה"
+          "האירוח בוטל — מחפשים לך חלופה",
+          { request_id: match.soldier_request_id }
         );
       }
     } catch (e) { console.error("notification error (hosting_canceled):", e); }
@@ -1478,7 +1491,8 @@ exports.onHostingStatusChange = onDocumentUpdated(
               soldierIdForNotif, "soldier",
               `האירוח שנקצה לך ב${match.hosting_date ?? ""} בוטל על ידי המשפחה. אנחנו כבר מחפשים לך משפחה חדשה!`,
               "hosting_canceled",
-              "האירוח בוטל — מחפשים לך חלופה"
+              "האירוח בוטל — מחפשים לך חלופה",
+              { request_id: match.soldier_request_id }
             );
           }
         } catch (e) { console.error("notification error (hosting_canceled trigger):", e); }

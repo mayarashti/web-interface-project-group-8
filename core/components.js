@@ -872,7 +872,7 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
   );
 }
 
-function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onMarkRead }) {
+function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onMarkRead, onNotificationClick }) {
   const { lang } = useLang();
   const isRtl = lang === 'he';
   if (!isOpen) return null;
@@ -951,33 +951,45 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
               <p className="text-warm-500 text-sm">{isRtl ? 'אין התראות חדשות' : 'No notifications yet'}</p>
             </div>
           ) : (
-            notifications.map((n, i) => (
-              <div
-                key={n.id || i}
-                className={clsx(
-                  'px-4 py-3 border-b border-warm-50 cursor-pointer transition-colors',
-                  n.read ? 'bg-white hover:bg-warm-50' : 'bg-brand-50/60 hover:bg-brand-50'
-                )}
-                onClick={() => onMarkRead && !n.read && onMarkRead(n.id)}
-              >
-                <div className="flex items-start gap-2.5">
-                  {/* unread dot */}
-                  <div className={clsx(
-                    'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
-                    n.read ? 'bg-transparent' : 'bg-brand-500'
-                  )} />
-                  <div className="min-w-0 flex-1">
-                    {n.title && (
-                      <p className={clsx('text-sm leading-snug mb-0.5', n.read ? 'font-medium text-gray-700' : 'font-bold text-gray-900')}>
-                        {n.title}
-                      </p>
+            notifications.map((n, i) => {
+              const isActionable = onNotificationClick && n.payload && (n.payload.request_id || n.payload.hosting_id);
+              return (
+                <div
+                  key={n.id || i}
+                  className={clsx(
+                    'px-4 py-3 border-b border-warm-50 transition-colors',
+                    isActionable ? 'cursor-pointer' : 'cursor-default',
+                    n.read ? 'bg-white hover:bg-warm-50' : 'bg-brand-50/60 hover:bg-brand-50'
+                  )}
+                  onClick={() => {
+                    if (!n.read && onMarkRead) onMarkRead(n.id);
+                    if (isActionable) { onNotificationClick(n); onClose(); }
+                  }}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {/* unread dot */}
+                    <div className={clsx(
+                      'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
+                      n.read ? 'bg-transparent' : 'bg-brand-500'
+                    )} />
+                    <div className="min-w-0 flex-1">
+                      {n.title && (
+                        <p className={clsx('text-sm leading-snug mb-0.5', n.read ? 'font-medium text-gray-700' : 'font-bold text-gray-900')}>
+                          {n.title}
+                        </p>
+                      )}
+                      <p className="text-xs text-warm-500 leading-relaxed">{n.content || n.message}</p>
+                      <p className="text-[11px] text-warm-400 mt-1">{n.time}</p>
+                    </div>
+                    {isActionable && (
+                      <svg className="flex-shrink-0 mt-0.5 text-brand-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
                     )}
-                    <p className="text-xs text-warm-500 leading-relaxed">{n.content || n.message}</p>
-                    <p className="text-[11px] text-warm-400 mt-1">{n.time}</p>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

@@ -795,6 +795,14 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        onNotificationClick={(notif) => {
+          const hostingId = notif.payload?.hosting_id;
+          if (hostingId) {
+            setSelectedHostingId(hostingId);
+          } else if (notif.type === 'wednesday_reminder' || notif.type === 'no_guests_reminder') {
+            onNewHosting();
+          }
+        }}
       />
       {/* Header — matches AppHeader styling */}
       <AppHeader
