@@ -606,7 +606,50 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     } catch (e) { console.error("notification error (confirm_24h):", e); }
   }
 
-  // ── REMINDER B: family hosting 18h away with no confirmed guests ──
+  // ── REMINDER B: soldier meal details 12h before confirmed hosting ─
+  const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const confirmedMatchesSnap = await db.collection("active_matches")
+    .where("status", "==", "approved")
+    .where("hosting_date", "in", [todayStr, tomorrowStr])
+    .get();
+
+  for (const matchDoc of confirmedMatchesSnap.docs) {
+    const match = matchDoc.data();
+    if ((match.reminders_sent ?? []).includes("meal_12h")) continue;
+    if (!match.host_offer_id) continue;
+
+    // Fetch hosting to get the time
+    const hostingSnap = await db.collection("family_hostings").doc(match.host_offer_id).get();
+    if (!hostingSnap.exists) continue;
+    const hosting = hostingSnap.data();
+    if (hosting.status === "canceled") continue;
+
+    const hostingTime = hosting.time ?? "18:00";
+    const hostingDatetime = new Date(`${match.hosting_date}T${hostingTime}:00`);
+    const msUntil = hostingDatetime - now;
+    if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
+
+    // Fetch family to get address
+    const familySnap = await db.collection("families").doc(match.family_id).get();
+    const family = familySnap.exists ? familySnap.data() : {};
+    const address = family.hostAddress || family.hostCity || "";
+
+    const soldierId = match.soldier_id
+      ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+    if (!soldierId) continue;
+
+    try {
+      await createNotification(
+        soldierId, "soldier",
+        `יש לך אירוח היום בשעה ${hostingTime} אצל משפחת ${match.family_name ?? "המשפחה"}${address ? ` בכתובת ${address}` : ""}. שבת שלום!`,
+        "meal_reminder",
+        "תזכורת לאירוח הערב 🍽️"
+      );
+      await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("meal_12h") });
+    } catch (e) { console.error("notification error (meal_12h):", e); }
+  }
+
+  // ── REMINDER C: family hosting 18h away with no confirmed guests ──
   const eigteenHoursFromNow = new Date(now.getTime() + 18 * 60 * 60 * 1000);
   const upcomingHostingsSnap = await db.collection("family_hostings")
     .where("date", "in", [todayStr, tomorrowStr])
