@@ -17,6 +17,34 @@ const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 // triggers, callables and the scheduler) can call the Distance Matrix API.
 setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY] });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS HELPER
+// Creates a notification document in the `notifications` collection.
+//
+// Fields:
+//   user_id  — UID of the recipient
+//   role     — 'soldier' | 'host'
+//   title    — short heading (optional)
+//   content  — full message text
+//   type     — machine-readable category (e.g. 'match', 'cancel', 'reminder')
+//   read     — always false on creation
+//   sent_at  — server timestamp
+//
+// Usage inside any Cloud Function:
+//   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
+// ─────────────────────────────────────────────────────────────────────────────
+async function createNotification(userId, role, content, type = 'general', title = '') {
+  await db.collection('notifications').add({
+    user_id: userId,
+    role,
+    title,
+    content,
+    type,
+    read: false,
+    sent_at: FieldValue.serverTimestamp(),
+  });
+}
+
 // ─── Compromise levels (applied in order after 24h) ───────────────
 const COMPROMISE = {
   NONE:   0,  // strict matching only

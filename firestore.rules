@@ -56,6 +56,18 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Notifications:
+    // Each user can read only their own notifications.
+    // Only the read field may be updated by the user (to mark as read).
+    // Cloud Functions (admin SDK) create notifications — client writes are blocked.
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.user_id
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false; // Cloud Functions only
+    }
+
     // Archive collections — written only by Cloud Functions (admin SDK bypasses rules).
     // Authenticated users can read their own history.
     match /active_match_archive/{docId} {

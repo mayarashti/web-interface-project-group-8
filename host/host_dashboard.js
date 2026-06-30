@@ -677,10 +677,12 @@ function SoldierProfileModal({ guest, onClose }) {
 function S19HostHome({ data, setData, onProfile, onLogout }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
-  
+
   const [selectedHostingId, setSelectedHostingId] = useState(null);
   const [selectedRecipeGuest, setSelectedRecipeGuest] = useState(null);
   const [showPrefModal,       setShowPrefModal]       = useState(false);
+  const [showNotifications,   setShowNotifications]   = useState(false);
+  const notifications = data.notifications || [];
 
   // Resolve current active hosting from data
   const selectedHosting = hostings.find(h => h.id === selectedHostingId);
@@ -787,11 +789,20 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-20">
+      <NotificationsPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
+        onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+      />
       {/* Header — matches AppHeader styling */}
       <AppHeader
         eyebrow={t('s19_greeting')}
         title={data.hostName || 'משפחה'}
         onProfile={onProfile}
+        onNotifications={() => setShowNotifications(true)}
+        notificationsCount={notifications.filter(n => !n.read).length}
         onLogout={onLogout}
       />
 

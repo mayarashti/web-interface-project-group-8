@@ -638,7 +638,7 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo }) {
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo, onNotifications, notificationsCount = 0 }) {
   const { lang, setLang, t } = useLang();
   return (
     <>
@@ -679,6 +679,24 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
                 </svg>
               </button>
             ))}
+            {onNotifications && (
+              <button
+                onClick={onNotifications}
+                className="app-icon-btn relative"
+                aria-label={lang === 'he' ? 'התראות' : 'Notifications'}
+                title={lang === 'he' ? 'התראות' : 'Notifications'}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                {notificationsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    {notificationsCount > 9 ? '9+' : notificationsCount}
+                  </span>
+                )}
+              </button>
+            )}
             {actions}
           </div>
 
@@ -854,6 +872,126 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
   );
 }
 
+function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onMarkRead }) {
+  const { lang } = useLang();
+  const isRtl = lang === 'he';
+  if (!isOpen) return null;
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <div className="fixed inset-0 z-40" dir={isRtl ? 'rtl' : 'ltr'} onClick={onClose}>
+      {/* invisible backdrop — click anywhere to close */}
+
+      {/* The floating panel itself */}
+      <div
+        className="absolute bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{
+          top: '80px',
+          left: '8px',
+          width: 'min(340px, calc(100vw - 16px))',
+          maxHeight: '480px',
+          border: '1px solid #e8e0d8',
+          animation: 'notif-drop 0.18s cubic-bezier(0.16,1,0.3,1) both',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Small caret pointing up toward the bell icon */}
+        <div style={{
+          position: 'absolute',
+          top: '-7px',
+          left: '22px',
+          width: '14px',
+          height: '7px',
+          overflow: 'visible',
+        }}>
+          <svg width="14" height="7" viewBox="0 0 14 7" fill="none">
+            <path d="M0 7 L7 0 L14 7" fill="white" stroke="#e8e0d8" strokeWidth="1" strokeLinejoin="round"/>
+            <path d="M1 7 L7 1 L13 7" fill="white" stroke="white" strokeWidth="1"/>
+          </svg>
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-warm-100 flex-shrink-0">
+          <h3 className="text-base font-bold text-gray-900">
+            {isRtl ? 'התראות' : 'Notifications'}
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold ms-2">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </h3>
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && onMarkAllRead && (
+              <button
+                onClick={onMarkAllRead}
+                className="text-xs text-brand-600 hover:text-brand-800 font-semibold transition-colors"
+              >
+                {isRtl ? 'סמן הכל כנקרא' : 'Mark all read'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-warm-100 text-warm-500 hover:bg-warm-200 transition-colors text-sm font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Notification list */}
+        <div className="overflow-y-auto overscroll-contain flex-1">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 text-center space-y-3 px-6">
+              <div className="w-12 h-12 rounded-full bg-warm-100 flex items-center justify-center text-warm-400">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+              </div>
+              <p className="text-warm-500 text-sm">{isRtl ? 'אין התראות חדשות' : 'No notifications yet'}</p>
+            </div>
+          ) : (
+            notifications.map((n, i) => (
+              <div
+                key={n.id || i}
+                className={clsx(
+                  'px-4 py-3 border-b border-warm-50 cursor-pointer transition-colors',
+                  n.read ? 'bg-white hover:bg-warm-50' : 'bg-brand-50/60 hover:bg-brand-50'
+                )}
+                onClick={() => onMarkRead && !n.read && onMarkRead(n.id)}
+              >
+                <div className="flex items-start gap-2.5">
+                  {/* unread dot */}
+                  <div className={clsx(
+                    'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
+                    n.read ? 'bg-transparent' : 'bg-brand-500'
+                  )} />
+                  <div className="min-w-0 flex-1">
+                    {n.title && (
+                      <p className={clsx('text-sm leading-snug mb-0.5', n.read ? 'font-medium text-gray-700' : 'font-bold text-gray-900')}>
+                        {n.title}
+                      </p>
+                    )}
+                    <p className="text-xs text-warm-500 leading-relaxed">{n.content || n.message}</p>
+                    <p className="text-[11px] text-warm-400 mt-1">{n.time}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes notif-drop {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 window.ProgressBar = ProgressBar;
 window.Btn = Btn;
 window.Input = Input;
@@ -865,6 +1003,7 @@ window.RadioGroup = RadioGroup;
 window.MultiCheck = MultiCheck;
 window.SectionTitle = SectionTitle;
 window.AppHeader = AppHeader;
+window.NotificationsPanel = NotificationsPanel;
 window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
 window.LocationInput = LocationInput;

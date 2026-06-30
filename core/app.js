@@ -20,7 +20,10 @@ function App() {
   // Make `go` available globally for components that use `window.setScreen`
   window.setScreen = go;
 
+  const notificationsUnsubRef = React.useRef(null);
+
   const handleLogout = async () => {
+    if (notificationsUnsubRef.current) { notificationsUnsubRef.current(); notificationsUnsubRef.current = null; }
     try { if (window.auth) await window.auth.signOut(); } catch (e) {}
     setFormData({ languages: ['he'], hostings: [], requests: [], editingRequest: null, selectedRequestId: null, editingHostingId: null });
     go(1);
@@ -87,7 +90,7 @@ function App() {
         const soldierProfile = await window.DB.getSoldierProfile(user.uid);
         if (soldierProfile) {
           setFormData(prev => ({ ...prev, ...soldierProfile, uid: user.uid, role: 'soldier' }));
-          
+
           // Real-time listener for soldier requests
           window.db.collection('soldier_hosting_searches')
             .where('soldier_id', '==', user.uid)
@@ -99,6 +102,14 @@ function App() {
               setFormData(prev => ({ ...prev, requests: reqs }));
             });
 
+          // Real-time listener for notifications
+          if (window.DB.subscribeToNotifications) {
+            if (notificationsUnsubRef.current) notificationsUnsubRef.current();
+            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+              setFormData(prev => ({ ...prev, notifications }));
+            });
+          }
+
           setScreen(24); // Soldier Landing
           setLoadingUser(false);
           return;
@@ -108,7 +119,7 @@ function App() {
         const familyProfile = await window.DB.getFamilyProfile(user.uid);
         if (familyProfile) {
           setFormData(prev => ({ ...prev, ...familyProfile, uid: user.uid, role: 'host' }));
-          
+
           // Real-time listener for active family hostings
           window.db.collection('family_hostings')
             .where('family_id', '==', user.uid)
@@ -133,6 +144,14 @@ function App() {
                 return { ...prev, hostings: [...active, ...archived] };
               });
             });
+
+          // Real-time listener for notifications
+          if (window.DB.subscribeToNotifications) {
+            if (notificationsUnsubRef.current) notificationsUnsubRef.current();
+            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+              setFormData(prev => ({ ...prev, notifications }));
+            });
+          }
 
           setScreen(19); // Host Home
           setLoadingUser(false);
