@@ -17,6 +17,35 @@ const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 // triggers, callables and the scheduler) can call the Distance Matrix API.
 setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY] });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS HELPER
+// Creates a notification document in the `notifications` collection.
+//
+// Fields:
+//   user_id  — UID of the recipient
+//   role     — 'soldier' | 'host'
+//   title    — short heading (optional)
+//   content  — full message text
+//   type     — machine-readable category (e.g. 'match', 'cancel', 'reminder')
+//   read     — always false on creation
+//   sent_at  — server timestamp
+//
+// Usage inside any Cloud Function:
+//   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
+// ─────────────────────────────────────────────────────────────────────────────
+async function createNotification(userId, role, content, type = 'general', title = '', payload = {}) {
+  await db.collection('notifications').add({
+    user_id: userId,
+    role,
+    title,
+    content,
+    type,
+    payload,
+    read: false,
+    sent_at: FieldValue.serverTimestamp(),
+  });
+}
+
 // ─── Compromise levels (applied in order after 24h) ───────────────
 const COMPROMISE = {
   NONE:   0,  // strict matching only
@@ -370,6 +399,7 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   await matchRef.set({
     id: matchRef.id,
     soldier_request_id: requestId,
+    soldier_id: request.soldier_id,             // stored for fast notification lookups
     host_offer_id: best.hosting.id,
     family_id: best.family.id,
     family_name: best.family.hostName ?? null,
@@ -382,10 +412,22 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     compromise_level: compromiseLevel,
     compromise_notes: compromiseNotes,
     created_at: new Date().toISOString(),
+    reminders_sent: [],
   });
 
   // Mark soldier request as matched
   await db.collection("soldier_hosting_searches").doc(requestId).update({ is_match: true });
+
+  // Notify soldier: new assignment found
+  try {
+    await createNotification(
+      request.soldier_id, "soldier",
+      `נמצאה לך משפחה מארחת: ${best.family.hostName ?? "משפחה"} ב${best.family.hostCity ?? ""}. היכנס לאפליקציה כדי לאשר את הגעתך.`,
+      "new_match",
+      "שיבוץ חדש!",
+      { request_id: requestId }
+    );
+  } catch (e) { console.error("notification error (new_match):", e); }
 
   // Note: family_hostings.guests is updated only when the soldier confirms arrival
   // (via the confirmMatch callable), not at match creation time.
@@ -522,7 +564,183 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
       notification: "no_spot_left",
     });
 
+    // Notify soldier: spot was taken
+    try {
+      const soldierId = match.soldier_id
+        ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+      if (soldierId) {
+        await createNotification(
+          soldierId, "soldier",
+          `המקום אצל משפחת ${match.family_name ?? "המשפחה"} נתפס. אנחנו מחפשים לך משפחה חדשה!`,
+          "spot_taken",
+          "המקום נתפס — מחפשים לך חלופה",
+          { request_id: match.soldier_request_id }
+        );
+      }
+    } catch (e) { console.error("notification error (spot_taken scheduler):", e); }
+
     await tryAllCompromiseLevels(match.soldier_request_id);
+  }
+
+  // ── REMINDER A: soldier hasn't confirmed in 24h ───────────────────
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const unconfirmedSnap = await db.collection("active_matches")
+    .where("status", "==", "pending_soldier_approval")
+    .get();
+
+  for (const matchDoc of unconfirmedSnap.docs) {
+    const match = matchDoc.data();
+    if (!match.created_at || match.created_at > oneDayAgo) continue;
+    if ((match.reminders_sent ?? []).includes("confirm_24h")) continue;
+    if (match.hosting_date && match.hosting_date < todayStr) continue;
+
+    const soldierId = match.soldier_id
+      ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+    if (!soldierId) continue;
+
+    try {
+      await createNotification(
+        soldierId, "soldier",
+        `נמצאה לך משפחה מארחת: ${match.family_name ?? "משפחה"} ב${match.family_city ?? ""}. עדיין לא אישרת הגעה — אנא אשר בהקדם כדי שלא תאבד את המקום!`,
+        "confirm_reminder",
+        "תזכורת: עדיין לא אישרת הגעה",
+        { request_id: match.soldier_request_id }
+      );
+      await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("confirm_24h") });
+    } catch (e) { console.error("notification error (confirm_24h):", e); }
+  }
+
+  // ── REMINDER B: soldier meal details 12h before confirmed hosting ─
+  const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const confirmedMatchesSnap = await db.collection("active_matches")
+    .where("status", "==", "approved")
+    .where("hosting_date", "in", [todayStr, tomorrowStr])
+    .get();
+
+  for (const matchDoc of confirmedMatchesSnap.docs) {
+    const match = matchDoc.data();
+    if ((match.reminders_sent ?? []).includes("meal_12h")) continue;
+    if (!match.host_offer_id) continue;
+
+    // Fetch hosting to get the time
+    const hostingSnap = await db.collection("family_hostings").doc(match.host_offer_id).get();
+    if (!hostingSnap.exists) continue;
+    const hosting = hostingSnap.data();
+    if (hosting.status === "canceled") continue;
+
+    const hostingTime = hosting.time ?? "18:00";
+    const hostingDatetime = new Date(`${match.hosting_date}T${hostingTime}:00`);
+    const msUntil = hostingDatetime - now;
+    if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
+
+    // Fetch family to get address
+    const familySnap = await db.collection("families").doc(match.family_id).get();
+    const family = familySnap.exists ? familySnap.data() : {};
+    const address = family.hostAddress || family.hostCity || "";
+
+    const soldierId = match.soldier_id
+      ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+    if (!soldierId) continue;
+
+    try {
+      await createNotification(
+        soldierId, "soldier",
+        `יש לך אירוח היום בשעה ${hostingTime} אצל משפחת ${match.family_name ?? "המשפחה"}${address ? ` בכתובת ${address}` : ""}. שבת שלום!`,
+        "meal_reminder",
+        "תזכורת לאירוח הערב 🍽️",
+        { request_id: match.soldier_request_id }
+      );
+      await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("meal_12h") });
+    } catch (e) { console.error("notification error (meal_12h):", e); }
+  }
+
+  // ── REMINDER C: family guest details 12h before hosting ──────────
+  const familyHostingsFor12hSnap = await db.collection("family_hostings")
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+
+  for (const hostingDoc of familyHostingsFor12hSnap.docs) {
+    const hosting = hostingDoc.data();
+    if (hosting.status === "canceled") continue;
+    if (!hosting.guests || hosting.guests.length === 0) continue;
+    if ((hosting.reminders_sent ?? []).includes("guest_details_12h")) continue;
+
+    const hostingTime = hosting.time ?? "18:00";
+    const hostingDatetime = new Date(`${hosting.date}T${hostingTime}:00`);
+    const msUntil = hostingDatetime - now;
+    if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
+
+    const guestCount = hosting.guests.reduce((s, g) => s + (g.groupSize || 1), 0);
+    const guestNames = hosting.guests.map(g => g.name).filter(Boolean).join(", ");
+
+    try {
+      await createNotification(
+        hosting.family_id, "host",
+        `תזכורת 🗓️ ${guestCount} חייל/ים צפויים להגיע אליכם היום בשעה ${hostingTime}: ${guestNames}. שבת שלום ומבורכת!`,
+        "guest_details_reminder",
+        "פרטי החיילים המגיעים אליכם היום",
+        { hosting_id: hostingDoc.id }
+      );
+      await hostingDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("guest_details_12h") });
+    } catch (e) { console.error("notification error (guest_details_12h):", e); }
+  }
+
+  // ── REMINDER E: family hosting 18h away with no confirmed guests ──
+  const eigteenHoursFromNow = new Date(now.getTime() + 18 * 60 * 60 * 1000);
+  const upcomingHostingsSnap = await db.collection("family_hostings")
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+
+  for (const hostingDoc of upcomingHostingsSnap.docs) {
+    const hosting = hostingDoc.data();
+    if (hosting.status === "canceled") continue;
+    if (hosting.guests && hosting.guests.length > 0) continue;
+    if ((hosting.reminders_sent ?? []).includes("no_guests_18h")) continue;
+
+    const hostingTime = hosting.time ?? "18:00";
+    const hostingDatetime = new Date(`${hosting.date}T${hostingTime}:00`);
+    const msUntil = hostingDatetime - now;
+    if (msUntil > 18 * 60 * 60 * 1000 || msUntil < 0) continue;
+
+    try {
+      await createNotification(
+        hosting.family_id, "host",
+        `האירוח שלך ב${hosting.date} מתקרב ועדיין אין חיילים מאושרים. האם תרצו לשנות משהו בהגדרות כדי שנוכל לשבץ אליכם חיילים?`,
+        "no_guests_reminder",
+        "עדיין אין חיילים לאירוח שלך",
+        { hosting_id: hostingDoc.id }
+      );
+      await hostingDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("no_guests_18h") });
+    } catch (e) { console.error("notification error (no_guests_18h):", e); }
+  }
+
+  // ── REMINDER F: unmatched soldier 25h before event ────────────────
+  const twentyFiveHoursDate = new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const checkDates = [...new Set([todayStr, tomorrowStr, twentyFiveHoursDate])];
+
+  const unmatchedSoldiersSnap = await db.collection("soldier_hosting_searches")
+    .where("is_match", "==", false)
+    .where("when", "in", checkDates)
+    .get();
+
+  for (const reqDoc of unmatchedSoldiersSnap.docs) {
+    const req = reqDoc.data();
+    if ((req.reminders_sent ?? []).includes("unmatched_25h")) continue;
+
+    const eventDatetime = new Date(`${req.when}T18:00:00`);
+    const hoursUntil = (eventDatetime - now) / (60 * 60 * 1000);
+    if (hoursUntil > 25 || hoursUntil < 0) continue;
+
+    try {
+      await createNotification(
+        req.soldier_id, "soldier",
+        "עדיין מחפשים לך משפחה מארחת לשבת הקרובה. אנחנו ממשיכים לנסות ולא שכחנו אותך! 💪",
+        "searching_reminder",
+        "עדיין מחפשים לך משפחה",
+        { request_id: reqDoc.id }
+      );
+      await reqDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("unmatched_25h") });
+    } catch (e) { console.error("notification error (unmatched_25h):", e); }
   }
 });
 
@@ -548,8 +766,21 @@ exports.requestRematch = onCall(async (req) => {
   });
   await db.collection("active_matches").doc(match_id).delete();
 
-  // If the match was already confirmed, free up the reserved seats and fill the slot
+  // If the match was already confirmed, notify family, free seats, and fill the slot
   if (match.status === "approved" && match.host_offer_id) {
+    // Notify family: their confirmed soldier changed plans
+    try {
+      if (match.family_id) {
+        await createNotification(
+          match.family_id, "host",
+          `חייל שאישר הגעה לאירוח שלך ב${match.hosting_date ?? ""} שינה את תוכניותיו ולא יוכל להגיע. אנחנו נעדכן אותך אם יגיע חייל אחר.`,
+          "soldier_canceled",
+          "חייל ביטל הגעה",
+          { hosting_id: match.host_offer_id }
+        );
+      }
+    } catch (e) { console.error("notification error (rematch_family):", e); }
+
     const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(hostingRef);
@@ -944,9 +1175,35 @@ exports.onActiveMatchApproved = onDocumentUpdated(
         is_match: false,
         notification: "no_spot_left",
       });
+
+      // Notify soldier: spot was taken by someone faster
+      try {
+        await createNotification(
+          request.soldier_id, "soldier",
+          `המקום אצל משפחת ${after.family_name ?? "המשפחה"} נתפס על ידי חייל אחר שאישר מהר יותר. אנחנו מחפשים לך משפחה חדשה!`,
+          "spot_taken",
+          "המקום נתפס — מחפשים לך חלופה",
+          { request_id: after.soldier_request_id }
+        );
+      } catch (e) { console.error("notification error (spot_taken):", e); }
+
       await tryAllCompromiseLevels(after.soldier_request_id);
       return;
     }
+
+    // Notify family: a soldier confirmed arrival
+    try {
+      if (after.family_id) {
+        const groupLabel = (after.group_size ?? 1) > 1 ? ` (${after.group_size} חיילים)` : "";
+        await createNotification(
+          after.family_id, "host",
+          `${guestObj.name}${groupLabel} אישר הגעה לאירוח שלך ב${after.hosting_date ?? ""}. תוכלו לראות את הפרטים המלאים בדשבורד.`,
+          "soldier_confirmed",
+          "חייל אישר הגעה!",
+          { hosting_id: after.host_offer_id }
+        );
+      }
+    } catch (e) { console.error("notification error (soldier_confirmed):", e); }
 
     // 2. Check all remaining pending matches for this hosting
     const pendingSnap = await db
@@ -1048,8 +1305,21 @@ exports.cancelSoldierRequest = onCall(async (req) => {
     });
     await matchDoc.ref.delete();
 
-    // If already confirmed, free the hosting slot and scan for a replacement
+    // If already confirmed, free the hosting slot, notify family, and scan for a replacement
     if (match.status === "approved" && match.host_offer_id) {
+      // Notify family: their confirmed soldier canceled
+      try {
+        if (match.family_id) {
+          await createNotification(
+            match.family_id, "host",
+            `חייל שאישר הגעה לאירוח שלך ב${match.hosting_date ?? ""} ביטל את ההגעה. אנחנו נעדכן אותך אם יגיע חייל אחר במקומו.`,
+            "soldier_canceled",
+            "חייל ביטל הגעה",
+            { hosting_id: match.host_offer_id }
+          );
+        }
+      } catch (e) { console.error("notification error (soldier_canceled):", e); }
+
       const hostingRef = db.collection("family_hostings").doc(match.host_offer_id);
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(hostingRef);
@@ -1129,6 +1399,21 @@ exports.cancelHosting = onCall(async (req) => {
       is_match: false,
     });
 
+    // Notify soldier: their hosting was canceled — we're looking for a new one
+    try {
+      const soldierIdForNotif = match.soldier_id
+        ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+      if (soldierIdForNotif) {
+        await createNotification(
+          soldierIdForNotif, "soldier",
+          `האירוח שנקצה לך ב${match.hosting_date ?? ""} בוטל על ידי המשפחה. אנחנו כבר מחפשים לך משפחה חדשה!`,
+          "hosting_canceled",
+          "האירוח בוטל — מחפשים לך חלופה",
+          { request_id: match.soldier_request_id }
+        );
+      }
+    } catch (e) { console.error("notification error (hosting_canceled):", e); }
+
     // 5. Try to find a new match
     const newMatch = await tryAllCompromiseLevels(match.soldier_request_id);
     rematchResults.push({
@@ -1196,6 +1481,22 @@ exports.onHostingStatusChange = onDocumentUpdated(
         await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
           is_match: false,
         });
+
+        // Notify soldier: hosting canceled — looking for a new one
+        try {
+          const soldierIdForNotif = match.soldier_id
+            ?? (await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).get()).data()?.soldier_id;
+          if (soldierIdForNotif) {
+            await createNotification(
+              soldierIdForNotif, "soldier",
+              `האירוח שנקצה לך ב${match.hosting_date ?? ""} בוטל על ידי המשפחה. אנחנו כבר מחפשים לך משפחה חדשה!`,
+              "hosting_canceled",
+              "האירוח בוטל — מחפשים לך חלופה",
+              { request_id: match.soldier_request_id }
+            );
+          }
+        } catch (e) { console.error("notification error (hosting_canceled trigger):", e); }
+
         await tryAllCompromiseLevels(match.soldier_request_id);
       }
     }
@@ -1830,4 +2131,45 @@ exports.generateRecipes = onCall(
     return { recipes: cleanedRecipes };
   }
 );
+
+// ──────────────────────────────────────────────────────────────────
+// SCHEDULED: every Wednesday at 17:00 Israel time
+// Remind registered families who have no upcoming hosting to open one.
+// ──────────────────────────────────────────────────────────────────
+exports.sendWednesdayHostingReminder = onSchedule(
+  { schedule: "0 17 * * 3", timeZone: "Asia/Jerusalem" },
+  async () => {
+    // Find next Friday (= upcoming Shabbat hosting date)
+    const now = new Date();
+    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
+    const friday = new Date(now);
+    friday.setDate(friday.getDate() + daysUntilFriday);
+    const fridayStr = friday.toISOString().split("T")[0];
+
+    // Which families already have an active hosting for that Friday?
+    const existingSnap = await db.collection("family_hostings")
+      .where("date", "==", fridayStr)
+      .get();
+    const familiesWithHosting = new Set(
+      existingSnap.docs
+        .filter(d => d.data().status !== "canceled")
+        .map(d => d.data().family_id)
+    );
+
+    // Notify every other registered family
+    const familiesSnap = await db.collection("families").get();
+    for (const familyDoc of familiesSnap.docs) {
+      if (familiesWithHosting.has(familyDoc.id)) continue;
+      try {
+        await createNotification(
+          familyDoc.id, "host",
+          `שבת קרבה ובאה 🕯️ האם תרצו לארח חיילים השבת (${fridayStr})? פתחו אירוח עכשיו ונשבץ אליכם חיילים.`,
+          "wednesday_reminder",
+          "רוצים לארח השבת?"
+        );
+      } catch (e) { console.error("notification error (wednesday_reminder):", e); }
+    }
+  }
+);
+
 

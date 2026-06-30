@@ -123,6 +123,58 @@ window.DB = {
     }
   },
 
+  // Notifications
+  // Returns an unsubscribe function. Calls `callback` with an array of
+  // notification objects sorted newest-first whenever the collection changes.
+  subscribeToNotifications(uid, callback) {
+    console.log('[notif] starting Firestore listener for uid:', uid);
+    return window.db.collection('notifications')
+      .where('user_id', '==', uid)
+      .orderBy('sent_at', 'desc')
+      .limit(50)
+      .onSnapshot(snapshot => {
+        console.log('[notif] Firestore snapshot:', snapshot.docs.length, 'docs');
+        const notifications = snapshot.docs.map(doc => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            ...d,
+            time: d.sent_at ? d.sent_at.toDate().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '',
+          };
+        });
+        callback(notifications);
+      }, err => {
+        console.error('notifications listener error:', err);
+      });
+  },
+
+  async markNotificationRead(notificationId) {
+    try {
+      await window.db.collection('notifications').doc(notificationId).update({ read: true });
+      return true;
+    } catch (e) {
+      console.error('Error marking notification read:', e);
+      return false;
+    }
+  },
+
+  async markAllNotificationsRead(uid) {
+    try {
+      const snap = await window.db.collection('notifications')
+        .where('user_id', '==', uid)
+        .where('read', '==', false)
+        .get();
+      if (snap.empty) return true;
+      const batch = window.db.batch();
+      snap.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error('Error marking all notifications read:', e);
+      return false;
+    }
+  },
+
   // Active Matches
   async createMatch(soldierRequestId, hostOfferId) {
     try {

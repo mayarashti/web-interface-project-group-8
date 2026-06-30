@@ -18,6 +18,8 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const hasRequests = data.requests && data.requests.length > 0;
   const [showPrefModal, setShowPrefModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifications = data.notifications || [];
 
   const handleNewRequestClick = () => {
     if (data.soldierPreferencesSkipped) {
@@ -29,6 +31,20 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-10">
+      <NotificationsPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
+        onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        onNotificationClick={(notif) => {
+          const reqId = notif.payload?.request_id;
+          const req = reqId
+            ? (data.requests || []).find(r => r.id === reqId)
+            : (data.requests || []).find(r => r.is_match);
+          if (req) setActiveRequest(req);
+        }}
+      />
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
@@ -39,6 +55,8 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
             </svg>
           </button>
         )}
+        onNotifications={() => setShowNotifications(true)}
+        notificationsCount={notifications.filter(n => !n.read).length}
         onLogout={onLogout}
       />
 
@@ -489,7 +507,9 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
   const [selected, setSelected] = useState(data.focusFamilyForMap || null);
   const [hovered, setHovered] = useState(null);
   const [showPrefModal, setShowPrefModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
+  const notifications = data.notifications || [];
 
   const handleNewRequestClick = () => {
     if (data.soldierPreferencesSkipped) {
@@ -548,6 +568,20 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+      <NotificationsPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
+        onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        onNotificationClick={(notif) => {
+          const reqId = notif.payload?.request_id;
+          const req = reqId
+            ? (data.requests || []).find(r => r.id === reqId)
+            : (data.requests || []).find(r => r.is_match);
+          if (req) onBack(); // go back to S15Landing which will show the request sheet
+        }}
+      />
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
@@ -559,6 +593,8 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
             </svg>
           </button>
         )}
+        onNotifications={() => setShowNotifications(true)}
+        notificationsCount={notifications.filter(n => !n.read).length}
         onLogout={onLogout}
       />
 
