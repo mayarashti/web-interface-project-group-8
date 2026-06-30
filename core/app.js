@@ -103,9 +103,11 @@ function App() {
             });
 
           // Real-time listener for notifications
+          console.log('[notif] subscribeToNotifications available?', !!window.DB.subscribeToNotifications, '| uid:', user.uid);
           if (window.DB.subscribeToNotifications) {
             if (notificationsUnsubRef.current) notificationsUnsubRef.current();
             notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+              console.log('[notif] soldier got', notifications.length, 'notifications');
               setFormData(prev => ({ ...prev, notifications }));
             });
           }
@@ -146,9 +148,11 @@ function App() {
             });
 
           // Real-time listener for notifications
+          console.log('[notif] subscribeToNotifications available?', !!window.DB.subscribeToNotifications, '| uid:', user.uid);
           if (window.DB.subscribeToNotifications) {
             if (notificationsUnsubRef.current) notificationsUnsubRef.current();
             notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+              console.log('[notif] host got', notifications.length, 'notifications');
               setFormData(prev => ({ ...prev, notifications }));
             });
           }

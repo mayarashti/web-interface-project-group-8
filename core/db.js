@@ -127,11 +127,13 @@ window.DB = {
   // Returns an unsubscribe function. Calls `callback` with an array of
   // notification objects sorted newest-first whenever the collection changes.
   subscribeToNotifications(uid, callback) {
+    console.log('[notif] starting Firestore listener for uid:', uid);
     return window.db.collection('notifications')
       .where('user_id', '==', uid)
       .orderBy('sent_at', 'desc')
       .limit(50)
       .onSnapshot(snapshot => {
+        console.log('[notif] Firestore snapshot:', snapshot.docs.length, 'docs');
         const notifications = snapshot.docs.map(doc => {
           const d = doc.data();
           return {
