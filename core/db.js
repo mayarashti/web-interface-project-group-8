@@ -84,6 +84,17 @@ window.DB = {
     }
   },
 
+  async saveTelegramChatId(uid, role, chatId) {
+    try {
+      const collection = role === 'soldier' ? 'soldiers' : 'families';
+      await window.db.collection(collection).doc(uid).update({ telegram_chat_id: chatId ?? null });
+      return true;
+    } catch (e) {
+      console.error('Error saving telegram_chat_id:', e);
+      return false;
+    }
+  },
+
   // Hosting Searches (Soldier requests)
   async createHostingSearch(soldierId, data) {
     try {

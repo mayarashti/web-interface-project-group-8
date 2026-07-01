@@ -795,6 +795,8 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        uid={data.uid}
+        telegramConnected={!!data.telegram_chat_id}
         onNotificationClick={(notif) => {
           const hostingId = notif.payload?.hosting_id;
           if (hostingId) {
