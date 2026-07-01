@@ -1824,94 +1824,491 @@ exports.reverseGeocode = onCall(
 );
 
 // ══════════════════════════════════════════════════════════════════
-// TELEGRAM BOT
+// TELEGRAM BOT — conversational bot with inline keyboards
 // ══════════════════════════════════════════════════════════════════
 
-// Sends a plain-text message to a Telegram chat.
-async function sendTelegramMessage(token, chatId, text) {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+// ── Telegram API helpers ──────────────────────────────────────────
+
+async function telegramPost(token, method, body) {
+  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    console.error("sendTelegramMessage failed", res.status, await res.text());
+  if (!res.ok) console.error(`Telegram ${method} failed`, res.status, await res.text());
+  return res;
+}
+
+async function sendTelegramMessage(token, chatId, text, replyMarkup = null) {
+  const body = { chat_id: chatId, text, parse_mode: "HTML" };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  await telegramPost(token, "sendMessage", body);
+}
+
+async function answerCallbackQuery(token, queryId) {
+  await telegramPost(token, "answerCallbackQuery", { callback_query_id: queryId });
+}
+
+// ── Session helpers ───────────────────────────────────────────────
+// Sessions live in `telegram_sessions/{chatId}` and hold the
+// current conversation state so the webhook can be stateless.
+
+async function getSession(chatId) {
+  const snap = await db.collection("telegram_sessions").doc(String(chatId)).get();
+  return snap.exists ? snap.data() : null;
+}
+
+async function saveSession(chatId, patch) {
+  await db.collection("telegram_sessions").doc(String(chatId)).set(
+    { ...patch, updated_at: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+}
+
+async function resetSession(chatId) {
+  await db.collection("telegram_sessions").doc(String(chatId)).set(
+    { state: "idle", temp_data: {}, updated_at: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// ── UI helpers ────────────────────────────────────────────────────
+
+function inlineKeyboard(rows) { return { inline_keyboard: rows }; }
+function btn(text, data)      { return { text, callback_data: data }; }
+
+function getNextFridays(n = 4) {
+  const fridays = [];
+  const d = new Date();
+  const daysUntil = (5 - d.getDay() + 7) % 7 || 7; // 5 = Friday
+  d.setDate(d.getDate() + daysUntil);
+  for (let i = 0; i < n; i++) {
+    fridays.push({
+      label: `שישי ${d.getDate()}/${d.getMonth() + 1}`,
+      value: d.toISOString().split("T")[0],
+    });
+    d.setDate(d.getDate() + 7);
+  }
+  return fridays;
+}
+
+// ── Main menu ─────────────────────────────────────────────────────
+
+async function showMainMenu(token, chatId, role, name) {
+  const greeting = name ? `שלום ${name}! 👋` : "שלום! 👋";
+  const keyboard = role === "soldier"
+    ? inlineKeyboard([
+        [btn("📋 הסטטוס שלי", "menu:status")],
+        [btn("🍽️ פתח בקשת אירוח", "menu:new_request")],
+        [btn("❓ עזרה", "menu:help")],
+      ])
+    : inlineKeyboard([
+        [btn("👥 מי מגיע אליי?", "menu:guests")],
+        [btn("🏠 פתח אירוח חדש", "menu:new_hosting")],
+        [btn("❓ עזרה", "menu:help")],
+      ]);
+  await sendTelegramMessage(token, chatId, `${greeting}\n\nמה תרצה לעשות?`, keyboard);
+}
+
+// ── Soldier: status ───────────────────────────────────────────────
+
+async function handleStatus(token, chatId, session) {
+  const uid = session.user_id;
+
+  const matchSnap = await db.collection("active_matches")
+    .where("soldier_id", "==", uid)
+    .where("status", "in", ["pending_soldier_approval", "approved"])
+    .limit(1).get();
+
+  if (matchSnap.empty) {
+    const reqSnap = await db.collection("soldier_hosting_searches")
+      .where("soldier_id", "==", uid).where("is_match", "==", false).limit(1).get();
+    const msg = reqSnap.empty
+      ? "אין לך בקשות פעילות כרגע."
+      : `🔍 <b>מחפשים לך משפחה...</b>\n\nתאריך: ${reqSnap.docs[0].data().when}\nעדיין לא נמצאה התאמה — ממשיכים לנסות!`;
+    return sendTelegramMessage(token, chatId, msg,
+      inlineKeyboard([[btn("🍽️ פתח בקשה", "menu:new_request"), btn("🔙 תפריט", "menu:main")]]));
+  }
+
+  const matchId = matchSnap.docs[0].id;
+  const match = matchSnap.docs[0].data();
+  const statusLabel = match.status === "approved" ? "✅ מאושר" : "⏳ ממתין לאישורך";
+  const text = `<b>השיבוץ שלך:</b>\n\nמשפחה: ${match.family_name ?? "—"}\nעיר: ${match.family_city ?? "—"}\nתאריך: ${match.hosting_date ?? "—"}\nסטטוס: ${statusLabel}`;
+
+  const buttons = [[btn("🔙 תפריט", "menu:main")]];
+  if (match.status === "pending_soldier_approval")
+    buttons.unshift([btn("✅ אשר הגעה", `confirm:${matchId}`), btn("🔄 שיבוץ חדש", `rematch:${matchId}`)]);
+
+  await sendTelegramMessage(token, chatId, text, inlineKeyboard(buttons));
+}
+
+// ── Host: who's coming ────────────────────────────────────────────
+
+async function handleGuests(token, chatId, session) {
+  const today = new Date().toISOString().split("T")[0];
+  const snap = await db.collection("family_hostings")
+    .where("family_id", "==", session.user_id)
+    .where("date", ">=", today)
+    .where("status", "==", "open")
+    .orderBy("date").limit(3).get();
+
+  if (snap.empty) {
+    return sendTelegramMessage(token, chatId, "אין לך אירוחים פעילים קרובים.",
+      inlineKeyboard([[btn("🏠 פתח אירוח חדש", "menu:new_hosting"), btn("🔙 תפריט", "menu:main")]]));
+  }
+
+  for (const doc of snap.docs) {
+    const h = doc.data();
+    const guests = h.guests || [];
+    let text = `🗓️ <b>${h.date}</b> בשעה ${h.time ?? "—"}\n`;
+    if (guests.length === 0) {
+      text += "עדיין לא שובצו חיילים.";
+    } else {
+      const total = guests.reduce((s, g) => s + (g.groupSize || 1), 0);
+      text += `<b>${total} חיילים מגיעים:</b>\n`;
+      guests.forEach(g => {
+        text += `• ${g.name}${g.phone ? ` — ${g.phone}` : ""}${(g.groupSize ?? 1) > 1 ? ` (${g.groupSize})` : ""}\n`;
+      });
+    }
+    await sendTelegramMessage(token, chatId, text.trim());
+  }
+
+  await sendTelegramMessage(token, chatId, "זה הכל.", inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+}
+
+// ── Soldier: new request — step by step ──────────────────────────
+
+async function srStart(token, chatId) {
+  await saveSession(chatId, { state: "sr_date", temp_data: {} });
+  const f = getNextFridays(4);
+  await sendTelegramMessage(token, chatId, "🍽️ <b>בקשת אירוח חדשה</b>\n\nלאיזה שבת?",
+    inlineKeyboard([
+      f.slice(0, 2).map(d => btn(d.label, `sr_date:${d.value}`)),
+      f.slice(2, 4).map(d => btn(d.label, `sr_date:${d.value}`)),
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function srKosher(token, chatId, date) {
+  await saveSession(chatId, { state: "sr_kosher", temp_data: { when: date } });
+  await sendTelegramMessage(token, chatId, `תאריך: <b>${date}</b>\n\nמה רמת הכשרות שלך?`,
+    inlineKeyboard([
+      [btn("ללא העדפה", "sr_kosher:none"), btn("כשר", "sr_kosher:separated")],
+      [btn("כשר למהדרין", "sr_kosher:mehadrin")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function srShabbat(token, chatId, temp) {
+  await saveSession(chatId, { state: "sr_shabbat", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "שמירת שבת?",
+    inlineKeyboard([
+      [btn("לא שומר", "sr_shabbat:none"), btn("מסורתי", "sr_shabbat:traditional")],
+      [btn("שומר שבת", "sr_shabbat:keeps")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function srGuests(token, chatId, temp) {
+  await saveSession(chatId, { state: "sr_guests", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "כמה אנשים?",
+    inlineKeyboard([
+      [btn("1", "sr_guests:1"), btn("2", "sr_guests:2"), btn("3", "sr_guests:3"), btn("4", "sr_guests:4")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function srSleep(token, chatId, temp) {
+  await saveSession(chatId, { state: "sr_sleep", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "צריך לינה?",
+    inlineKeyboard([[btn("כן", "sr_sleep:yes"), btn("לא", "sr_sleep:no")], [btn("❌ ביטול", "menu:main")]]));
+}
+
+async function srConfirm(token, chatId, temp) {
+  await saveSession(chatId, { state: "sr_confirm", temp_data: temp });
+  const kLabel = { none: "ללא העדפה", separated: "כשר", mehadrin: "כשר למהדרין" }[temp.kosher] ?? temp.kosher;
+  const sLabel = { none: "לא שומר", traditional: "מסורתי", keeps: "שומר שבת" }[temp.shabbat] ?? temp.shabbat;
+  await sendTelegramMessage(token, chatId,
+    `📋 <b>אישור הבקשה:</b>\n\nתאריך: ${temp.when}\nכשרות: ${kLabel}\nשבת: ${sLabel}\nאנשים: ${temp.guestCount}\nלינה: ${temp.needSleep ? "כן" : "לא"}`,
+    inlineKeyboard([[btn("✅ שלח בקשה", "sr_submit"), btn("❌ ביטול", "menu:main")]]));
+}
+
+async function srSubmit(token, chatId, session) {
+  const { user_id, temp_data: t } = session;
+  try {
+    const ref = db.collection("soldier_hosting_searches").doc();
+    await ref.set({
+      id: ref.id, soldier_id: user_id, when: t.when,
+      kosher: t.kosher, shabbat: t.shabbat,
+      guestCount: parseInt(t.guestCount), needSleep: t.needSleep,
+      transport: false, walkDistance: false, is_match: false,
+      source: "telegram", created_at: FieldValue.serverTimestamp(),
+    });
+    await resetSession(chatId);
+    await sendTelegramMessage(token, chatId,
+      "✅ <b>הבקשה נשלחה!</b>\n\nמחפשים לך משפחה ונודיע ברגע שנמצאה התאמה. 🏠",
+      inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+  } catch (e) {
+    console.error("sr_submit error:", e);
+    await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב מאוחר יותר.",
+      inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
   }
 }
 
-// ── HTTP WEBHOOK: receives updates from Telegram ──────────────────
+// ── Host: new hosting — step by step ─────────────────────────────
+
+async function nhStart(token, chatId) {
+  await saveSession(chatId, { state: "nh_date", temp_data: {} });
+  const f = getNextFridays(4);
+  await sendTelegramMessage(token, chatId, "🏠 <b>אירוח חדש</b>\n\nלאיזה שבת?",
+    inlineKeyboard([
+      f.slice(0, 2).map(d => btn(d.label, `nh_date:${d.value}`)),
+      f.slice(2, 4).map(d => btn(d.label, `nh_date:${d.value}`)),
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function nhSoldiers(token, chatId, date) {
+  await saveSession(chatId, { state: "nh_soldiers", temp_data: { date } });
+  await sendTelegramMessage(token, chatId, `תאריך: <b>${date}</b>\n\nכמה חיילים תוכלו לארח?`,
+    inlineKeyboard([
+      [btn("1", "nh_soldiers:1"), btn("2", "nh_soldiers:2"), btn("3", "nh_soldiers:3")],
+      [btn("4", "nh_soldiers:4"), btn("5", "nh_soldiers:5"), btn("6", "nh_soldiers:6")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function nhKosher(token, chatId, temp) {
+  await saveSession(chatId, { state: "nh_kosher", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "רמת הכשרות במטבח?",
+    inlineKeyboard([
+      [btn("לא כשר", "nh_kosher:none"), btn("כשר", "nh_kosher:separated")],
+      [btn("כשר למהדרין", "nh_kosher:mehadrin")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function nhTime(token, chatId, temp) {
+  await saveSession(chatId, { state: "nh_time", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "באיזו שעה תתקיים הארוחה?",
+    inlineKeyboard([
+      [btn("12:00", "nh_time:12:00"), btn("13:00", "nh_time:13:00"), btn("14:00", "nh_time:14:00")],
+      [btn("19:00", "nh_time:19:00"), btn("20:00", "nh_time:20:00"), btn("21:00", "nh_time:21:00")],
+      [btn("❌ ביטול", "menu:main")],
+    ]));
+}
+
+async function nhSleep(token, chatId, temp) {
+  await saveSession(chatId, { state: "nh_sleep", temp_data: temp });
+  await sendTelegramMessage(token, chatId, "האם יש אפשרות לינה?",
+    inlineKeyboard([[btn("כן", "nh_sleep:yes"), btn("לא", "nh_sleep:no")], [btn("❌ ביטול", "menu:main")]]));
+}
+
+async function nhConfirm(token, chatId, temp) {
+  await saveSession(chatId, { state: "nh_confirm", temp_data: temp });
+  const kLabel = { none: "לא כשר", separated: "כשר", mehadrin: "כשר למהדרין" }[temp.hostKosher] ?? temp.hostKosher;
+  await sendTelegramMessage(token, chatId,
+    `📋 <b>אישור האירוח:</b>\n\nתאריך: ${temp.date}\nחיילים: ${temp.soldiers}\nכשרות: ${kLabel}\nשעה: ${temp.time}\nלינה: ${temp.sleepOvernight ? "כן" : "לא"}`,
+    inlineKeyboard([[btn("✅ פתח אירוח", "nh_submit"), btn("❌ ביטול", "menu:main")]]));
+}
+
+async function nhSubmit(token, chatId, session) {
+  const { user_id, temp_data: t } = session;
+  const familySnap = await db.collection("families").doc(user_id).get();
+  const family = familySnap.exists ? familySnap.data() : {};
+  try {
+    const ref = db.collection("family_hostings").doc();
+    await ref.set({
+      id: ref.id, family_id: user_id, date: t.date,
+      soldiers: parseInt(t.soldiers), hostKosher: t.hostKosher,
+      time: t.time, sleepOvernight: t.sleepOvernight,
+      status: "open", guests: [], occupied: 0, is_fully_booked: false,
+      hostShabbat: family.hostShabbat ?? "none",
+      hostLanguages: family.hostLanguages ?? [],
+      hostCooking: family.hostCooking ?? [],
+      hasPets: family.hasPets ?? false,
+      pickup: family.pickup ?? false,
+      hostLat: family.hostLat ?? null, hostLng: family.hostLng ?? null,
+      hostCity: family.hostCity ?? null, hostName: family.hostName ?? null,
+      source: "telegram", created_at: FieldValue.serverTimestamp(),
+    });
+    await resetSession(chatId);
+    await sendTelegramMessage(token, chatId,
+      "✅ <b>האירוח נפתח!</b>\n\nנחפש חיילים שמתאימים ונעדכן ברגע שנמצאה התאמה. 🔔",
+      inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+  } catch (e) {
+    console.error("nh_submit error:", e);
+    await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.",
+      inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+  }
+}
+
+// ── Webhook ───────────────────────────────────────────────────────
 //
-// After deploying, register the URL once:
+// Register once after deploy:
 //   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<FUNCTION_URL>"
-//
-// Flow for a new user:
-//   1. User taps the "Connect Telegram" banner in the app.
-//   2. Deep link opens: https://t.me/MemulaimBot?start=<firebaseUID>
-//   3. Telegram sends /start <firebaseUID> to this webhook.
-//   4. We look up the UID in soldiers → families, save chat_id, send confirmation.
 // ─────────────────────────────────────────────────────────────────
 exports.telegramWebhook = onRequest(
   { region: "me-west1", secrets: [TELEGRAM_BOT_TOKEN] },
   async (req, res) => {
-    // Telegram always POSTs; reject everything else quickly.
     if (req.method !== "POST") return res.sendStatus(405);
+    res.sendStatus(200); // Acknowledge before any async work — Telegram retries after 5 s
 
     const token = TELEGRAM_BOT_TOKEN.value();
     const update = req.body;
+
+    // ── Button press ─────────────────────────────────────────────
+    if (update.callback_query) {
+      const { id: queryId, from, data } = update.callback_query;
+      const chatId = from.id;
+      await answerCallbackQuery(token, queryId);
+
+      const session = await getSession(chatId);
+      if (!session?.user_id) return;
+
+      // Navigation
+      if (data === "menu:main")    { await resetSession(chatId); return showMainMenu(token, chatId, session.role, session.name); }
+      if (data === "menu:status")  return handleStatus(token, chatId, session);
+      if (data === "menu:guests")  return handleGuests(token, chatId, session);
+      if (data === "menu:new_request") return srStart(token, chatId);
+      if (data === "menu:new_hosting") return nhStart(token, chatId);
+      if (data === "menu:help")
+        return sendTelegramMessage(token, chatId,
+          "❓ <b>עזרה</b>\n\nבאמצעות הבוט ניתן לפתוח בקשת אירוח, לבדוק שיבוץ ולראות מי מגיע לאירוח.\nלשאלות נוספות פנו לאפליקציה.",
+          inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+
+      // Confirm match (triggers onActiveMatchApproved)
+      if (data.startsWith("confirm:")) {
+        const matchId = data.slice(8);
+        try {
+          await db.collection("active_matches").doc(matchId).update({ status: "approved" });
+          await sendTelegramMessage(token, chatId, "✅ אישרת את ההגעה! נתראה בשבת 🍽️",
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        } catch (e) {
+          await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+        }
+        return;
+      }
+
+      // Rematch — replicates requestRematch logic (temporary ban)
+      if (data.startsWith("rematch:")) {
+        const matchId = data.slice(8);
+        try {
+          const matchSnap = await db.collection("active_matches").doc(matchId).get();
+          if (matchSnap.exists) {
+            const match = matchSnap.data();
+            await db.collection("active_match_archive").doc(matchId).set({
+              ...match, final_status: "canceled_by_soldier", archived_at: new Date().toISOString(),
+            });
+            await db.collection("active_matches").doc(matchId).delete();
+            await db.collection("soldier_hosting_searches").doc(match.soldier_request_id).update({
+              is_match: false,
+              temporarily_banned_families: FieldValue.arrayUnion(match.family_id),
+            });
+            await tryAllCompromiseLevels(match.soldier_request_id);
+          }
+          await sendTelegramMessage(token, chatId, "🔄 מחפשים לך שיבוץ חדש...",
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        } catch (e) {
+          await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+        }
+        return;
+      }
+
+      // Soldier new-request flow
+      if (data.startsWith("sr_date:"))   return srKosher(token, chatId, data.slice(8));
+      if (data.startsWith("sr_kosher:")) {
+        const s = await getSession(chatId);
+        return srShabbat(token, chatId, { ...s.temp_data, kosher: data.slice(9) });
+      }
+      if (data.startsWith("sr_shabbat:")) {
+        const s = await getSession(chatId);
+        return srGuests(token, chatId, { ...s.temp_data, shabbat: data.slice(11) });
+      }
+      if (data.startsWith("sr_guests:")) {
+        const s = await getSession(chatId);
+        return srSleep(token, chatId, { ...s.temp_data, guestCount: data.slice(10) });
+      }
+      if (data.startsWith("sr_sleep:")) {
+        const s = await getSession(chatId);
+        return srConfirm(token, chatId, { ...s.temp_data, needSleep: data.slice(9) === "yes" });
+      }
+      if (data === "sr_submit") return srSubmit(token, chatId, session);
+
+      // Host new-hosting flow
+      if (data.startsWith("nh_date:"))     return nhSoldiers(token, chatId, data.slice(8));
+      if (data.startsWith("nh_soldiers:")) {
+        const s = await getSession(chatId);
+        return nhKosher(token, chatId, { ...s.temp_data, soldiers: data.slice(12) });
+      }
+      if (data.startsWith("nh_kosher:")) {
+        const s = await getSession(chatId);
+        return nhTime(token, chatId, { ...s.temp_data, hostKosher: data.slice(10) });
+      }
+      if (data.startsWith("nh_time:")) {
+        const s = await getSession(chatId);
+        const time = data.slice(8); // "12:00"
+        return nhSleep(token, chatId, { ...s.temp_data, time });
+      }
+      if (data.startsWith("nh_sleep:")) {
+        const s = await getSession(chatId);
+        return nhConfirm(token, chatId, { ...s.temp_data, sleepOvernight: data.slice(9) === "yes" });
+      }
+      if (data === "nh_submit") return nhSubmit(token, chatId, session);
+
+      return;
+    }
+
+    // ── Text message ─────────────────────────────────────────────
     const message = update?.message;
-
-    // Acknowledge immediately — Telegram retries if we take > 5 s.
-    res.sendStatus(200);
-
     if (!message?.text || !message?.chat?.id) return;
 
     const chatId = message.chat.id;
     const text = message.text.trim();
 
-    if (!text.startsWith("/start")) {
-      await sendTelegramMessage(token, chatId,
-        "שלום! 👋 לחיבור החשבון אנא פתחו את אפליקציית ממולאים ולחצו על 'חבר את הטלגרם שלך'."
-      );
-      return;
-    }
-
-    const uid = text.split(" ")[1]?.trim();
-    if (!uid) {
-      await sendTelegramMessage(token, chatId,
-        "ברוכים הבאים לבוט ממולאים! 🏠\nלחיבור החשבון אנא לחצו על הקישור בתוך האפליקציה."
-      );
-      return;
-    }
-
-    // Search soldiers first, then families.
-    let userRef = null;
-    let userName = null;
-
-    const soldierSnap = await db.collection("soldiers").doc(uid).get();
-    if (soldierSnap.exists) {
-      userRef = soldierSnap.ref;
-      userName = soldierSnap.data().fullName || null;
-    } else {
-      const familySnap = await db.collection("families").doc(uid).get();
-      if (familySnap.exists) {
-        userRef = familySnap.ref;
-        userName = familySnap.data().hostName || null;
+    // /start <uid> — connect account
+    if (text.startsWith("/start")) {
+      const uid = text.split(" ")[1]?.trim();
+      if (!uid) {
+        return sendTelegramMessage(token, chatId,
+          "ברוכים הבאים לבוט ממולאים! 🏠\nלחיבור החשבון פתחו את האפליקציה ולחצו על 'חבר את הטלגרם שלך'.");
       }
+
+      let userRef = null, role = null, name = null;
+      const soldierSnap = await db.collection("soldiers").doc(uid).get();
+      if (soldierSnap.exists) {
+        userRef = soldierSnap.ref; role = "soldier";
+        name = soldierSnap.data().fullName ?? null;
+      } else {
+        const familySnap = await db.collection("families").doc(uid).get();
+        if (familySnap.exists) {
+          userRef = familySnap.ref; role = "host";
+          name = familySnap.data().hostName ?? null;
+        }
+      }
+
+      if (!userRef)
+        return sendTelegramMessage(token, chatId, "לא מצאנו את החשבון שלך. נסו שוב מתוך האפליקציה.");
+
+      await userRef.update({ telegram_chat_id: chatId });
+      await saveSession(chatId, { user_id: uid, role, name, state: "idle", temp_data: {} });
+      await sendTelegramMessage(token, chatId, `✅ ${name ? `${name}, ` : ""}חשבון הטלגרם חובר בהצלחה! 🎉`);
+      return showMainMenu(token, chatId, role, name);
     }
 
-    if (!userRef) {
-      await sendTelegramMessage(token, chatId,
-        "לא מצאנו את החשבון שלך. אנא נסו שוב מתוך האפליקציה."
-      );
-      return;
+    // /menu — show main menu
+    if (text === "/menu") {
+      const session = await getSession(chatId);
+      return session?.user_id
+        ? showMainMenu(token, chatId, session.role, session.name)
+        : sendTelegramMessage(token, chatId, "אנא חברו את החשבון מתוך האפליקציה תחילה.");
     }
 
-    await userRef.update({ telegram_chat_id: chatId });
-
-    const greeting = userName ? `${userName}, ` : "";
-    await sendTelegramMessage(token, chatId,
-      `✅ ${greeting}חשבון הטלגרם חובר בהצלחה!\nמעכשיו תקבלו התראות ישירות לכאן. 🔔`
-    );
+    // Any other text — show menu or prompt to connect
+    const session = await getSession(chatId);
+    return session?.user_id
+      ? showMainMenu(token, chatId, session.role, session.name)
+      : sendTelegramMessage(token, chatId, "שלום! 👋 לחיבור החשבון פתחו את האפליקציה ולחצו על 'חבר את הטלגרם שלך'.");
   }
 );
 

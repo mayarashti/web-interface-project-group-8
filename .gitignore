@@ -2,6 +2,7 @@ node_modules/
 tools/
 
 # Firebase Functions secrets / local env — never commit the API key
+functions/serviceAccount.json
 functions/.secret.local
 .env
 .env.*
