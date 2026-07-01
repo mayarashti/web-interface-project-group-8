@@ -37,6 +37,8 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        uid={data.uid}
+        telegramConnected={!!data.telegram_chat_id}
         onNotificationClick={(notif) => {
           const reqId = notif.payload?.request_id;
           const req = reqId
@@ -574,6 +576,8 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
         notifications={notifications}
         onMarkAllRead={() => window.DB && window.DB.markAllNotificationsRead(data.uid)}
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
+        uid={data.uid}
+        telegramConnected={!!data.telegram_chat_id}
         onNotificationClick={(notif) => {
           const reqId = notif.payload?.request_id;
           const req = reqId

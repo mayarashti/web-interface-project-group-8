@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError, onRequest } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions");
@@ -13,9 +13,12 @@ const db = getFirestore();
 // Set once with:  firebase functions:secrets:set GOOGLE_MAPS_API_KEY
 const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 
-// Bind the Maps secret to every function so the matching engine (invoked from
-// triggers, callables and the scheduler) can call the Distance Matrix API.
-setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY] });
+// Telegram bot token — stored as a Functions secret.
+// Set once with:  firebase functions:secrets:set TELEGRAM_BOT_TOKEN
+const TELEGRAM_BOT_TOKEN = defineSecret("TELEGRAM_BOT_TOKEN");
+
+// Bind secrets to every function.
+setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY, TELEGRAM_BOT_TOKEN] });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NOTIFICATIONS HELPER
@@ -44,6 +47,20 @@ async function createNotification(userId, role, content, type = 'general', title
     read: false,
     sent_at: FieldValue.serverTimestamp(),
   });
+
+  // Mirror to Telegram if the user has connected their account.
+  try {
+    const collection = role === 'host' ? 'families' : 'soldiers';
+    const userSnap = await db.collection(collection).doc(userId).get();
+    const chatId = userSnap.exists ? userSnap.data().telegram_chat_id : null;
+    if (chatId) {
+      const token = TELEGRAM_BOT_TOKEN.value();
+      const text = title ? `<b>${title}</b>\n\n${content}` : content;
+      await sendTelegramMessage(token, chatId, text);
+    }
+  } catch (e) {
+    console.error('Telegram mirror error:', e);
+  }
 }
 
 // ─── Compromise levels (applied in order after 24h) ───────────────
@@ -1803,6 +1820,98 @@ exports.reverseGeocode = onCall(
     const parsed = parseGeocodeResult(result);
     parsed.coordinates = { lat, lng };
     return { address: parsed };
+  }
+);
+
+// ══════════════════════════════════════════════════════════════════
+// TELEGRAM BOT
+// ══════════════════════════════════════════════════════════════════
+
+// Sends a plain-text message to a Telegram chat.
+async function sendTelegramMessage(token, chatId, text) {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+  });
+  if (!res.ok) {
+    console.error("sendTelegramMessage failed", res.status, await res.text());
+  }
+}
+
+// ── HTTP WEBHOOK: receives updates from Telegram ──────────────────
+//
+// After deploying, register the URL once:
+//   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<FUNCTION_URL>"
+//
+// Flow for a new user:
+//   1. User taps the "Connect Telegram" banner in the app.
+//   2. Deep link opens: https://t.me/MemulaimBot?start=<firebaseUID>
+//   3. Telegram sends /start <firebaseUID> to this webhook.
+//   4. We look up the UID in soldiers → families, save chat_id, send confirmation.
+// ─────────────────────────────────────────────────────────────────
+exports.telegramWebhook = onRequest(
+  { region: "me-west1", secrets: [TELEGRAM_BOT_TOKEN] },
+  async (req, res) => {
+    // Telegram always POSTs; reject everything else quickly.
+    if (req.method !== "POST") return res.sendStatus(405);
+
+    const token = TELEGRAM_BOT_TOKEN.value();
+    const update = req.body;
+    const message = update?.message;
+
+    // Acknowledge immediately — Telegram retries if we take > 5 s.
+    res.sendStatus(200);
+
+    if (!message?.text || !message?.chat?.id) return;
+
+    const chatId = message.chat.id;
+    const text = message.text.trim();
+
+    if (!text.startsWith("/start")) {
+      await sendTelegramMessage(token, chatId,
+        "שלום! 👋 לחיבור החשבון אנא פתחו את אפליקציית ממולאים ולחצו על 'חבר את הטלגרם שלך'."
+      );
+      return;
+    }
+
+    const uid = text.split(" ")[1]?.trim();
+    if (!uid) {
+      await sendTelegramMessage(token, chatId,
+        "ברוכים הבאים לבוט ממולאים! 🏠\nלחיבור החשבון אנא לחצו על הקישור בתוך האפליקציה."
+      );
+      return;
+    }
+
+    // Search soldiers first, then families.
+    let userRef = null;
+    let userName = null;
+
+    const soldierSnap = await db.collection("soldiers").doc(uid).get();
+    if (soldierSnap.exists) {
+      userRef = soldierSnap.ref;
+      userName = soldierSnap.data().fullName || null;
+    } else {
+      const familySnap = await db.collection("families").doc(uid).get();
+      if (familySnap.exists) {
+        userRef = familySnap.ref;
+        userName = familySnap.data().hostName || null;
+      }
+    }
+
+    if (!userRef) {
+      await sendTelegramMessage(token, chatId,
+        "לא מצאנו את החשבון שלך. אנא נסו שוב מתוך האפליקציה."
+      );
+      return;
+    }
+
+    await userRef.update({ telegram_chat_id: chatId });
+
+    const greeting = userName ? `${userName}, ` : "";
+    await sendTelegramMessage(token, chatId,
+      `✅ ${greeting}חשבון הטלגרם חובר בהצלחה!\nמעכשיו תקבלו התראות ישירות לכאן. 🔔`
+    );
   }
 );
 
