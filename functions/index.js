@@ -2215,6 +2215,27 @@ exports.telegramWebhook = onRequest(
         return;
       }
 
+      // Cancel open soldier request (no match yet)
+      if (data.startsWith("cancel_req:")) {
+        const reqId = data.slice(11);
+        try {
+          const requestSnap = await db.collection("soldier_hosting_searches").doc(reqId).get();
+          if (requestSnap.exists) {
+            const request = requestSnap.data();
+            await db.collection("soldier_hosting_searches_archive").doc(reqId).set({
+              ...request, status: "canceled", final_status: "canceled_by_soldier",
+              archived_at: new Date().toISOString(),
+            });
+            await db.collection("soldier_hosting_searches").doc(reqId).delete();
+          }
+          await sendTelegramMessage(token, chatId, "✅ הבקשה בוטלה.",
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        } catch (e) {
+          await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+        }
+        return;
+      }
+
       // Soldier new-request flow
       if (data.startsWith("sr_date:"))   return srKosher(token, chatId, data.slice(8));
       if (data.startsWith("sr_kosher:")) {
@@ -2304,11 +2325,87 @@ exports.telegramWebhook = onRequest(
         : sendTelegramMessage(token, chatId, "אנא חברו את החשבון מתוך האפליקציה תחילה.");
     }
 
-    // Any other text — show menu or prompt to connect
+    // Free text — intent detection
     const session = await getSession(chatId);
-    return session?.user_id
-      ? showMainMenu(token, chatId, session.role, session.name)
-      : sendTelegramMessage(token, chatId, "שלום! 👋 לחיבור החשבון פתחו את האפליקציה ולחצו על 'חבר את הטלגרם שלך'.");
+    if (!session?.user_id) {
+      return sendTelegramMessage(token, chatId, "שלום! 👋 לחיבור החשבון פתחו את האפליקציה ולחצו על 'חבר את הטלגרם שלך'.");
+    }
+
+    const t2 = text.replace(/[?!.,؟]/g, "").trim();
+
+    // CONFIRM ARRIVAL — actually confirm the pending match directly
+    if (/אשר|אישור|לאשר|confirm|אני מגיע/.test(t2) && session.role === "soldier") {
+      const matchSnap = await db.collection("active_matches")
+        .where("soldier_id", "==", session.user_id)
+        .where("status", "==", "pending_soldier_approval")
+        .limit(1).get();
+      if (matchSnap.empty) {
+        return sendTelegramMessage(token, chatId, "אין לך שיבוץ ממתין לאישור כרגע.",
+          inlineKeyboard([[btn("📋 הסטטוס שלי", "menu:status"), btn("🔙 תפריט", "menu:main")]]));
+      }
+      const matchId = matchSnap.docs[0].id;
+      try {
+        await db.collection("active_matches").doc(matchId).update({ status: "approved" });
+        await sendTelegramMessage(token, chatId, "✅ אישרת את ההגעה! נתראה בשבת 🍽️",
+          inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+      } catch (e) {
+        await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+      }
+      return;
+    }
+
+    // CANCEL — soldier cancels their request or match
+    if (/בטל|ביטול|לבטל|cancel/.test(t2) && session.role === "soldier") {
+      const matchSnap = await db.collection("active_matches")
+        .where("soldier_id", "==", session.user_id)
+        .where("status", "in", ["pending_soldier_approval", "approved"])
+        .limit(1).get();
+      if (!matchSnap.empty) {
+        const match = matchSnap.docs[0].data();
+        return sendTelegramMessage(token, chatId,
+          `בטוח שברצונך לבטל את השיבוץ עם משפחת ${match.family_name ?? "המשפחה"}?`,
+          inlineKeyboard([[btn("✅ כן, בטל", `rematch:${matchSnap.docs[0].id}`), btn("❌ לא", "menu:status")]]));
+      }
+      const reqSnap = await db.collection("soldier_hosting_searches")
+        .where("soldier_id", "==", session.user_id).where("is_match", "==", false).limit(1).get();
+      if (reqSnap.empty) {
+        return sendTelegramMessage(token, chatId, "אין לך בקשות פעילות לביטול.",
+          inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+      }
+      const reqData = reqSnap.docs[0].data();
+      return sendTelegramMessage(token, chatId,
+        `בטוח שברצונך לבטל את בקשת האירוח לתאריך ${reqData.when}?`,
+        inlineKeyboard([[btn("✅ כן, בטל", `cancel_req:${reqSnap.docs[0].id}`), btn("❌ לא", "menu:main")]]));
+    }
+
+    // STATUS
+    if (/סטטוס|מצב|שיבוץ|מה קורה|מה.*שלי|מה.*מצבי/.test(t2)) {
+      return handleStatus(token, chatId, session);
+    }
+
+    // GUESTS (host)
+    if (/מי מגיע|האורחים|החיילים|מי.*בא|אורח/.test(t2)) {
+      return handleGuests(token, chatId, session);
+    }
+
+    // NEW REQUEST (soldier)
+    if (/בקש.*אירוח|פתח.*בקשה|להתארח|רוצה.*אירוח|צריך.*אירוח/.test(t2)) {
+      return session.role === "soldier" ? srStart(token, chatId) : showMainMenu(token, chatId, session.role, session.name);
+    }
+
+    // NEW HOSTING (host)
+    if (/פתח.*אירוח|לארח|רוצה.*לארח|אירוח.*חדש/.test(t2)) {
+      return session.role === "host" ? nhStart(token, chatId) : showMainMenu(token, chatId, session.role, session.name);
+    }
+
+    // HELP
+    if (/עזרה|help|מה אפשר|מה.*יכול/.test(t2)) {
+      return sendTelegramMessage(token, chatId,
+        "❓ <b>מה אפשר לעשות כאן?</b>\n\nפשוט כתבו בשפה חופשית:\n• \"אשר הגעה\" — לאשר שיבוץ ישירות\n• \"תבטל בקשה\" — לבטל בקשה\n• \"מה הסטטוס שלי\" — לבדוק שיבוץ\n• \"פתח בקשת אירוח\" — בקשה חדשה\n• \"מי מגיע אליי\" — לראות אורחים",
+        inlineKeyboard([[btn("📋 תפריט", "menu:main")]]));
+    }
+
+    return showMainMenu(token, chatId, session.role, session.name);
   }
 );
 
