@@ -128,6 +128,61 @@ function Input({ label, value, onChange, placeholder, type = 'text', hint, error
   );
 }
 
+/* TimeSelect — dropdown of half-hour time slots (evening by default, with a
+   toggle to reveal morning/afternoon slots too). Keeps the soldier and family
+   time fields aligned on the same half-hour grid so exact matches are common. */
+function buildHalfHourSlots(startHour, endHour) {
+  const slots = [];
+  for (let h = startHour; h <= endHour; h++) {
+    slots.push(`${String(h).padStart(2, '0')}:00`);
+    slots.push(`${String(h).padStart(2, '0')}:30`);
+  }
+  return slots;
+}
+const TIME_SLOTS_EVENING = buildHalfHourSlots(16, 23);
+const TIME_SLOTS_MORNING = buildHalfHourSlots(8, 15);
+
+function TimeSelect({ label, value, onChange, error, required = false, hint }) {
+  const { t } = useLang();
+  const [showEarlier, setShowEarlier] = useState(TIME_SLOTS_MORNING.includes(value));
+  const slots = showEarlier ? [...TIME_SLOTS_MORNING, ...TIME_SLOTS_EVENING] : TIME_SLOTS_EVENING;
+
+  return (
+    <div className="w-full mb-5">
+      {label && (
+        <label className="block text-sm font-semibold text-gray-800 mb-1.5 flex flex-wrap justify-between items-baseline gap-1">
+          <span>{label} {required && <span className="text-red-500">*</span>}</span>
+          {hint && <span className="text-xs font-normal text-warm-500">{hint}</span>}
+        </label>
+      )}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className={clsx(
+          "w-full min-h-[48px] py-3 px-4 rounded-xl border bg-white text-[15px] transition-all duration-200 focus:outline-none focus:ring-4",
+          error
+            ? "border-red-300 focus:border-red-500 focus:ring-red-100 bg-red-50/30"
+            : "border-warm-200 focus:border-brand-400 focus:ring-brand-50 hover:border-warm-300"
+        )}
+      >
+        <option value="" disabled>{t('time_select_ph')}</option>
+        {slots.map(s => <option key={s} value={s}>{s}</option>)}
+      </select>
+      {!showEarlier && (
+        <button
+          type="button"
+          onClick={() => setShowEarlier(true)}
+          className="mt-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors"
+        >
+          {t('time_show_earlier')}
+        </button>
+      )}
+      {error && <p className="mt-1.5 text-xs font-medium text-red-600 animate-fade-in">{error}</p>}
+    </div>
+  );
+}
+
 function LocationInput({ label, value, onChange, onMapPin, placeholder, error, required = false, hint }) {
   const { t } = useLang();
   return (

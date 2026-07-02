@@ -683,7 +683,6 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
     id: Date.now(),
     when: '',
     startTime: '',
-    endTime: '',
     guestCount: 1,
     friendDietary: [],
     friendDietaryOther: '',
@@ -781,22 +780,12 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
             onChange={(val) => handleChange('when', val)}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input 
-              label={t('start_time')}
-              type="time"
-              value={request.startTime}
-              onChange={(val) => handleChange('startTime', val)}
-              required
-            />
-            <Input 
-              label={t('end_time')}
-              type="time"
-              value={request.endTime}
-              onChange={(val) => handleChange('endTime', val)}
-              required
-            />
-          </div>
+          <TimeSelect
+            label={t('s15_arrival_time')}
+            value={request.startTime}
+            onChange={(val) => handleChange('startTime', val)}
+            required
+          />
 
           <div className="mb-4">
             <label className="block text-sm font-semibold text-warm-600 mb-1.5">

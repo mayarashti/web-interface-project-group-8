@@ -1438,9 +1438,8 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
             error={errors.date}
           />
 
-          <Input 
+          <TimeSelect
             label={t('s20_time_free')}
-            type="time"
             value={form.time}
             onChange={setF('time')}
             error={errors.time}

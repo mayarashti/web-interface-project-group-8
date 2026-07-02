@@ -57,6 +57,8 @@ const T = {
     s1_title: 'ברוכים הבאים לממולאים!',
     start_time: 'שעת התחלה',
     end_time: 'שעת סיום',
+    time_select_ph: 'בחר שעה',
+    time_show_earlier: 'שעות מוקדמות יותר (בוקר/צהריים)',
     logout: 'התנתק',
     km_unit: 'ק״מ',
     
@@ -273,6 +275,7 @@ const T = {
     s15_time_range: 'טווח שעות האירוח',
     s15_start_time: 'שעת התחלה',
     s15_end_time: 'שעת סיום',
+    s15_arrival_time: 'באיזו שעה תרצה להגיע?',
     s15_guest_count: 'כמה אנשים תהיו?',
     s15_friend_dietary: 'האם לחברים יש העדפות אוכל?',
     s15_pets_comfort: 'מסתדרים עם בעלי חיים?',
@@ -583,6 +586,8 @@ const T = {
     back:'Back',
     continue:'Continue →',
     close:'Close',
+    time_select_ph: 'Select a time',
+    time_show_earlier: 'Earlier hours (morning/afternoon)',
     step_label: (s, total) => `Step ${s} of ${total}`,
 
     /* S1 Welcome */
@@ -730,6 +735,7 @@ const T = {
     s15_form_title: 'New Request',
     s15_form_sub: 'Fill in the details to find the best match for you',
     s15_when: 'When do you want to stay?',
+    s15_arrival_time: 'What time do you want to arrive?',
     s15_shabbat: 'Observing Shabbat?',
     s15_kosher: 'Observing Kosher?',
     s15_duration: 'How long will you be there?',

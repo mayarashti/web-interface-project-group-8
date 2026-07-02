@@ -96,22 +96,25 @@ function isShabbatCompatible(requestShabbat, familyShabbat) {
 
 // ──────────────────────────────────────────────────────────────────
 // TIME COMPATIBILITY
-// Soldier has startTime/endTime ("19:00"/"22:00")
-// Family has a single time field ("18:35") — must fall inside soldier's window
-// flexMinutes expands the window in compromise mode (±120 min)
+// Both soldier and family now provide a single desired time ("19:00"),
+// chosen from the same half-hour grid in the UI. A match is compatible when
+// the family's time falls within flexMinutes of the soldier's requested time.
+// flexMinutes widens the window in compromise mode.
 // ──────────────────────────────────────────────────────────────────
+const TIME_TOLERANCE_MINUTES = 60;       // exact tier: ±1h
+const TIME_COMPROMISE_MINUTES = 150;     // compromise tier: ±2.5h
+
 function toMinutes(timeStr) {
   if (!timeStr || !timeStr.match(/^\d{1,2}:\d{2}$/)) return null;
   const [h, m] = timeStr.split(":").map(Number);
   return h * 60 + m;
 }
 
-function isTimeCompatible(soldierStart, soldierEnd, familyTime, flexMinutes = 0) {
+function isTimeCompatible(soldierTime, familyTime, flexMinutes = TIME_TOLERANCE_MINUTES) {
   const famMin = toMinutes(familyTime);
-  const startMin = toMinutes(soldierStart);
-  const endMin = toMinutes(soldierEnd);
-  if (famMin === null || startMin === null || endMin === null) return true; // can't check → allow
-  return famMin >= (startMin - flexMinutes) && famMin <= (endMin + flexMinutes);
+  const soldierMin = toMinutes(soldierTime);
+  if (famMin === null || soldierMin === null) return true; // can't check → allow
+  return Math.abs(famMin - soldierMin) <= flexMinutes;
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -238,11 +241,11 @@ if (soldier.pets === "allergy" && family.hasPets === true) return false;
   // the user said petsComfort only has "ok"/"no", not "allergic".
   // Since there's no "allergic" value, "no" becomes a soft compromise.
 
-  // Time window — compromised in TIME mode (±2h = 120 min)
+  // Time window — compromised in TIME mode (±1h exact → ±2.5h compromise)
   if (compromiseLevel < COMPROMISE.TIME) {
-    if (!isTimeCompatible(request.startTime, request.endTime, hosting.time, 0)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES)) return false;
   } else {
-    if (!isTimeCompatible(request.startTime, request.endTime, hosting.time, 120)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES)) return false;
   }
 
   // NOTE: the geographic radius is NOT enforced here. Distance needs one
@@ -915,7 +918,6 @@ exports.debugMatching = onCall(async (req) => {
       shabbat: request.shabbat,
       guestCount: request.guestCount ?? 1,
       startTime: request.startTime,
-      endTime: request.endTime,
       travelDistance: request.travelDistance,
       petsComfort: request.petsComfort,
       needSleep: request.needSleep,
@@ -950,8 +952,8 @@ exports.debugMatching = onCall(async (req) => {
     checks.sleep = request.needSleep === true ? hosting.sleepOvernight === true : true;
     checks.pet_allergy = !(soldier.pets === "allergy" && family.hasPets === true);
     checks.pets_comfort = request.petsComfort !== "no" || family.hasPets !== true;
-    checks.time = isTimeCompatible(request.startTime, request.endTime, hosting.time, 0);
-    checks.time_compromise = isTimeCompatible(request.startTime, request.endTime, hosting.time, 120);
+    checks.time = isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES);
+    checks.time_compromise = isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES);
 
     // Geographic radius (straight-line estimate; the real engine refines this
     // with Google Distance Matrix). Unknown distance → treated as passing.
