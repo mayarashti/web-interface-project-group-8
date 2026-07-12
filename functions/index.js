@@ -2432,7 +2432,7 @@ async function callGroq(messages, jsonMode = true, temperature = 0.0) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages,
         response_format: jsonMode ? { type: "json_object" } : undefined,
         temperature
@@ -2462,7 +2462,7 @@ async function callGroq(messages, jsonMode = true, temperature = 0.0) {
   }
 }
 
-async function searchSpoonacular(queryParams) {
+async function searchSpoonacular(queryParams, useOffset = true) {
   const apiKey = process.env.SPOONACULAR_API_KEY;
   if (!apiKey) {
     console.error("SPOONACULAR_API_KEY is not defined in process.env");
@@ -2489,6 +2489,23 @@ async function searchSpoonacular(queryParams) {
     url.searchParams.set("diet", queryParams.diet);
   }
 
+  // Set default Shabbat cuisines and types to match user selection unless overridden in queryParams
+  const cuisine = queryParams.cuisine !== undefined ? queryParams.cuisine : "Middle Eastern,Mediterranean,Jewish,Eastern European,Italian";
+  const type = queryParams.type !== undefined ? queryParams.type : "main course,side dish";
+
+  if (cuisine) {
+    url.searchParams.set("cuisine", cuisine);
+  }
+  if (type) {
+    url.searchParams.set("type", type);
+  }
+
+  // To prevent the exact same recipes from repeating, add a random offset.
+  if (useOffset) {
+    const randomOffset = Math.floor(Math.random() * 20);
+    url.searchParams.set("offset", randomOffset.toString());
+  }
+
   console.log("Spoonacular complexSearch url:", url.toString().replace(apiKey, "HIDDEN"));
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -2501,11 +2518,21 @@ async function searchSpoonacular(queryParams) {
   return data.results || [];
 }
 
+function upgradeImageResolution(url) {
+  if (!url) return "";
+  // Replace low-resolution suffixes like -312x231.jpg or -90x90.jpg with -636x393.jpg
+  return url.replace(/-\d+x\d+\.(jpg|jpeg|png|webp)$/i, "-636x393.$1");
+}
+
 async function translateAndFormatRecipe(candidate, soldier) {
   const systemPromptTranslate = 
     "You are a professional chef and translation expert.\n" +
-    "Your task is to translate an English recipe into high-quality, warm, and natural Hebrew (עברית).\n" +
-    "You must return ONLY a valid JSON object matching the target schema.\n\n" +
+    "Your task is to translate an English recipe into high-quality, warm, natural, and idiomatic culinary Hebrew (עברית) suitable for an Israeli family making a Shabbat dinner.\n" +
+    "Ensure:\n" +
+    "1. Translating cooking terms and ingredients naturally, not word-for-word (e.g., use 'כוס' for 'cup', 'כפית' for 'teaspoon', 'כף' for 'tablespoon', 'שן שום' for 'clove of garlic', etc.).\n" +
+    "2. Grammatical correctness, proper gender agreement, and natural phrasing.\n" +
+    "3. The description explains why this specific recipe is great for the soldier and matches their preferences in a warm, welcoming tone.\n" +
+    "4. Return ONLY a valid JSON object matching the target schema.\n\n" +
     "Target JSON structure:\n" +
     "{\n" +
     '  "title": "Hebrew recipe title",\n' +
@@ -2569,7 +2596,7 @@ async function translateAndFormatRecipe(candidate, soldier) {
     ingredients: translated.ingredients || [],
     instructions: translated.instructions || [],
     matching_preferences: translated.matching_preferences || [],
-    image_url: candidate.image || "",
+    image_url: upgradeImageResolution(candidate.image) || "",
     readyInMinutes: candidate.readyInMinutes || 30,
     servings: candidate.servings || 4
   };
@@ -2587,11 +2614,15 @@ exports.generateRecipes = onCall(
     // Step 2: Use LLM to analyze preferences and generate Spoonacular API search parameters
     const systemPromptQuery = 
       "You are a translation and culinary assistant. Your task is to analyze food preferences and restrictions " +
-      "and generate optimized English search parameters for the Spoonacular API to find matching recipes.\n" +
-      "You must return ONLY a JSON object and nothing else.\n\n" +
+      "and generate optimized English search parameters for the Spoonacular API to find matching recipes for an Israeli Shabbat dinner.\n" +
+      "Keep in mind:\n" +
+      "1. Shabbat dinners in Israel typically feature festive, hearty, warm family dishes (e.g., roast chicken, beef stews, fish, meatballs, couscous, tagines, rice, potatoes, roasted vegetables, Mediterranean salads).\n" +
+      "2. The search query should prioritize these traditional Shabbat-friendly dinner categories based on the user's favorite foods (translating them from Hebrew if needed).\n" +
+      "3. Avoid generating search queries for pork, shellfish, or non-kosher style foods if Kosher is required.\n" +
+      "4. The JSON must return ONLY a JSON object and nothing else.\n\n" +
       "JSON structure:\n" +
       "{\n" +
-      '  "query": "English search term like chicken or pasta or salad or beef or empty string",\n' +
+      '  "query": "English search term like chicken, beef, fish, meatballs, couscous, salad, or empty string",\n' +
       '  "includeIngredients": ["english ingredient 1", "english ingredient 2"],\n' +
       '  "excludeIngredients": ["english allergen/disliked 1", "english allergen/disliked 2"],\n' +
       '  "diet": "vegetarian or vegan or gluten free or empty string"\n' +
@@ -2617,19 +2648,19 @@ exports.generateRecipes = onCall(
       queryParams.excludeIngredients = [...(soldier?.allergies || []), ...(soldier?.dislikedFoods || [])];
     }
 
-    // Step 3: Query Spoonacular API for candidate recipes
+    // Step 3: Query Spoonacular API for candidate recipes (using a random offset to prevent repetition)
     let candidates = [];
     try {
-      candidates = await searchSpoonacular(queryParams);
+      candidates = await searchSpoonacular(queryParams, true);
       console.log(`Retrieved ${candidates.length} recipe candidates from Spoonacular.`);
 
-      // If no candidates, try relaxing the query parameters (e.g. drop query and includeIngredients)
-      if ((!candidates || candidates.length === 0) && (queryParams.includeIngredients?.length > 0 || queryParams.query)) {
-        console.log("No candidates returned from initial search. Relaxing search filters.");
+      // If no candidates, try relaxing the query parameters (e.g. drop query and includeIngredients) and turn off offset
+      if (!candidates || candidates.length === 0) {
+        console.log("No candidates returned from initial search. Relaxing search filters and disabling offset.");
         candidates = await searchSpoonacular({
           excludeIngredients: queryParams.excludeIngredients,
           diet: queryParams.diet
-        });
+        }, false);
         console.log(`Retrieved ${candidates.length} relaxed candidates.`);
       }
     } catch (err) {
@@ -2685,7 +2716,7 @@ exports.generateRecipes = onCall(
         `Validate against these rules:\n` +
         `1. Must NOT contain any allergens.\n` +
         `2. Must NOT contain any disliked ingredients.\n` +
-        `3. If Kosher required: Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.) and MUST NOT mix meat and dairy.\n` +
+        `3. If Kosher required: The recipe must be kosher. It must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.). Crucially, it MUST NOT mix meat (chicken, beef, turkey, lamb, etc.) with dairy (milk, butter, cheese, cream, yogurt, etc.) in the same recipe.\n` +
         `4. Must match dietary restrictions (e.g. vegetarian, vegan).\n` +
         `5. Must be a distinct type of dish from any already selected recipes.\n`;
 

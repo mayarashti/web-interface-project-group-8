@@ -300,14 +300,6 @@ function RecipeCard({ recipe, guestKey, prefs, onRefresh, refreshing }) {
           </div>
         )}
 
-        {/* Ingredients Summary */}
-        <div className="mb-3 text-xs">
-          <span className="text-[10px] text-warm-400 font-bold flex items-center gap-1 mb-0.5">
-            <UtensilsIcon className="w-3.5 h-3.5 text-warm-400" strokeWidth={2.2} />
-            <span>{lang === 'he' ? 'רכיבים עיקריים' : 'Main Ingredients'}</span>
-          </span>
-          <p className="text-gray-700 font-medium truncate">{ingredientsSummary}</p>
-        </div>
 
         {/* Details Toggle Button */}
         <button
