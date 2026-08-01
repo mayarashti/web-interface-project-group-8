@@ -186,7 +186,7 @@ const T = {
     s11_q_more:'יש עוד משהו שתרצה לספר למשפחות?',
 
     /* S12 Summary */
-    s12_title:'סיכום הרשמה', s12_sub:'בדוק שהכל נכון לפני השליחה',
+    s12_title:'ככה תיראה למשפחה המארחת', s12_sub:'זה בדיוק מה שהמשפחות רואות כשתבקש/י ארוחה — אפשר לערוך הכל כאן',
     s12_personal:'פרטים אישיים', s12_full:'שם מלא', s12_phone:'טלפון', s12_age:'גיל', s12_email:'אימייל',
     s12_mil:'שירות צבאי', s12_stype:'סוג שירות', s12_unit:'יחידה', s12_doc:'מסמך',
     s12_uploaded:'הועלה',
@@ -194,6 +194,9 @@ const T = {
     s12_sleep:'לינה', s12_walk:'מרחק הליכה', s12_allerg:'אלרגיות',
     s12_no_allerg:'ללא', s12_pets:'חיות מחמד', s12_sol:'עם חיילים',
     s12_bio:'תיאור אישי', s12_submit:'שלח פרופיל', s12_edit:'ערוך פרטים',
+    s12_about_title:'קצת עליי', s12_photo_edit:'לחץ לשינוי התמונה',
+    s12_preview_badge:'תצוגה מקדימה', s12_no_restrictions:'אין הגבלות', s12_solo_tag:'יחיד',
+    s12_edit_section:'עריכת הפרטים', s12_edit_sub:'משהו לא מדויק? אפשר לשנות כל פרט כאן',
     guest_group_solo:'מגיע לבד',
     guest_group_with: (n) => `מגיע עם ${n} חייל${n > 1 ? 'ים' : ''} נוסף${n > 1 ? 'ים' : ''}`,
     guest_logistics:'לוגיסטיקה',
@@ -724,7 +727,7 @@ const T = {
     s11_q_more:'Anything else you\'d like to tell the families?',
 
     /* S12 Summary */
-    s12_title:'Registration Summary', s12_sub:'Check everything is correct before submitting',
+    s12_title:'This Is How Families Will See You', s12_sub:'This is exactly what families see when you request a meal — you can edit anything here',
     s12_personal:'Personal Details', s12_full:'Full Name', s12_phone:'Phone', s12_age:'Age', s12_email:'Email',
     s12_mil:'Military Service', s12_stype:'Service Type', s12_unit:'Unit', s12_doc:'Document',
     s12_uploaded:'Uploaded',
@@ -732,6 +735,9 @@ const T = {
     s12_sleep:'Overnight Stay', s12_walk:'Walk Distance', s12_allerg:'Allergies',
     s12_no_allerg:'None', s12_pets:'Pets', s12_sol:'With soldiers',
     s12_bio:'Personal Bio', s12_submit:'Submit Profile', s12_edit:'Edit Details',
+    s12_about_title:'A Bit About Me', s12_photo_edit:'Tap to change photo',
+    s12_preview_badge:'Preview', s12_no_restrictions:'No restrictions', s12_solo_tag:'Solo',
+    s12_edit_section:'Edit Details', s12_edit_sub:"Something not quite right? You can change anything here",
     guest_group_solo:'Coming alone',
     guest_group_with: (n) => `Coming with ${n} more soldier${n > 1 ? 's' : ''}`,
     guest_logistics:'Logistics',

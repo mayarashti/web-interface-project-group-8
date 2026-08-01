@@ -329,11 +329,27 @@ function S7Preferences({ data, setData, onNext, onBack }) {
   );
 }
 
-/* S12Summary — Registration summary & submit */
+/* S12Summary — Live, editable preview of the profile exactly as host families see it */
+var { useState: useStateS12, useRef: useRefS12 } = React;
 
-function S12Summary({ data, onEdit, onSubmit, onBack }) {
-  const { t } = useLang();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+function S12Summary({ data, setData, onSubmit, onBack }) {
+  const { t, lang } = useLang();
+  const [isSubmitting, setIsSubmitting] = useStateS12(false);
+  const [showEdit, setShowEdit] = useStateS12(false);
+  const fileInputRef = useRefS12(null);
+
+  const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setData(prev => ({
+        ...prev,
+        avatarFile: file,
+        avatarPreview: URL.createObjectURL(file)
+      }));
+    }
+  };
 
   const handleNext = async () => {
     if (isSubmitting) return;
@@ -345,16 +361,31 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
     }
   };
 
-  const Row = ({ label, value }) => value ? (
-    <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
-      <span className="text-xs text-warm-500 font-medium w-32 flex-shrink-0">{label}</span>
-      <span className="text-sm text-gray-800 text-start flex-1 ms-2">{value}</span>
-    </div>
-  ) : null;
+  const allergyOpts = [
+    { value: 'gluten',     label: t('a_gluten')  },
+    { value: 'lactose',    label: t('a_lactose') },
+    { value: 'nuts',       label: t('a_nuts')    },
+    { value: 'peanuts',    label: t('a_peanuts') },
+    { value: 'veg',        label: t('a_veg')     },
+    { value: 'vegan',      label: t('a_vegan')   },
+    { value: 'fish',       label: t('a_fish')    },
+    { value: 'other',      label: t('a_other')   },
+  ];
 
-  const kosh = { none: t('map_none'), separated: t('map_kosh'), mehadrin: t('map_meh') };
-  const shab = { none: t('map_sec'), traditional: t('map_trad'), keeps: t('map_obs') };
-  const pets = { ok: t('map_pets_ok'), notok: t('map_pets_no'), allergy: t('map_pets_al') };
+  const langOpts = [
+    { value: 'he',    label: t('lang_he')    },
+    { value: 'en',    label: t('lang_en')    },
+    { value: 'ru',    label: t('lang_ru')    },
+    { value: 'ar',    label: t('lang_ar')    },
+    { value: 'other', label: t('lang_other') },
+  ];
+
+  const afterMealOpts = [
+    { value: 'board', label: t('s11_am_board') },
+    { value: 'talk',  label: t('s11_am_talk')  },
+    { value: 'tv',    label: t('s11_am_tv')    },
+    { value: 'other', label: t('s11_am_other') },
+  ];
 
   return (
     <ScreenLayout
@@ -364,37 +395,280 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       nextLabel={t('s12_submit')}
       step={4}
       total={4}
-      icon="📋"
+      icon="🎉"
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
-      <Card className="mb-4">
-        <p className="section-label mb-3">{t('s12_personal')}</p>
-        <Row label={t('s12_full')}  value={data.fullName} />
-        <Row label={t('s12_phone')} value={data.phone} />
-        <Row label={t('s12_age')}   value={data.age} />
+      {/* Live preview — exactly what host families see on your registered-soldier card */}
+      {(() => {
+        const koshLabels = {
+          mehadrin:  lang === 'he' ? 'מהדרין' : 'Mehadrin',
+          separated: lang === 'he' ? 'כשר' : 'Kosher',
+        };
+        const koshLabel = koshLabels[data.kosher] || (lang === 'he' ? 'רגיל' : 'Regular');
+
+        const allergyLabels = {
+          gluten:  lang === 'he' ? 'ללא גלוטן' : 'Gluten Free',
+          lactose: lang === 'he' ? 'ללא לקטוז' : 'Lactose Free',
+          nuts:    lang === 'he' ? 'ללא אגוזים' : 'Nut Free',
+          peanuts: lang === 'he' ? 'ללא בוטנים' : 'Peanut Free',
+          veg:     lang === 'he' ? 'צמחוני' : 'Vegetarian',
+          vegan:   lang === 'he' ? 'טבעוני' : 'Vegan',
+          fish:    lang === 'he' ? 'ללא דגים' : 'Fish Free',
+          other:   lang === 'he' ? 'אלרגיה' : 'Allergy',
+        };
+        const afterMealLabels = {
+          board: lang === 'he' ? 'משחק קופסא' : 'Board games',
+          talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
+          tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
+        };
+        const aboutLines = [
+          data.qOrigin          && { icon: '🌍', label: lang === 'he' ? 'מאיפה במקור' : 'Originally from', value: data.qOrigin },
+          data.qOffDuty         && { icon: '🎒', label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty', value: data.qOffDuty },
+          data.qFridayTradition && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: data.qFridayTradition },
+          data.qFavoriteDish    && { icon: '🍲', label: lang === 'he' ? 'מנה אהובה על השולחן' : 'Favorite dish', value: data.qFavoriteDish },
+          data.qDislikedFood    && { icon: '🚫', label: lang === 'he' ? 'ממש לא אוהב לאכול' : "Really doesn't like", value: data.qDislikedFood },
+          (data.qAfterMeal || []).length > 0 && {
+            icon: '🎲',
+            label: lang === 'he' ? 'הכי כיף אחרי הארוחה' : 'Favorite after the meal',
+            value: data.qAfterMeal.map(v => v === 'other' ? (data.qAfterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
+          },
+          data.qMoreInfo        && { icon: '📝', label: lang === 'he' ? 'עוד משהו לספר' : 'Anything else', value: data.qMoreInfo },
+        ].filter(Boolean);
+
+        return (
+          <React.Fragment>
+            <p className="section-label mb-2 flex items-center gap-1.5">
+              <span>👀</span><span>{t('s12_preview_badge')}</span>
+            </p>
+            <Card className="mb-2 p-4 border border-warm-200 shadow-sm bg-white">
+              <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
+                <div
+                  className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
+                  style={{ background: !data.avatarPreview || data.avatarPreview.startsWith('blob:') ? '#B0BA99' : data.avatarPreview }}
+                >
+                  {data.avatarPreview && data.avatarPreview.startsWith('blob:') ? (
+                    <img src={data.avatarPreview} alt={data.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    (data.fullName || '?')[0]
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-gray-800 text-sm truncate">{data.fullName || (lang === 'he' ? 'שם מלא' : 'Full Name')}</h4>
+                  <p className="text-xs text-warm-500 mt-0.5">
+                    {data.age ? `${data.age} ${lang === 'he' ? 'שנים' : 'y/o'}` : (lang === 'he' ? 'חייל משרת' : 'Serving Soldier')}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
+                      <span>{t('s12_solo_tag')}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{t('s12_kosh')}</span>
+                  <span className="font-bold text-gray-800">🍽️ {koshLabel}</span>
+                </div>
+                <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{t('s12_allerg')}</span>
+                  {(data.allergies || []).length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {data.allergies.map(a => (
+                        <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-lg">
+                          {allergyLabels[a] || a}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="font-medium text-gray-500">🍴 {t('s12_no_restrictions')}</span>
+                  )}
+                </div>
+              </div>
+
+              {aboutLines.length > 0 && (
+                <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-3 space-y-1.5">
+                  {aboutLines.map((l, i) => (
+                    <p key={i} className="text-xs text-warm-600 leading-relaxed">
+                      <span className="me-1">{l.icon}</span>
+                      <span className="font-bold text-warm-700">{l.label}: </span>
+                      <span>{l.value}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </React.Fragment>
+        );
+      })()}
+
+      <button
+        type="button"
+        onClick={() => setShowEdit(v => !v)}
+        className="w-full flex items-center justify-between gap-3 mt-6 mb-4 py-2 text-start"
+      >
+        <p className="text-xs text-warm-500 flex-1">{t('s12_edit_sub')}</p>
+        <svg
+          className="w-5 h-5 text-warm-400 flex-shrink-0 transition-transform duration-200"
+          style={{ transform: showEdit ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
+      {!showEdit ? null : (
+      <React.Fragment>
+      {/* Hero: photo + name/phone/age — click the avatar to change or add a photo */}
+      <Card className="mb-4 p-5 text-center">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <div className="flex justify-center mb-2">
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
+            {data.avatarPreview ? (
+              data.avatarPreview.startsWith('blob:') ? (
+                <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                  style={{ background: data.avatarPreview }}
+                >
+                  {(data.fullName || '?')[0]}
+                </div>
+              )
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
+              </div>
+            )}
+            <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs">+</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-warm-400 mb-5">{t('s12_photo_edit')}</p>
+
+        <Input label={t('s12_full')}  value={data.fullName || ''} onChange={set('fullName')} />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={t('s12_phone')} type="tel" value={data.phone || ''} onChange={set('phone')} />
+          <Input label={t('s12_age')} type="number" value={data.age || ''} onChange={set('age')} />
+        </div>
       </Card>
 
-
-
-      <Card className="mb-4">
-        <p className="section-label mb-3">{t('s12_prefs')}</p>
-        <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
-        <Row label={t('s12_shab')}   value={shab[data.shabbatKeeps]} />
-        <Row label={t('s12_allerg')} value={(data.allergies || []).map(a => a === 'other' ? t('a_other') : t('a_' + a)).join(', ') || t('s12_no_allerg')} />
-        <Row label={t('s12_pets')}   value={pets[data.pets]} />
+      {/* Preferences — same fields families see on your request card */}
+      <Card className="mb-4 p-5">
+        <p className="section-label mb-4">🍽️ {t('s12_prefs')}</p>
+        <RadioGroup
+          label={t('s7_kosh')}
+          value={data.kosher || ''}
+          onChange={set('kosher')}
+          options={[
+            { value: 'mehadrin',  label: t('s7_meh'),    sub: t('s7_meh_s')    },
+            { value: 'separated', label: t('s7_kosh_k'), sub: t('s7_kosh_k_s') },
+            { value: 'none',      label: t('s7_none'),   sub: t('s7_none_s')   },
+          ]}
+        />
+        <RadioGroup
+          label={t('s7_shab')}
+          value={data.shabbatKeeps || ''}
+          onChange={set('shabbatKeeps')}
+          options={[
+            { value: 'keeps',       label: t('s7_yes'),        sub: t('s7_yes_s')     },
+            { value: 'traditional', label: t('s16_shab_trad'), sub: t('s7_trad_s')   },
+            { value: 'none',        label: t('s7_no'),         sub: t('s7_no_s')      },
+          ]}
+        />
+        <div className="mt-2">
+          <MultiCheck
+            label={t('s9_title')}
+            options={allergyOpts}
+            values={data.allergies || []}
+            onChange={set('allergies')}
+          />
+          {(data.allergies || []).includes('other') && (
+            <div className="mt-3">
+              <textarea
+                value={data.allergyNote || ''}
+                onChange={e => set('allergyNote')(e.target.value)}
+                placeholder={t('s9_note_ph')}
+                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+                rows={2}
+              />
+            </div>
+          )}
+        </div>
+        <div className="mt-5">
+          <MultiCheck
+            label={t('s10_lang')}
+            options={langOpts}
+            values={data.languages || ['he']}
+            onChange={set('languages')}
+          />
+        </div>
+        <div className="mt-5">
+          <RadioGroup
+            label={t('s10_pets')}
+            value={data.pets || ''}
+            onChange={set('pets')}
+            options={[
+              { value: 'ok',      label: t('s10_pets_ok') },
+              { value: 'notok',   label: t('s10_pets_no') },
+              { value: 'allergy', label: t('s10_pets_al') },
+            ]}
+          />
+        </div>
       </Card>
 
-      {data.bio && (
-        <Card className="mb-4 bg-brand-50 border-brand-100">
-          <p className="section-label mb-2">{t('s12_bio')}</p>
-          <p className="text-sm text-gray-700 leading-relaxed italic">"{data.bio}"</p>
-        </Card>
+      {/* About you — the warm answers families read on your card */}
+      <Card className="mb-4 p-5 bg-brand-50 border-brand-100">
+        <p className="section-label mb-4">💬 {t('s12_about_title')}</p>
+        <div className="space-y-4">
+          <Input label={t('s11_q_origin')}   value={data.qOrigin || ''}          onChange={set('qOrigin')} />
+          <Input label={t('s11_q_offduty')}  value={data.qOffDuty || ''}         onChange={set('qOffDuty')} />
+          <Input label={t('s11_q_tradition')} value={data.qFridayTradition || ''} onChange={set('qFridayTradition')} />
+          <Input label={t('s11_q_dish')}     value={data.qFavoriteDish || ''}    onChange={set('qFavoriteDish')} />
+          <Input label={t('s11_q_dislike')}  value={data.qDislikedFood || ''}    onChange={set('qDislikedFood')} />
+
+          <div>
+            <MultiCheck
+              label={t('s11_q_aftermeal')}
+              options={afterMealOpts}
+              values={data.qAfterMeal || []}
+              onChange={set('qAfterMeal')}
+            />
+            {(data.qAfterMeal || []).includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={data.qAfterMealOther || ''}
+                  onChange={e => set('qAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">{t('s11_q_more')}</label>
+            <textarea
+              value={data.qMoreInfo || ''}
+              onChange={e => set('qMoreInfo')(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+              maxLength={300}
+            />
+          </div>
+        </div>
+      </Card>
+      </React.Fragment>
       )}
-
-      <div className="mt-4">
-        <Btn variant="secondary" onClick={onEdit}>{t('s12_edit')}</Btn>
-      </div>
     </ScreenLayout>
   );
 }

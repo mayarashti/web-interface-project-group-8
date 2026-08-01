@@ -1278,11 +1278,48 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
                         </div>
                       </div>
 
-                      {g.bio && (
-                        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-1 leading-relaxed">
-                          "{g.bio}"
-                        </div>
-                      )}
+                      {(() => {
+                        const afterMealLabels = {
+                          board: lang === 'he' ? 'משחק קופסא' : 'Board games',
+                          talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
+                          tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
+                        };
+                        const aboutLines = [
+                          g.qOrigin           && { icon: '🌍', label: lang === 'he' ? 'מאיפה במקור' : 'Originally from', value: g.qOrigin },
+                          g.qOffDuty          && { icon: '🎒', label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty', value: g.qOffDuty },
+                          g.qFridayTradition  && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: g.qFridayTradition },
+                          g.qFavoriteDish     && { icon: '🍲', label: lang === 'he' ? 'מנה אהובה על השולחן' : 'Favorite dish', value: g.qFavoriteDish },
+                          g.qDislikedFood     && { icon: '🚫', label: lang === 'he' ? 'ממש לא אוהב לאכול' : "Really doesn't like", value: g.qDislikedFood },
+                          (g.qAfterMeal || []).length > 0 && {
+                            icon: '🎲',
+                            label: lang === 'he' ? 'הכי כיף אחרי הארוחה' : 'Favorite after the meal',
+                            value: g.qAfterMeal.map(v => v === 'other' ? (g.qAfterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
+                          },
+                          g.qMoreInfo         && { icon: '📝', label: lang === 'he' ? 'עוד משהו לספר' : 'Anything else', value: g.qMoreInfo },
+                        ].filter(Boolean);
+
+                        if (aboutLines.length > 0) {
+                          return (
+                            <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-1 space-y-1.5">
+                              {aboutLines.map((l, i) => (
+                                <p key={i} className="text-xs text-warm-600 leading-relaxed">
+                                  <span className="me-1">{l.icon}</span>
+                                  <span className="font-bold text-warm-700">{l.label}: </span>
+                                  <span>{l.value}</span>
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (g.bio) {
+                          return (
+                            <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-1 leading-relaxed">
+                              "{g.bio}"
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       {(() => {
                         const phone = getGuestPhone(g);
