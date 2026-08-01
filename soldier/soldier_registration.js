@@ -25,7 +25,7 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
         onBack={onBack}
         onNext={() => { if (validate()) setShowPrefModal(true); }}
         step={1}
-        total={3}
+        total={4}
         icon="🪶"
         title={t('s3_title')}
         onInfo={onInfo}
@@ -77,25 +77,150 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
   );
 }
 
-/* S7Preferences — Consolidated preferences page */
-var { useState, useRef } = React;
+/* S4Profile — Profile photo & self-introduction */
+var { useState: useStateS4, useRef: useRefS4 } = React;
 
-function S7Preferences({ data, setData, onNext, onBack }) {
-  const { t, lang } = useLang();
-  const fileInputRef = useRef(null);
+function S4Profile({ data, setData, onNext, onBack }) {
+  const { t } = useLang();
+  const fileInputRef = useRefS4(null);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setData(prev => ({ 
-        ...prev, 
-        avatarFile: file, 
-        avatarPreview: URL.createObjectURL(file) 
+      setData(prev => ({
+        ...prev,
+        avatarFile: file,
+        avatarPreview: URL.createObjectURL(file)
       }));
     }
   };
+
+  const afterMealOpts = [
+    { value: 'board', label: t('s11_am_board') },
+    { value: 'talk',  label: t('s11_am_talk')  },
+    { value: 'tv',    label: t('s11_am_tv')    },
+    { value: 'other', label: t('s11_am_other') },
+  ];
+
+  return (
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      step={2}
+      total={4}
+      icon="📸"
+      title={t('s11_title')}
+      sub={t('s11_sub')}
+    >
+      <div className="pb-32">
+        <div className="flex justify-center mb-6">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
+            {data.avatarPreview ? (
+              data.avatarPreview.startsWith('blob:') ? (
+                <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                  style={{ background: data.avatarPreview }}
+                >
+                  {(data.fullName || '?')[0]}
+                </div>
+              )
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
+              </div>
+            )}
+            <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs">+</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-center text-[11px] text-warm-400 mb-1">{t('s11_photo')}</p>
+        <p className="text-center text-[11px] text-warm-400 mb-6">{t('s11_photo_note')}</p>
+
+        <p className="text-sm text-warm-500 leading-relaxed mb-6">{t('s11_q_intro')}</p>
+
+        <div className="space-y-5">
+          <Input
+            label={t('s11_q_origin')}
+            value={data.qOrigin || ''}
+            onChange={set('qOrigin')}
+          />
+          <Input
+            label={t('s11_q_offduty')}
+            value={data.qOffDuty || ''}
+            onChange={set('qOffDuty')}
+          />
+          <Input
+            label={t('s11_q_tradition')}
+            value={data.qFridayTradition || ''}
+            onChange={set('qFridayTradition')}
+          />
+          <Input
+            label={t('s11_q_dish')}
+            value={data.qFavoriteDish || ''}
+            onChange={set('qFavoriteDish')}
+          />
+          <Input
+            label={t('s11_q_dislike')}
+            value={data.qDislikedFood || ''}
+            onChange={set('qDislikedFood')}
+          />
+
+          <div>
+            <MultiCheck
+              label={t('s11_q_aftermeal')}
+              options={afterMealOpts}
+              values={data.qAfterMeal || []}
+              onChange={set('qAfterMeal')}
+            />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_aftermeal_sub')}</p>
+            {(data.qAfterMeal || []).includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={data.qAfterMealOther || ''}
+                  onChange={e => set('qAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">{t('s11_q_more')}</label>
+            <textarea
+              value={data.qMoreInfo || ''}
+              onChange={e => set('qMoreInfo')(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+              maxLength={300}
+            />
+          </div>
+        </div>
+      </div>
+    </ScreenLayout>
+  );
+}
+
+/* S7Preferences — Consolidated preferences page */
+var { useState, useRef } = React;
+
+function S7Preferences({ data, setData, onNext, onBack }) {
+  const { t, lang } = useLang();
+
+  const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   const langOpts = [
     { value: 'he',    label: t('lang_he')    },
@@ -124,8 +249,8 @@ function S7Preferences({ data, setData, onNext, onBack }) {
     <ScreenLayout
       onBack={onBack}
       onNext={() => { if (validate()) onNext(); }}
-      step={2}
-      total={3}
+      step={3}
+      total={4}
       icon="🍽️"
       title={t('s7_title')}
       sub={t('s7_sub')}
@@ -199,52 +324,6 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           ]}
         />
 
-        {/* Profile Section (Bio & Photo) */}
-        <div className="pt-6 border-t border-warm-200">
-          <p className="text-sm font-semibold text-warm-600 mb-4">{t('s11_title')}</p>
-
-          <div className="flex justify-center mb-6">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              style={{ display: 'none' }} 
-              onChange={handleFileChange} 
-            />
-            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
-              {data.avatarPreview ? (
-                data.avatarPreview.startsWith('blob:') ? (
-                  <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
-                ) : (
-                  <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
-                    style={{ background: data.avatarPreview }}
-                  >
-                    {(data.fullName || '?')[0]}
-                  </div>
-                )
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
-                  <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
-                </div>
-              )}
-              <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-white text-xs">+</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-center text-[11px] text-warm-400 mb-5">{t('s11_photo')}</p>
-
-          <textarea
-            value={data.bio || ''}
-            onChange={e => set('bio')(e.target.value)}
-            placeholder={t('s11_bio_ph')}
-            className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
-            rows={4}
-            maxLength={300}
-          />
-          <p className="text-[10px] text-warm-400 mt-1 text-start">{(data.bio || '').length}/300</p>
-        </div>
       </div>
     </ScreenLayout>
   );
@@ -283,8 +362,8 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       onNext={handleNext}
       isNextLoading={isSubmitting}
       nextLabel={t('s12_submit')}
-      step={3}
-      total={3}
+      step={4}
+      total={4}
       icon="📋"
       title={t('s12_title')}
       sub={t('s12_sub')}

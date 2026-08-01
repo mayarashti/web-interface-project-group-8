@@ -294,8 +294,9 @@ function App() {
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(7)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} onInfo={() => setShowInfo(true)} />,
-    7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(3)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(4)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} onInfo={() => setShowInfo(true)} />,
+    4:  <S4Profile          data={formData} setData={setFormData} onNext={() => go(7)} onBack={() => go(3)} />,
+    7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(4)} />,
     12: <S12Summary   data={formData} onEdit={() => go(3)} onSubmit={() => registerSoldier(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,

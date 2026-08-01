@@ -165,10 +165,25 @@ const T = {
     s10_pets_ok:'נוח עם חיות', s10_pets_no:'לא נוח', s10_pets_al:'יש לי אלרגיה לחיות',
 
     /* S11 Profile */
-    s11_title:'הפרופיל שלך', s11_sub:'פרופיל עשיר עוזר למשפחות להכיר אותך לפני שבת',
+    s11_title:'ספר לנו קצת על עצמך', s11_sub:'פרופיל עשיר עוזר למשפחות להכיר אותך לפני שבת',
     s11_photo:'לחץ לבחירת תמונה (אופציונלי)',
+    s11_photo_note:'אפשר גם בלי, אבל משפחות אוהבות לדעת מי מגיע אליהן',
     s11_bio:'ספר לנו עליך',
     s11_bio_ph:'היי, אני דניאל, משרת באזור חיפה ומחפש ארוחת שישי חמה כשאני יוצא מהבסיס.',
+    s11_q_intro:'קצת שאלות נחמדות על עצמך, לא חייב לענות אבל זה יהפוך את ההגעה למשפחה ליותר נעימה',
+    s11_q_origin:'מאיפה אתה במקור?',
+    s11_q_offduty:'מה אתה עושה כשאתה לא במילואים?',
+    s11_q_tradition:'מסורת נחמדה בארוחת שישי שגדלת עלייה?',
+    s11_q_dish:'מנה שתמיד כיף לך שיש על השולחן',
+    s11_q_dislike:'משהו שאתה ממש לא אוהב לאכול',
+    s11_q_aftermeal:'מה הכי כיף לך אחרי הארוחה',
+    s11_q_aftermeal_sub:'אפשר לבחור כמה אפשרויות',
+    s11_am_board:'משחק קופסא',
+    s11_am_talk:'לשבת לשיחה ארוכה סביב השולחן',
+    s11_am_tv:'לראות סדרה מול הטלוויזיה',
+    s11_am_other:'אחר',
+    s11_am_other_ph:'ספר לנו מה עוד',
+    s11_q_more:'יש עוד משהו שתרצה לספר למשפחות?',
 
     /* S12 Summary */
     s12_title:'סיכום הרשמה', s12_sub:'בדוק שהכל נכון לפני השליחה',
@@ -688,10 +703,25 @@ const T = {
     s10_pets_ok:'Comfortable with pets', s10_pets_no:'Not comfortable', s10_pets_al:'I\'m allergic to animals',
 
     /* S11 Profile */
-    s11_title:'Your Profile', s11_sub:'A full profile helps families get to know you before Shabbat',
+    s11_title:'Tell us a bit about yourself', s11_sub:'A full profile helps families get to know you before Shabbat',
     s11_photo:'Tap to choose a photo (optional)',
+    s11_photo_note:'It\'s okay to skip this, but families love knowing who\'s coming to visit',
     s11_bio:'Tell us about yourself',
     s11_bio_ph:'Hi, I\'m Daniel, serving near Haifa and looking for a warm Friday dinner when I leave base.',
+    s11_q_intro:'A few nice questions about yourself — no need to answer, but it\'ll make arriving at the family feel warmer',
+    s11_q_origin:'Where are you originally from?',
+    s11_q_offduty:'What do you do when you\'re not in reserve duty?',
+    s11_q_tradition:'A nice Friday dinner tradition you grew up with?',
+    s11_q_dish:'A dish you always love having on the table',
+    s11_q_dislike:'Something you really don\'t like to eat',
+    s11_q_aftermeal:'What do you enjoy most after the meal',
+    s11_q_aftermeal_sub:'You can choose a few options',
+    s11_am_board:'Board games',
+    s11_am_talk:'Sitting for a long chat around the table',
+    s11_am_tv:'Watching a show on TV',
+    s11_am_other:'Other',
+    s11_am_other_ph:'Tell us more',
+    s11_q_more:'Anything else you\'d like to tell the families?',
 
     /* S12 Summary */
     s12_title:'Registration Summary', s12_sub:'Check everything is correct before submitting',
