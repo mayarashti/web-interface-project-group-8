@@ -907,7 +907,7 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
 
 function Modal({ isOpen, onClose, title, children, className }) {
   if (!isOpen) return null;
-  return (
+  return ReactDOM.createPortal(
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-[2px] transition-opacity"
@@ -927,7 +927,8 @@ function Modal({ isOpen, onClose, title, children, className }) {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -999,7 +1000,7 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
                      : 'You cannot create a hosting without filling this in') :
     null;
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in"
       style={{ zIndex: 9999 }}
@@ -1030,7 +1031,8 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
