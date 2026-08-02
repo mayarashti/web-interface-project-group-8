@@ -1,8 +1,25 @@
 /* S3PersonalDetails — Personal details */
 var { useState } = React;
 
+const CutleryIcon = () => (
+  <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm">
+    <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 14H24V24C24 26 22 28 20 28H16V14Z" stroke="#a39081" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M20 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M20 28V38" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M28 22H34" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M28 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M31 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M34 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M31 22V38" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  </div>
+);
+
+
+
 function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPreferences }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [errors, setErrors] = useState({});
   const [showPrefModal, setShowPrefModal] = useState(false);
 
@@ -26,8 +43,13 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
         onNext={() => { if (validate()) setShowPrefModal(true); }}
         step={1}
         total={3}
-        icon="🪶"
-        title={t('s3_title')}
+        icon=""
+        title={
+          <span className="flex flex-col">
+            <span>{lang === 'he' ? 'יצירת חשבון' : 'Create Account'}</span>
+            <span className="text-lg font-medium text-warm-500 mt-1">{lang === 'he' ? 'חייל' : 'Soldier'}</span>
+          </span>
+        }
         onInfo={onInfo}
       >
         <div className="space-y-6 pb-32">
@@ -126,7 +148,7 @@ function S7Preferences({ data, setData, onNext, onBack }) {
       onNext={() => { if (validate()) onNext(); }}
       step={2}
       total={3}
-      icon="🍽️"
+      icon={<CutleryIcon />}
       title={t('s7_title')}
       sub={t('s7_sub')}
     >
@@ -285,7 +307,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       nextLabel={t('s12_submit')}
       step={3}
       total={3}
-      icon="📋"
+      icon={<SummaryIcon />}
       title={t('s12_title')}
       sub={t('s12_sub')}
     >

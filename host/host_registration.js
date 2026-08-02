@@ -3,7 +3,7 @@
 var { useState, useEffect, useRef } = React;
 
 function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences, onInfo }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [showPrefModal, setShowPrefModal] = useState(false);
@@ -118,9 +118,44 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
     { id: 'nuts',    label: t('alg_nuts') },
   ];
 
-  const titles   = ['', t('s16_1_title'), t('s16_2_title'), t('s16_3_title')];
+  const titles   = [
+    '',
+    (
+      <span className="flex flex-col">
+        <span>{lang === 'he' ? 'יצירת חשבון' : 'Create Account'}</span>
+        <span className="text-lg font-medium text-warm-500 mt-1">{lang === 'he' ? 'משפחה מארחת' : 'Host Family'}</span>
+      </span>
+    ),
+    t('s16_2_title'),
+    t('s16_3_title')
+  ];
+  const CutleryIcon = () => (
+    <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm">
+      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 14H24V24C24 26 22 28 20 28H16V14Z" stroke="#a39081" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M20 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M20 28V38" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M28 22H34" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M28 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M31 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M34 14V22" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M31 22V38" stroke="#a39081" strokeWidth="3" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
+
+  const SparklesIcon = () => (
+    <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm">
+      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="#a39081" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M5.636 5.636l2.828 2.828M15.536 15.536l2.828 2.828M5.636 18.364l2.828-2.828M15.536 8.464l2.828-2.828" stroke="#a39081" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="12" r="3" stroke="#a39081" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  );
+
   const subtitles = ['', t('s16_1_sub'),  t('s16_2_sub'),  t('s16_3_sub')];
-  const icons     = ['', '🏡', '🍽️', '✨'];
+  const icons     = ['', '', <CutleryIcon />, <SparklesIcon />];
 
   return (
     <>
@@ -304,7 +339,7 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
               >
                 {!data.hostPreview && (
                   <>
-                    <span className="text-3xl mb-2">📷</span>
+                    <CameraIcon className="w-8 h-8 text-warm-400 mb-2" />
                     <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
                     <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
                   </>
@@ -381,7 +416,7 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
       onNext={handleNext}
       isNextLoading={isSubmitting}
       nextLabel={t('s16_submit')}
-      icon="📋"
+      icon={<SummaryIcon />}
       title={t('s16_sum_title')}
       sub={t('s12_sub')}
     >
@@ -425,7 +460,7 @@ function S17HostSuccess({ onNext }) {
       <AppHeader />
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
         <div className="w-24 h-24 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center mb-6 shadow-sm">
-          <span className="text-5xl">✅</span>
+          <SuccessIcon />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-3">{t('s17_title')}</h1>
         <p className="text-base text-warm-500 leading-relaxed mb-10 max-w-[300px]">

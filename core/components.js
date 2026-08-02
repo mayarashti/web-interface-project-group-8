@@ -1,6 +1,98 @@
 /* components.js — Shared UI components */
 
 var { useState, useEffect, useRef } = React;
+
+// Clean line-art SVG icons in the style of CutleryIcon
+const HomeIcon = () => (
+  <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm animate-fade-in">
+    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#a39081" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  </div>
+);
+
+const SummaryIcon = () => (
+  <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm animate-fade-in">
+    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#a39081" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" />
+      <path d="M7 8H17" />
+      <path d="M7 12H17" />
+      <path d="M7 16H13" />
+    </svg>
+  </div>
+);
+
+const ClipboardIcon = () => (
+  <div className="w-16 h-16 rounded-full bg-[#fbf8f5] border border-[#e6dacf] flex items-center justify-center mx-auto mb-4 shadow-sm animate-fade-in">
+    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#a39081" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    </svg>
+  </div>
+);
+
+const CameraIcon = ({ className = "w-8 h-8" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+);
+
+const BellIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+const AlertTriangleIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const ShabbatIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="9" y1="20" x2="9" y2="10" />
+    <path d="M9 10c-1-2 0-4 0-4s1 2 0 4" />
+    <line x1="15" y1="20" x2="15" y2="10" />
+    <path d="M15 10c-1-2 0-4 0-4s1 2 0 4" />
+    <path d="M6 20h12" />
+  </svg>
+);
+
+const StarOfDavidIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 19 15 5 15" />
+    <polygon points="12 22 19 9 5 9" />
+  </svg>
+);
+
+const PawIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 14c-2 0-3.5 1-3.5 2.5S10 19 12 19s3.5-1 3.5-2.5S14 14 12 14z" />
+    <circle cx="7" cy="10" r="1.5" />
+    <circle cx="10" cy="7" r="1.5" />
+    <circle cx="14" cy="7" r="1.5" />
+    <circle cx="17" cy="10" r="1.5" />
+  </svg>
+);
+
+const MapPinIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const SuccessIcon = () => (
+  <svg className="w-12 h-12 text-green-600 animate-scale-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
 window.clsx = (...args) => args.filter(Boolean).join(' ');
 const clsx = window.clsx;
 
@@ -501,7 +593,10 @@ function RadiusMapModal({ isOpen, onClose, onConfirm, initialLat, initialLng, in
 
         {address && (
           <div className="bg-brand-50 border border-brand-100 p-3 rounded-xl">
-            <p className="text-xs text-brand-700 font-medium">📍 {address}</p>
+            <p className="text-xs text-brand-700 font-medium flex items-center gap-1.5">
+              <MapPinIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{address}</span>
+            </p>
           </div>
         )}
 
@@ -697,7 +792,7 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
   const { lang, setLang, t } = useLang();
   return (
     <>
-      <div className="sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
+      <div className="app-header-outer sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
         <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
 
           {/* Left — Language toggle + info + profile / extra actions */}
@@ -756,19 +851,19 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
           </div>
 
           {/* Logo — absolutely centred so it never gets displaced by side buttons */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <img src="MEMULAIM.png" alt="מימולאים" className="h-16 w-auto object-contain drop-shadow-md pointer-events-none" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
+            <img src="MEMULAIM.png" alt="מימולאים" className="h-14 md:h-18 w-auto object-contain drop-shadow-md pointer-events-none" />
           </div>
 
           <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
             <div className="min-w-0 text-right" dir={lang === 'he' ? 'rtl' : 'ltr'}>
-              {eyebrow && (
-                <p className="text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              {!onBack && eyebrow && (
+                <p className="text-[10px] md:text-xs font-semibold truncate leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
                   {eyebrow}
                 </p>
               )}
-              {title && (
-                <h1 className="text-base font-bold tracking-tight truncate leading-tight" style={{ color: '#fff' }}>
+              {!onBack && title && (
+                <h1 className="text-base md:text-lg font-bold tracking-tight truncate leading-tight" style={{ color: '#fff' }}>
                   {title}
                 </h1>
               )}
@@ -849,7 +944,15 @@ function ScreenLayout({ children, onBack, onNext, nextLabel, title, sub, icon, s
             {(step && steps) && <ProgressBar step={step} total={steps} />}
 
             <div className="mb-8">
-              {icon && typeof icon === 'string' && <div className="text-4xl mb-4 animate-fade-in">{icon}</div>}
+              {icon && (
+                <div className="mb-4 animate-fade-in">
+                  {typeof icon === 'string' ? (
+                    <div className="text-4xl">{icon}</div>
+                  ) : (
+                    icon
+                  )}
+                </div>
+              )}
               {title && <h1 className="text-[28px] font-bold text-gray-900 leading-tight mb-2 tracking-tight">{title}</h1>}
               {sub && <p className="text-[15px] text-warm-500 leading-relaxed">{sub}</p>}
             </div>
@@ -889,11 +992,11 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
 
   const warning =
     context === 'first_request' ?
-      (lang === 'he' ? '⚠️ לא ניתן לשלוח בקשה ללא מילוי השאלון'
-                     : '⚠️ You cannot submit a request without filling this in') :
+      (lang === 'he' ? 'לא ניתן לשלוח בקשה ללא מילוי השאלון'
+                     : 'You cannot submit a request without filling this in') :
     context === 'host_first_hosting' ?
-      (lang === 'he' ? '⚠️ לא ניתן לפתוח אירוח ללא מילוי השאלון'
-                     : '⚠️ You cannot create a hosting without filling this in') :
+      (lang === 'he' ? 'לא ניתן לפתוח אירוח ללא מילוי השאלון'
+                     : 'You cannot create a hosting without filling this in') :
     null;
 
   return (
@@ -906,7 +1009,7 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
       >
         <div className="p-6">
           <div className="text-center mb-6">
-            <div className="text-5xl mb-4">📋</div>
+            <ClipboardIcon />
             <h2 className="text-xl font-bold text-gray-900 mb-3">{t('pref_prompt_title')}</h2>
             <p className="text-sm text-warm-500 leading-relaxed">{sub}</p>
           </div>
@@ -917,7 +1020,10 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
             </Btn>
           </div>
           {warning ? (
-            <p className="text-xs text-center text-red-400 font-medium mt-4">{warning}</p>
+            <p className="text-xs text-center text-red-500 font-medium mt-4 flex items-center justify-center gap-1">
+              <AlertTriangleIcon className="w-4 h-4 flex-shrink-0" />
+              <span>{warning}</span>
+            </p>
           ) : (
             <p className="text-xs text-center text-warm-400 mt-4">{t('pref_prompt_later_hint')}</p>
           )}
@@ -1106,3 +1212,15 @@ window.MapPinModal = MapPinModal;
 window.FridayDatePicker = FridayDatePicker;
 window.RadiusMapModal = RadiusMapModal;
 window.PreferencesPromptModal = PreferencesPromptModal;
+
+window.HomeIcon = HomeIcon;
+window.SummaryIcon = SummaryIcon;
+window.ClipboardIcon = ClipboardIcon;
+window.CameraIcon = CameraIcon;
+window.BellIcon = BellIcon;
+window.AlertTriangleIcon = AlertTriangleIcon;
+window.ShabbatIcon = ShabbatIcon;
+window.StarOfDavidIcon = StarOfDavidIcon;
+window.PawIcon = PawIcon;
+window.MapPinIcon = MapPinIcon;
+window.SuccessIcon = SuccessIcon;

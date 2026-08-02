@@ -12,6 +12,208 @@ function familyInRange(req, fam) {
   return d <= radius;
 }
 
+function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
+  const [matchState, setMatchState] = React.useState('pending'); // 'pending', 'match_found', 'confirmed'
+  const [matchDetails, setMatchDetails] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!req.is_match) {
+      setMatchState('pending');
+      return;
+    }
+
+    if (!window.db) {
+      // demo fallback
+      setMatchState('match_found');
+      setMatchDetails({
+        familyName: 'כהן',
+        city: 'אור יהודה',
+        date: req.when
+      });
+      return;
+    }
+
+    // Subscribe to active_matches
+    const unsubscribe = window.db.collection('active_matches')
+      .where('soldier_request_id', '==', req.id)
+      .where('status', 'in', ['pending_soldier_approval', 'approved'])
+      .limit(1)
+      .onSnapshot(async (snap) => {
+        if (snap.empty) {
+          setMatchState('pending');
+          return;
+        }
+
+        const match = snap.docs[0].data();
+        const state = match.status === 'approved' ? 'confirmed' : 'match_found';
+        setMatchState(state);
+
+        // Fetch family details
+        try {
+          const famDoc = await window.db.collection('families').doc(match.family_id).get();
+          if (famDoc.exists) {
+            const famData = famDoc.data();
+            setMatchDetails({
+              familyName: famData.hostName,
+              city: famData.hostCity,
+              date: req.when
+            });
+          } else {
+            setMatchDetails({
+              familyName: match.family_name || 'כהן',
+              city: match.family_city || 'אור יהודה',
+              date: req.when
+            });
+          }
+        } catch (e) {
+          setMatchDetails({
+            familyName: match.family_name || 'כהן',
+            city: match.family_city || 'אור יהודה',
+            date: req.when
+          });
+        }
+      });
+
+    return () => unsubscribe();
+  }, [req.id, req.is_match]);
+
+  let cardStyle = {
+    borderRadius: '16px',
+    backgroundColor: '#FFFFFF',
+    padding: '20px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    position: 'relative',
+    transition: 'all 200ms ease',
+    border: '1px solid #E5E7EB'
+  };
+
+  if (matchState === 'pending') {
+    cardStyle.border = '1px solid #E5E7EB';
+  } else if (matchState === 'match_found') {
+    cardStyle.border = '1px solid #E67E22';
+  } else if (matchState === 'confirmed') {
+    cardStyle.border = '1px solid #27AE60';
+  }
+
+  let titleText = '';
+  let subtitleText = '';
+
+  if (matchState === 'pending') {
+    titleText = lang === 'he' ? 'מחפשים לך אירוח לשבת...' : 'Searching for Your Shabbat Match';
+    subtitleText = lang === 'he'
+      ? `מחפשים מארחים עבור ${req.when} ב-${req.location}. אנחנו בודקים הצעות כדי למצוא לך את המשפחה המארחת המושלמת.`
+      : `Looking for hosts for ${req.when} in ${req.location}. We are reviewing requests to find the perfect host family for you.`;
+  } else if (matchState === 'match_found') {
+    titleText = lang === 'he' ? 'נמצאה משפחה מארחת!' : 'Host Family Found!';
+    const famName = matchDetails?.familyName || (lang === 'he' ? 'כהן' : 'Cohen');
+    const city = matchDetails?.city || (lang === 'he' ? 'אור יהודה' : 'Or Yehuda');
+    subtitleText = lang === 'he'
+      ? `משפחת ${famName} מ${city} תשמח לארח אותך בשישי הקרוב (${req.when}).`
+      : `The ${famName} family from ${city} would love to host you this Friday (${req.when}).`;
+  } else if (matchState === 'confirmed') {
+    titleText = lang === 'he' ? 'האירוח אושר!' : 'Hosting Confirmed!';
+    const famName = matchDetails?.familyName || (lang === 'he' ? 'כהן' : 'Cohen');
+    const city = matchDetails?.city || (lang === 'he' ? 'אור יהודה' : 'Or Yehuda');
+    subtitleText = lang === 'he'
+      ? `הכול מוכן! האירוח שלך אצל משפחת ${famName} ב${city} מאושר.`
+      : `You're all set for Shabbat with the ${famName} family in ${city}.`;
+  }
+
+  return (
+    <div style={cardStyle} className="shadow-sm hover:shadow-md transition-all relative">
+      {/* Top right badge for match_found state */}
+      {matchState === 'match_found' && (
+        <span
+          className="absolute -top-3 left-4 md:left-6 px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm"
+          style={{ backgroundColor: '#E67E22' }}
+        >
+          {lang === 'he' ? 'נמצאה התאמה!' : 'Match Found!'}
+        </span>
+      )}
+
+      {/* Header Area */}
+      <div className="flex gap-4 items-start text-right" style={{ direction: lang === 'he' ? 'rtl' : 'ltr' }}>
+        {/* Icon container - Styled to match '+ New Request' button icon box */}
+        <div className="flex-shrink-0 mt-0.5">
+          {matchState === 'pending' && (
+            <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+          )}
+          {matchState === 'match_found' && (
+            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-500">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </div>
+          )}
+          {matchState === 'confirmed' && (
+            <div className="w-12 h-12 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* Title and Subtitle */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-bold tracking-tight text-gray-900 mb-1">
+            {titleText}
+          </h3>
+          <p className="text-[13px] font-normal leading-relaxed text-warm-500">
+            {subtitleText}
+          </p>
+        </div>
+      </div>
+
+      {/* Action Buttons Area */}
+      <div className="flex gap-3 items-center w-full mt-1" style={{ direction: lang === 'he' ? 'rtl' : 'ltr' }}>
+        {matchState === 'pending' && (
+          <>
+            <button
+              onClick={() => onEdit(req)}
+              className="flex-1 text-center py-2.5 text-xs font-bold text-gray-600 hover:text-brand-600 transition-colors rounded-xl bg-warm-50 border border-warm-100 hover:border-warm-200 hover:bg-warm-100 shadow-sm"
+            >
+              {lang === 'he' ? 'ערוך בקשה' : 'Edit Request'}
+            </button>
+            <button
+              onClick={() => onCancel(req.id)}
+              className="flex-1 text-center py-2.5 text-xs font-bold text-red-600 hover:text-red-700 transition-colors rounded-xl bg-red-50 border border-red-100 hover:border-red-200 hover:bg-red-100 shadow-sm"
+            >
+              {lang === 'he' ? 'בטל בקשה' : 'Cancel Request'}
+            </button>
+          </>
+        )}
+
+        {matchState === 'match_found' && (
+          <button
+            onClick={onOpen}
+            className="w-full text-center px-4 py-2.5 rounded-xl font-bold text-white transition-all shadow-sm hover:shadow active:scale-[0.98]"
+            style={{ backgroundColor: '#2D5A27' }}
+          >
+            {lang === 'he' ? 'פרטי האירוח ואישור הגעה' : 'View Details & Confirm Hosting'}
+          </button>
+        )}
+
+        {matchState === 'confirmed' && (
+          <button
+            onClick={onOpen}
+            className="w-full text-center px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm hover:shadow active:scale-[0.98] bg-white border"
+            style={{ borderColor: '#3D2B1F', color: '#3D2B1F' }}
+          >
+            {lang === 'he' ? 'צפייה בפרטי הגעה ויצירת קשר' : 'View Arrival & Contact Details'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onLogout, data, setData }) {
   const { t, lang } = useLang();
   const [activeRequest, setActiveRequest] = useState(null);
@@ -63,63 +265,17 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
       />
 
       <div className="px-5 mt-8 space-y-6 max-w-md mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            {hasRequests ? t('s15_landing_title') : t('s15_landing_no_req_title')}
+        {/* Welcome Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {t('s15_landing_welcome_title')}
           </h1>
-          {hasRequests ? (
-            <div className="space-y-3">
-              <p className="text-warm-500">{t('s15_landing_has_req_sub', data.requests.length)}</p>
-              <div className="flex flex-col gap-3 max-w-sm mx-auto">
-                {data.requests.map(req => {
-                  const families = window.MAP_FAMILIES || [];
-                  const matchCount = families.filter(fam => {
-                    if (req.kosher) {
-                      if (fam.kosher === 'none' && req.kosher !== 'none') return false;
-                      if (req.kosher === 'mehadrin' && fam.kosher !== 'mehadrin') return false;
-                    }
-                    if (req.shabbat && fam.shabbat === 'secular') return false;
-                    if (req.needSleep && !fam.canSleep) return false;
-                    if (!familyInRange(req, fam)) return false;
-                    return true;
-                  }).length;
-
-                  return (
-                    <div key={req.id} className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setActiveRequest(req)}
-                        className="flex-1 px-5 py-3 bg-white text-gray-900 text-sm font-bold rounded-2xl border border-warm-200 shadow-sm hover:border-brand-200 transition-all flex items-center justify-between group/btn"
-                      >
-                        <div className="flex flex-col items-start gap-0.5 text-right">
-                          <span>{req.when} - {req.location}</span>
-                          <span className={req.status === 'matched' ? "text-support-600 text-[11px] font-semibold" : "text-brand-600 text-[11px] font-medium"}>
-                            {req.status === 'matched' ? t('s15_match_success') : t('s15_searching_sub')}
-                          </span>
-                        </div>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500 group-hover/btn:translate-x-1 transition-transform rtl:group-hover/btn:-translate-x-1">
-                          <path d="M9 18l6-6-6-6"/>
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => onEditRequest(req)}
-                        className="w-12 h-12 rounded-2xl bg-white border border-warm-200 text-warm-500 flex items-center justify-center hover:bg-brand-50 hover:text-brand-600 shadow-sm transition-colors"
-                        title={t('s15_edit_req')}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                          <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM51.31,160,136,75.31,152.69,92,68,176.68ZM48,179.31,76.69,208H48Zm48,25.38L79.31,188,164,103.31,180.69,120Zm96-96L147.31,64l24-24L216,84.68Z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-warm-500">{t('s15_landing_new_req_sub')}</p>
-          )}
+          <p className="text-sm text-warm-500 font-medium">
+            {t('s15_landing_welcome_subtitle')}
+          </p>
         </div>
-        
-        {/* New Request CTA */}
+
+        {/* ── New Request CTA (Always at the top) ── */}
         <button
           onClick={handleNewRequestClick}
           className="w-full text-start p-5 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-300 hover:shadow-md transition-all group flex items-center gap-4"
@@ -137,6 +293,41 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
             <path d="M9 18l6-6-6-6"/>
           </svg>
         </button>
+
+        {/* ── Active Requests List (Only if there are requests) ── */}
+        {hasRequests && (
+          <div className="space-y-4 pt-4">
+            <h2 className="text-xl font-bold text-gray-900 border-b border-warm-100 pb-2">
+              {t('s15_active_requests')}
+            </h2>
+            <div className="flex flex-col gap-3">
+              {data.requests.map(req => (
+                <ActiveRequestCard
+                  key={req.id}
+                  req={req}
+                  onOpen={() => setActiveRequest(req)}
+                  onEdit={(r) => onEditRequest(r)}
+                  onCancel={async (id) => {
+                    setData(prev => ({
+                      ...prev,
+                      requests: (prev.requests || []).filter(r => r.id !== id)
+                    }));
+                    if (window.db) {
+                      try {
+                        const fn = firebase.functions().httpsCallable('cancelSoldierRequest');
+                        await fn({ request_id: id });
+                      } catch (e) {
+                        console.error('Cancel request error:', e);
+                      }
+                    }
+                  }}
+                  lang={lang}
+                  t={t}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <SearchStatusSheet
           request={activeRequest}
@@ -294,7 +485,7 @@ window.MAP_FAMILIES = [
 /* ——————————————————————————————————————————— 
    FamilyInfoCard — compact details beside the map
 ————————————————————————————————————————————— */
-function FamilyInfoCard({ family, onClose }) {
+function FamilyInfoCard({ family, onClose, className = '' }) {
   const { t } = useLang();
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
@@ -310,14 +501,14 @@ function FamilyInfoCard({ family, onClose }) {
   };
 
   const tags = [];
-  if (family.shabbat === 'keeps') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
-  else if (family.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: '🕯️' });
-  if (family.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-  else if (family.kosher === 'separated') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: '✡️' });
-  if (family.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: '🐾' });
+  if (family.shabbat === 'keeps') tags.push({ label: t('map_obs'), cls: 'family-info-tag-shabbat', icon: <ShabbatIcon className="w-3.5 h-3.5" /> });
+  else if (family.shabbat === 'traditional') tags.push({ label: t('map_trad'), cls: 'family-info-tag-shabbat', icon: <ShabbatIcon className="w-3.5 h-3.5" /> });
+  if (family.kosher === 'mehadrin') tags.push({ label: t('map_meh'), cls: 'family-info-tag-kosher', icon: <StarOfDavidIcon className="w-3.5 h-3.5" /> });
+  else if (family.kosher === 'separated') tags.push({ label: t('map_kosh'), cls: 'family-info-tag-kosher', icon: <StarOfDavidIcon className="w-3.5 h-3.5" /> });
+  if (family.hasPets) tags.push({ label: t('vibe_pets'), cls: 'family-info-tag-pets', icon: <PawIcon className="w-3.5 h-3.5" /> });
 
   return (
-    <aside className="family-info-card">
+    <aside className={`family-info-card ${className}`}>
       <div className="family-info-card-header">
         <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor || '#f3e2d3' }}>
           <img src={family.profile_img_url || (family.img_urls && family.img_urls[0]) || familyAvatarUrl(family.imageColor, family.id)} alt={family.name} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
@@ -393,7 +584,7 @@ function FamilyInfoCard({ family, onClose }) {
 ————————————————————————————————————————————— */
 function FamilyStrip({ families, selectedId, onSelect, onHover }) {
   return (
-    <div className="family-strip overflow-x-auto pb-3 -mx-5 px-5">
+    <div className="family-strip overflow-x-auto scrollbar-none pb-3 -mx-5 px-5">
       <div className="flex gap-4 items-start">
         {families.map(fam => (
           <button
@@ -505,7 +696,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
    S15Home — Soldier home screen
 ————————————————————————————————————————————— */
 function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [selected, setSelected] = useState(data.focusFamilyForMap || null);
   const [hovered, setHovered] = useState(null);
   const [showPrefModal, setShowPrefModal] = useState(false);
@@ -587,8 +778,8 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
         }}
       />
       <AppHeader
-        eyebrow={t('s15_hi')}
-        title={soldierName}
+        eyebrow={lang === 'he' ? 'תוצאות חיפוש' : 'Search Results'}
+        title={lang === 'he' ? 'משפחות מארחות' : 'Host Families'}
         onBack={onBack}
         profileAction={(
           <button onClick={onProfile} className="app-icon-btn" title={t('s15_landing_profile_title')} aria-label={t('s15_landing_profile_title')}>
@@ -645,6 +836,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
                   <FamilyInfoCard
                     family={selected}
                     onClose={() => setSelected(null)}
+                    className="family-info-card-overlay"
                   />
                 )}
               </div>
@@ -797,7 +989,7 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
               max="5" 
               value={request.guestCount} 
               onChange={(e) => handleChange('guestCount', parseInt(e.target.value))}
-              className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              className="w-full h-2 py-3 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
             />
           </div>
 
@@ -1211,7 +1403,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 
 
 function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName, soldierData }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
   const [realMatch, setRealMatch] = useState(null);
@@ -1349,7 +1541,16 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
                         : 'bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-md'
                     }`}
                   >
-                    {confirmed || realMatch.status === 'approved' ? '✓ הגעה אושרה' : 'אישור הגעה'}
+                    {confirmed || realMatch.status === 'approved' ? (
+                      <span className="flex items-center justify-center gap-1.5">
+                        <svg className="w-4 h-4 text-white flex-shrink-0 animate-scale-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>{lang === 'he' ? 'הגעה אושרה' : 'Arrival Approved'}</span>
+                      </span>
+                    ) : (
+                      lang === 'he' ? 'אישור הגעה' : 'Confirm Arrival'
+                    )}
                   </button>
                 )}
 

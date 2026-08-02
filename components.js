@@ -170,8 +170,8 @@ function AppHeader({ eyebrow, title, actions, onBack, profileAction }) {
             </div>
           )}
           <div className="app-greeting">
-            {eyebrow && <span>{eyebrow}</span>}
-            <strong>{title}</strong>
+            {!onBack && eyebrow && <span>{eyebrow}</span>}
+            {!onBack && title && <strong>{title}</strong>}
           </div>
         </div>
       </div>

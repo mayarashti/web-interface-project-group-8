@@ -5,7 +5,7 @@
 
 :root {
   /* Brand palette */
-  --brand-50:  #fbf8f5;
+  --brand-50: #fbf8f5;
   --brand-100: #f4ece6;
   --brand-200: #e7d6cb;
   --brand-300: #d6bdae;
@@ -17,7 +17,7 @@
   --brand-900: #291004;
 
   /* Warm neutral palette */
-  --warm-50:  #f7f1de;
+  --warm-50: #f7f1de;
   --warm-100: #efe8d2;
   --warm-200: #e2dac0;
   --warm-300: #d2c8a9;
@@ -26,50 +26,57 @@
   --warm-600: #4e442f;
 
   /* Community accent */
-  --support-50:  #f6f7f3;
+  --support-50: #f6f7f3;
   --support-100: #e5e9db;
   --support-500: #b0ba99;
   --support-600: #889371;
 
   /* Semantic */
   --color-success: #b0ba99;
-  --color-error:   #c2413d;
+  --color-error: #c2413d;
   --color-warning: #9d6638;
-  --color-info:    #4e442f;
+  --color-info: #4e442f;
 
   /* Typography */
   --font-primary: 'Assistant', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs:   0.8125rem; /* 13px */
-  --font-size-sm:   0.875rem;  /* 14px */
-  --font-size-base: 1rem;      /* 16px */
-  --font-size-lg:   1.125rem;  /* 18px */
-  --font-size-xl:   1.25rem;   /* 20px */
-  --font-size-2xl:  1.75rem;   /* 28px */
-  --font-size-3xl:  2rem;      /* 32px */
+  --font-size-xs: 0.8125rem;
+  /* 13px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-base: 1rem;
+  /* 16px */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.75rem;
+  /* 28px */
+  --font-size-3xl: 2rem;
+  /* 32px */
 
   --font-weight-regular: 400;
-  --font-weight-medium:  500;
-  --font-weight-semibold:650;
-  --font-weight-bold:    700;
-  --font-weight-extrabold:750;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 750;
 
   /* Spacing */
-  --space-1:  0.25rem;
-  --space-2:  0.5rem;
-  --space-3:  0.75rem;
-  --space-4:  1rem;
-  --space-5:  1.25rem;
-  --space-6:  1.5rem;
-  --space-8:  2rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
 
   /* Shape */
-  --radius-sm:   0.5rem;
-  --radius-md:   0.75rem;
-  --radius-lg:   1rem;
-  --radius-xl:   1.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
   --radius-full: 9999px;
 
   /* Elevation */
@@ -80,17 +87,19 @@
   --shadow-focus: 0 0 0 4px rgba(78, 34, 15, 0.16);
 
   /* Motion */
-  --transition-fast:   120ms ease;
+  --transition-fast: 120ms ease;
   --transition-normal: 180ms ease;
-  --transition-slow:   260ms ease;
+  --transition-slow: 260ms ease;
 
-  --z-map:         100;
+  --z-map: 100;
   --z-lang-toggle: 9999;
-  --z-overlay:     1999;
-  --z-sheet:       2000;
+  --z-overlay: 1999;
+  --z-sheet: 2000;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -127,18 +136,30 @@ button:disabled {
   background: var(--brand-100);
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--warm-300);
   border-radius: var(--radius-full);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--warm-400); }
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--warm-400);
+}
 
 .screen-enter {
   position: relative;
-  isolation: isolate;   /* creates a local stacking context */
-  overflow: hidden;     /* clips the rotated image cleanly at screen edges */
+  isolation: isolate;
+  /* creates a local stacking context */
+  overflow: hidden;
+  /* clips the rotated image cleanly at screen edges */
   animation: fadeSlideIn var(--transition-slow) ease forwards;
 }
 
@@ -148,7 +169,7 @@ button:disabled {
   content: '';
   position: absolute;
   z-index: -1;
-  left: 30rem;
+  left: calc(50% - 50px);
   bottom: 2.2rem;
   width: 450px;
   height: 555px;
@@ -157,11 +178,31 @@ button:disabled {
   transform-origin: center bottom;
   opacity: 0.15;
   pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+/* Mobile viewport (widths up to 640px) — larger, higher, offset right */
+@media (max-width: 640px) {
+  .screen-enter::before {
+    left: calc(50% - 180px); /* slightly offset to the right from center (50px shift) */
+    width: 460px;
+    height: 570px;
+    bottom: 8rem;           /* positioned higher up on the screen */
+    transform: rotate(-15deg);
+    opacity: 0.12;
+  }
 }
 
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pulse-ring {
@@ -169,17 +210,37 @@ button:disabled {
 }
 
 @keyframes pulseRing {
-  0% { transform: scale(1); opacity: 0.45; }
-  80%, 100% { transform: scale(1.45); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+
+  80%,
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
 }
 
 @keyframes bounce-dot {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
-  40% { transform: translateY(-4px); opacity: 1; }
+
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin {
@@ -187,11 +248,19 @@ button:disabled {
 }
 
 @keyframes sheetUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -240,7 +309,9 @@ input[type=radio] {
   box-shadow: var(--shadow-sm);
 }
 
-.lang-toggle:active { transform: scale(0.98); }
+.lang-toggle:active {
+  transform: scale(0.98);
+}
 
 html[lang="en"] .lang-toggle {
   left: auto;
@@ -278,7 +349,7 @@ html[lang="en"] .lang-toggle {
 }
 
 .app-icon-btn,
-.soldier-home-actions > button:not(.lang-toggle) {
+.soldier-home-actions>button:not(.lang-toggle) {
   width: 2.35rem;
   height: 2.35rem;
   flex: 0 0 2.35rem;
@@ -293,13 +364,13 @@ html[lang="en"] .lang-toggle {
 }
 
 .app-icon-btn:hover,
-.soldier-home-actions > button:not(.lang-toggle):hover {
+.soldier-home-actions>button:not(.lang-toggle):hover {
   border-color: var(--brand-200);
   box-shadow: var(--shadow-xs);
 }
 
 .app-icon-btn:active,
-.soldier-home-actions > button:not(.lang-toggle):active {
+.soldier-home-actions>button:not(.lang-toggle):active {
   transform: scale(0.98);
 }
 
@@ -355,7 +426,9 @@ html[lang="en"] .lang-toggle {
   border: 1px solid var(--warm-200);
 }
 
-.leaflet-control-attribution { display: none !important; }
+.leaflet-control-attribution {
+  display: none !important;
+}
 
 .host-marker-outer {
   width: 48px;
@@ -405,7 +478,9 @@ html[lang="en"] .lang-toggle {
   padding-top: var(--space-2);
 }
 
-.family-strip::-webkit-scrollbar { display: none; }
+.family-strip::-webkit-scrollbar {
+  display: none;
+}
 
 .family-story-item {
   width: 78px;
@@ -671,7 +746,7 @@ html[lang="en"] .lang-toggle {
   gap: var(--space-3);
 }
 
-.family-info-grid > div {
+.family-info-grid>div {
   min-width: 0;
   border: 1px solid var(--warm-200);
   border-radius: var(--radius-md);
@@ -739,12 +814,24 @@ html[lang="en"] .lang-toggle {
   background: var(--warm-50);
 }
 
-.no-scrollbar { scrollbar-width: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.pre-line { white-space: pre-line; }
-.shadow-xs { box-shadow: var(--shadow-xs); }
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.pre-line {
+  white-space: pre-line;
+}
+
+.shadow-xs {
+  box-shadow: var(--shadow-xs);
+}
 
 @media (max-width: 760px) {
+
   .app-header,
   .soldier-home-header {
     padding-inline: var(--space-5);
@@ -767,8 +854,13 @@ html[lang="en"] .lang-toggle {
    Recipe Recommendations (family dashboard)
 ───────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 .recipe-skeleton {
@@ -848,7 +940,9 @@ html[lang="en"] .lang-toggle {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .recipe-spin {
@@ -856,3 +950,83 @@ html[lang="en"] .lang-toggle {
   animation: spin 0.8s linear infinite;
 }
 
+/* ─────────────────────────────────────────
+   Mobile UI Redesign Styles
+───────────────────────────────────────── */
+
+/* Hides scrollbars on carousels/horizontal scrolls */
+.scrollbar-none {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Floating bottom sheet for family details on screens under 768px */
+@media (max-width: 767px) {
+  .family-info-card-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    background: #ffffff;
+    border-top: 1px solid var(--warm-200);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -10px 32px rgba(78, 34, 15, 0.16);
+    padding: var(--space-4) var(--space-5) var(--space-8);
+    max-height: 85vh;
+    overflow-y: auto;
+    direction: rtl;
+    animation: sheetUp var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Swipeable drag handle indicator */
+  .family-info-card-overlay::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--warm-300);
+    border-radius: var(--radius-full);
+    margin: 0 auto var(--space-4);
+  }
+}
+
+/* ── Fixed header on mobile devices only (max-width: 768px) ── */
+@media (max-width: 768px) {
+  .app-header-outer {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 50 !important;
+  }
+
+  .screen-enter {
+    transform: none !important;
+    animation: fadeSlideInMobile 260ms ease forwards !important;
+    padding-top: 72px !important;
+  }
+
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+@keyframes fadeSlideInMobile {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

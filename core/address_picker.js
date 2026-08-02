@@ -236,7 +236,7 @@
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurRef.current); selectSuggestion(s); }}
-                    className="w-full text-start px-4 py-2.5 hover:bg-brand-50 transition-colors border-b border-warm-100 last:border-0"
+                    className="w-full text-start px-4 py-3 hover:bg-brand-50 transition-colors border-b border-warm-100 last:border-0"
                   >
                     <span className="block text-sm font-semibold text-gray-800">{s.mainText}</span>
                     {s.secondaryText && (
@@ -281,7 +281,7 @@
                 if (onRadiusChange) onRadiusChange(v);
                 if (value?.coordinates?.lat) onChange && onChange({ ...value, radiusKm: v });
               }}
-              className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              className="w-full h-2 py-3 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
             />
             <div className="flex justify-between text-[11px] text-warm-400 mt-1">
               <span>500 מ'</span>
@@ -293,7 +293,10 @@
         {/* Selected address preview */}
         {value?.fullString && (
           <div className="mt-3 bg-brand-50 border border-brand-100 p-3 rounded-xl">
-            <p className="text-xs text-brand-700 font-medium">📍 {value.fullString}</p>
+            <p className="text-xs text-brand-700 font-medium flex items-center gap-1.5">
+              <MapPinIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{value.fullString}</span>
+            </p>
           </div>
         )}
       </div>

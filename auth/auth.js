@@ -204,7 +204,7 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
       <header
         dir="ltr"
         style={{ backgroundColor: 'var(--brand-500)' }}
-        className="w-full shadow-sm"
+        className="app-header-outer w-full shadow-sm"
       >
         {/* full-width grid — no max-width so buttons reach the screen edges */}
         <div className="grid grid-cols-3 items-center w-full px-2 py-1">
@@ -262,6 +262,7 @@ function S1Welcome({ onSoldier, onHost, onLogin }) {
                   alt=""
                   aria-hidden="true"
                   className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 object-contain"
+                  style={{ filter: 'brightness(0) saturate(100%) invert(97%) sepia(8%) saturate(319%) hue-rotate(334deg) brightness(102%) contrast(100%)' }}
                 />
               </span>
             </Btn>
@@ -314,7 +315,7 @@ function S2Explain({ onNext, onBack }) {
       onBack={onBack}
       onNext={onNext}
       nextLabel={t('s2_btn')}
-      icon="🏡"
+      icon={<HomeIcon />}
       title={t('s2_title')}
       sub={t('s2_sub')}
     >
@@ -346,7 +347,7 @@ function S18HostExplain({ onNext, onBack }) {
       onBack={onBack}
       onNext={onNext}
       nextLabel={t('s18_btn')}
-      icon="🏡"
+      icon={<HomeIcon />}
       title={t('s18_title')}
       sub={t('s18_sub')}
     >

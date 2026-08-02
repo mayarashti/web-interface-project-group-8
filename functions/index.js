@@ -6,6 +6,10 @@ const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
+if (process.env.FUNCTIONS_EMULATOR) {
+  delete process.env.FIRESTORE_EMULATOR_HOST;
+  delete process.env.FIREBASE_FIRESTORE_EMULATOR_ADDRESS;
+}
 initializeApp();
 const db = getFirestore();
 
@@ -1093,6 +1097,13 @@ exports.confirmMatch = onCall(async (req) => {
 
   const { match_id } = req.data;
   if (!match_id) throw new HttpsError("invalid-argument", "match_id is required");
+
+  console.log("ConfirmMatch Debug details:", {
+    match_id,
+    project: process.env.GCLOUD_PROJECT,
+    emulator_host: process.env.FIRESTORE_EMULATOR_HOST,
+    address: process.env.FIREBASE_FIRESTORE_EMULATOR_ADDRESS
+  });
 
   const matchSnap = await db.collection("active_matches").doc(match_id).get();
   if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");

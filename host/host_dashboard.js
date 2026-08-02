@@ -801,7 +801,7 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
       {/* Header — matches AppHeader styling */}
       <AppHeader
         eyebrow={t('s19_greeting')}
-        title={data.hostName || 'משפחה'}
+        title={data.hostFullName || data.hostName}
         onProfile={onProfile}
         onNotifications={() => setShowNotifications(true)}
         notificationsCount={notifications.filter(n => !n.read).length}
@@ -810,14 +810,24 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
 
       <div className="max-w-md mx-auto px-5 mt-6">
 
-        {/* Smart Alerts Section */}
-        <div className="mb-6">
-          <p className="section-label mb-3">{t('s19_smart_alerts')}</p>
-          {data.hasSoldierNearby ? (
-            <Card className="p-4 bg-amber-50 border-amber-200">
+        {/* Welcome Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {t('s19_landing_welcome_title') || 'שמחים שחזרת!'}
+          </h1>
+          <p className="text-sm text-warm-500 font-medium">
+            {t('s19_landing_welcome_subtitle') || 'בואו נמצא את החייל שישמח להתארח אצלכם השבת'}
+          </p>
+        </div>
+
+        {/* Smart Alerts Section — Only visible if there is an active alert */}
+        {data.hasSoldierNearby && (
+          <div className="mb-6">
+            <p className="section-label mb-3">{t('s19_smart_alerts')}</p>
+            <Card className="p-4 bg-amber-50 border border-amber-200">
               <div className="flex gap-3 items-start">
-                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">🔔</span>
+                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-700 shadow-sm">
+                  <BellIcon className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{t('s19_alert_title')}</p>
@@ -825,12 +835,8 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                 </div>
               </div>
             </Card>
-          ) : (
-            <Card className="p-4 border-dashed text-center">
-              <p className="text-sm text-warm-400">{t('no_new_alerts')}</p>
-            </Card>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* My Hostings Header */}
         <div className="flex items-center justify-between mb-4">
@@ -869,9 +875,9 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
               const isFull = !isCanceled && totalGuests >= capacity && capacity > 0;
 
               return (
-                <Card 
-                  key={h.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md hover:border-brand-300 ${isCanceled ? ' opacity-70' : ''}`}
+                <div 
+                  key={h.id}
+                  className={`bg-white rounded-2xl border border-warm-200 shadow-sm overflow-hidden cursor-pointer transition-all duration-200 hover:border-brand-300 hover:shadow-md active:scale-[0.99] ${isCanceled ? 'opacity-70' : ''}`}
                   onClick={() => setSelectedHostingId(h.id)}
                 >
                   <div className="p-5">
@@ -905,7 +911,7 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
                       </p>
                     )}
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
@@ -1119,11 +1125,11 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
         </Card>
 
         {/* Section 2 - Action controls */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {isCanceled ? (
             <button
               onClick={() => onCancel(hosting.id)}
-              className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors flex items-center justify-center gap-1.5"
+              className="flex-1 py-3.5 px-4 bg-brand-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors flex items-center justify-center gap-1.5"
             >
               <RotateCcwIcon className="w-4 h-4" />
               <span>{lang === 'he' ? 'שחזר אירוח' : 'Restore Hosting'}</span>
@@ -1132,14 +1138,14 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
             <>
               <button
                 onClick={() => onEdit(hosting.id)}
-                className="flex-1 py-3 px-4 bg-white border border-warm-200 text-gray-700 rounded-xl text-sm font-bold shadow-xs hover:bg-warm-50 hover:border-warm-300 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 py-3.5 px-4 bg-white border border-warm-200 text-gray-700 rounded-xl text-sm font-bold shadow-xs hover:bg-warm-50 hover:border-warm-300 transition-all flex items-center justify-center gap-1.5"
               >
                 <EditIcon className="w-4 h-4 text-gray-500" />
                 <span>{t('s19_edit_btn')}</span>
               </button>
               <button
                 onClick={() => onCancel(hosting.id)}
-                className="py-3 px-5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-3.5 px-5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
               >
                 <TrashIcon className="w-4 h-4 text-red-500" />
                 <span>{lang === 'he' ? 'ביטול' : 'Cancel'}</span>
@@ -1284,27 +1290,28 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
                               <button
                                 onClick={() => handleWhatsAppRedirect(g)}
                                 disabled={!phone}
-                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 font-bold shadow-xs active:scale-[0.98] transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 font-bold shadow-xs active:scale-[0.98] transition-all ${
                                   phone
-                                    ? "bg-white border border-warm-200 text-gray-700 hover:bg-warm-50"
+                                    ? "bg-[#25D366] text-white hover:bg-[#1ebd5b]"
                                     : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed opacity-60"
                                 }`}
                                 title={!phone ? t('s19_phone_missing_msg') : ''}
                               >
-                                <WhatsAppIcon className={`w-4 h-4 ${phone ? 'text-[#25D366]' : 'text-gray-400'}`} />
+                                <WhatsAppIcon className={`w-4 h-4 ${phone ? 'text-white' : 'text-gray-400'}`} />
                                 <span>{t('s19_send_msg')}</span>
                               </button>
                               <button
                                 onClick={() => onOpenRecipes(g)}
-                                className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2 px-3 rounded-xl hover:bg-brand-100 transition-colors font-bold active:scale-[0.98]"
+                                className="flex-1 flex items-center justify-center gap-1.5 bg-brand-50 border border-brand-200 text-brand-700 py-2.5 px-3 rounded-xl hover:bg-brand-100 transition-colors font-bold active:scale-[0.98]"
                               >
                                 <ChefHatIcon className="w-4 h-4 text-brand-700" />
                                 <span>{t('s19_view_recipes')}</span>
                               </button>
                             </div>
                             {!phone && (
-                              <p className="text-[10px] text-red-500 font-medium px-1 mt-0.5">
-                                ⚠️ {t('s19_phone_missing_msg')}
+                              <p className="text-[10px] text-red-500 font-medium px-1 mt-0.5 flex items-center gap-1">
+                                <AlertTriangleIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span>{t('s19_phone_missing_msg')}</span>
                               </p>
                             )}
                           </div>
@@ -1714,7 +1721,7 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
             >
               {!((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
                 <>
-                  <span className="text-3xl mb-2">📷</span>
+                  <CameraIcon className="w-8 h-8 text-warm-400 mb-2" />
                   <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
                   <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
                 </>
