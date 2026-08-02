@@ -184,7 +184,7 @@ function Modal({ isOpen, onClose, title, children }) {
   const { t } = useLang();
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in" style={{ zIndex: 9999 }} onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
