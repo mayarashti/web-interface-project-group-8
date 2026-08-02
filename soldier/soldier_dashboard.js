@@ -295,12 +295,33 @@ window.MAP_FAMILIES = [
    FamilyInfoCard — compact details beside the map
 ————————————————————————————————————————————— */
 function FamilyInfoCard({ family, onClose }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
     : family.kosher === 'separated' ? t('map_kosh') : t('map_none');
   const shabLabel = family.shabbat === 'keeps' ? t('map_obs')
     : family.shabbat === 'traditional' ? t('map_trad') : t('map_sec');
+
+  const afterMealLabels = {
+    board: lang === 'he' ? 'משחק קופסא' : 'Board games',
+    talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
+    tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
+  };
+  const kidsAgeLabel = family.kidsAgeRange === 'other'
+    ? (family.kidsAgeRangeOther || (lang === 'he' ? 'אחר' : 'Other'))
+    : family.kidsAgeRange;
+  const aboutLines = [
+    family.numKids          && { icon: '👨‍👩‍👧', label: lang === 'he' ? 'כמה ילדים בבית' : 'Kids at home', value: family.numKids },
+    kidsAgeLabel             && { icon: '🧒', label: lang === 'he' ? 'טווח גילאים' : 'Age range', value: kidsAgeLabel },
+    family.fridayDish       && { icon: '🍽️', label: lang === 'he' ? 'מאכל קבוע בשישי' : 'Regular Friday dish', value: family.fridayDish },
+    (family.afterMeal || []).length > 0 && {
+      icon: '🎲',
+      label: lang === 'he' ? 'אוהבים לעשות אחרי הארוחה' : 'Love doing after the meal',
+      value: family.afterMeal.map(v => v === 'other' ? (family.afterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
+    },
+    family.fridayTradition  && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: family.fridayTradition },
+    family.moreInfo          && { icon: '📝', label: lang === 'he' ? 'עוד לספר' : 'Anything else', value: family.moreInfo },
+  ].filter(Boolean);
 
   const openWhatsApp = () => {
     window.open(`https://wa.me/${family.waDigits}`, '_blank');
@@ -347,9 +368,19 @@ function FamilyInfoCard({ family, onClose }) {
         </div>
       )}
 
-      {family.vibe && (
+      {aboutLines.length > 0 ? (
+        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-1 mb-1 space-y-1.5">
+          {aboutLines.map((l, i) => (
+            <p key={i} className="text-xs text-warm-600 leading-relaxed">
+              <span className="me-1">{l.icon}</span>
+              <span className="font-bold text-warm-700">{l.label}: </span>
+              <span>{l.value}</span>
+            </p>
+          ))}
+        </div>
+      ) : family.vibe ? (
         <p className="family-info-vibe">"{family.vibe}"</p>
-      )}
+      ) : null}
 
       <div className="family-info-grid">
         <div>
@@ -1265,6 +1296,14 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               compromise_notes: match.compromise_notes,
               profile_img_url: d.profile_img_url,
               img_urls: d.img_urls,
+              numKids: d.hostNumKids,
+              kidsAgeRange: d.hostKidsAgeRange,
+              kidsAgeRangeOther: d.hostKidsAgeRangeOther,
+              fridayDish: d.hostFridayDish,
+              afterMeal: d.hostAfterMeal,
+              afterMealOther: d.hostAfterMealOther,
+              fridayTradition: d.hostFridayTradition,
+              moreInfo: d.hostMoreInfo,
             });
           });
         }

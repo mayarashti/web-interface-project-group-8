@@ -519,7 +519,7 @@ const T = {
     s16_5_title:'אופי הבית', s16_5_sub:'כמה פרטים אחרונים ואתם מוכנים!',
     s16_cap_label:'מקסימום חיילים לאירוח', s16_cap_sub:'כמה חיילים תוכלו לארח בסעודה אחת?',
     s16_vibe_sub:'בחרו תגיות שמתארות את הבית שלכם — עוזר לחיילים להרגיש בנוח',
-    s16_sum_title:'סיכום הרשמה',
+    s16_sum_title:'ככה תיראו לחיילים', s16_sum_sub:'זה בדיוק מה שחיילים רואים כשהם מבקשים להתארח אצלכם — אפשר לערוך הכל כאן',
     s16_sum_name:'שם', s16_sum_city:'עיר', s16_sum_host:'אירוח',
     s16_sum_shab:'שבת', s16_sum_cap:'קיבולת', s16_sum_tags:'תגיות',
     s16_cap_unit: (n) => `עד ${n} חיילים`,
@@ -930,7 +930,7 @@ const T = {
     v_kosh:'Please select a kashrut level', v_pets:'Please specify the pets', v_bio:'Please enter a short bio',
 
     /* S17 Host Summary */
-    s16_sum_title:'Registration Summary',
+    s16_sum_title:'This Is How You\'ll Look to Soldiers', s16_sum_sub:'This is exactly what soldiers see when they request to stay with you — you can edit anything here',
     s16_sum_name:'Name', s16_sum_city:'City',
     s16_sum_shab:'Shabbat',
     s16_sum_kosh:'Kashrut',
