@@ -399,109 +399,32 @@ function S12Summary({ data, setData, onSubmit, onBack }) {
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
-      {/* Live preview — exactly what host families see on your registered-soldier card */}
-      {(() => {
-        const koshLabels = {
-          mehadrin:  lang === 'he' ? 'מהדרין' : 'Mehadrin',
-          separated: lang === 'he' ? 'כשר' : 'Kosher',
-        };
-        const koshLabel = koshLabels[data.kosher] || (lang === 'he' ? 'רגיל' : 'Regular');
-
-        const allergyLabels = {
-          gluten:  lang === 'he' ? 'ללא גלוטן' : 'Gluten Free',
-          lactose: lang === 'he' ? 'ללא לקטוז' : 'Lactose Free',
-          nuts:    lang === 'he' ? 'ללא אגוזים' : 'Nut Free',
-          peanuts: lang === 'he' ? 'ללא בוטנים' : 'Peanut Free',
-          veg:     lang === 'he' ? 'צמחוני' : 'Vegetarian',
-          vegan:   lang === 'he' ? 'טבעוני' : 'Vegan',
-          fish:    lang === 'he' ? 'ללא דגים' : 'Fish Free',
-          other:   lang === 'he' ? 'אלרגיה' : 'Allergy',
-        };
-        const afterMealLabels = {
-          board: lang === 'he' ? 'משחק קופסא' : 'Board games',
-          talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
-          tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
-        };
-        const aboutLines = [
-          data.qOrigin          && { icon: '🌍', label: lang === 'he' ? 'מאיפה במקור' : 'Originally from', value: data.qOrigin },
-          data.qOffDuty         && { icon: '🎒', label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty', value: data.qOffDuty },
-          data.qFridayTradition && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: data.qFridayTradition },
-          data.qFavoriteDish    && { icon: '🍲', label: lang === 'he' ? 'מנה אהובה על השולחן' : 'Favorite dish', value: data.qFavoriteDish },
-          data.qDislikedFood    && { icon: '🚫', label: lang === 'he' ? 'ממש לא אוהב לאכול' : "Really doesn't like", value: data.qDislikedFood },
-          (data.qAfterMeal || []).length > 0 && {
-            icon: '🎲',
-            label: lang === 'he' ? 'הכי כיף אחרי הארוחה' : 'Favorite after the meal',
-            value: data.qAfterMeal.map(v => v === 'other' ? (data.qAfterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
-          },
-          data.qMoreInfo        && { icon: '📝', label: lang === 'he' ? 'עוד משהו לספר' : 'Anything else', value: data.qMoreInfo },
-        ].filter(Boolean);
-
-        return (
-          <React.Fragment>
-            <p className="section-label mb-2 flex items-center gap-1.5">
-              <span>👀</span><span>{t('s12_preview_badge')}</span>
-            </p>
-            <Card className="mb-2 p-4 border border-warm-200 shadow-sm bg-white">
-              <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
-                <div
-                  className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
-                  style={{ background: !data.avatarPreview || data.avatarPreview.startsWith('blob:') ? '#B0BA99' : data.avatarPreview }}
-                >
-                  {data.avatarPreview && data.avatarPreview.startsWith('blob:') ? (
-                    <img src={data.avatarPreview} alt={data.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    (data.fullName || '?')[0]
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-gray-800 text-sm truncate">{data.fullName || (lang === 'he' ? 'שם מלא' : 'Full Name')}</h4>
-                  <p className="text-xs text-warm-500 mt-0.5">
-                    {data.age ? `${data.age} ${lang === 'he' ? 'שנים' : 'y/o'}` : (lang === 'he' ? 'חייל משרת' : 'Serving Soldier')}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
-                      <span>{t('s12_solo_tag')}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
-                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{t('s12_kosh')}</span>
-                  <span className="font-bold text-gray-800">🍽️ {koshLabel}</span>
-                </div>
-                <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
-                  <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{t('s12_allerg')}</span>
-                  {(data.allergies || []).length > 0 ? (
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      {data.allergies.map(a => (
-                        <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-lg">
-                          {allergyLabels[a] || a}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="font-medium text-gray-500">🍴 {t('s12_no_restrictions')}</span>
-                  )}
-                </div>
-              </div>
-
-              {aboutLines.length > 0 && (
-                <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-3 space-y-1.5">
-                  {aboutLines.map((l, i) => (
-                    <p key={i} className="text-xs text-warm-600 leading-relaxed">
-                      <span className="me-1">{l.icon}</span>
-                      <span className="font-bold text-warm-700">{l.label}: </span>
-                      <span>{l.value}</span>
-                    </p>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </React.Fragment>
-        );
-      })()}
+      {/* Live preview — the exact same GuestProfileCard host families see on your registered-soldier card */}
+      <p className="section-label mb-2 flex items-center gap-1.5">
+        <span>👀</span><span>{t('s12_preview_badge')}</span>
+      </p>
+      <Card className="mb-2 p-4 border border-warm-200 shadow-sm bg-white">
+        <GuestProfileCard
+          lang={lang}
+          guest={{
+            name: data.fullName,
+            age: data.age,
+            photoUrl: data.avatarPreview && data.avatarPreview.startsWith('blob:') ? data.avatarPreview : null,
+            avatarColor: data.avatarPreview && !data.avatarPreview.startsWith('blob:') ? data.avatarPreview : '#B0BA99',
+            kosher: data.kosher,
+            allergies: data.allergies,
+            qOrigin: data.qOrigin,
+            qOffDuty: data.qOffDuty,
+            qFridayTradition: data.qFridayTradition,
+            qFavoriteDish: data.qFavoriteDish,
+            qDislikedFood: data.qDislikedFood,
+            qAfterMeal: data.qAfterMeal,
+            qAfterMealOther: data.qAfterMealOther,
+            qMoreInfo: data.qMoreInfo,
+            bio: data.bio,
+          }}
+        />
+      </Card>
 
       <button
         type="button"
