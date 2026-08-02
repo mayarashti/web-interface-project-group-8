@@ -908,9 +908,9 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
 function Modal({ isOpen, onClose, title, children, className }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/20 backdrop-blur-[2px] transition-opacity"
         onClick={onClose}
       />
       <div className={`relative w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-slide-up ${className || ''}`}>
@@ -1001,7 +1001,7 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in"
     >
       <div
         className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-slide-up"
