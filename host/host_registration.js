@@ -69,13 +69,10 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
       if (!data.hostPassword || data.hostPassword.length < 6) e.hostPassword = t('v_pass');
       if (!data.hostCity?.trim()) e.hostCity = t('v_city');
     }
-    if (step === 2) {
+    if (step === 3) {
       if (!data.hostKosher) e.hostKosher = t('v_kosh');
       if (!data.hostShabbat) e.hostShabbat = t('v_shab');
       if (data.hasPets && !data.petsDetails?.trim()) e.petsDetails = t('v_pets');
-    }
-    if (step === 3) {
-      if (!data.hostVibe?.trim()) e.hostVibe = t('v_bio');
     }
 
     setErrors(e);
@@ -118,9 +115,29 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
     { id: 'nuts',    label: t('alg_nuts') },
   ];
 
-  const titles   = ['', t('s16_1_title'), t('s16_2_title'), t('s16_3_title')];
-  const subtitles = ['', t('s16_1_sub'),  t('s16_2_sub'),  t('s16_3_sub')];
-  const icons     = ['', '🏡', '🍽️', '✨'];
+  const kidsCountOptions = [
+    { id: '0', label: '0' }, { id: '1', label: '1' }, { id: '2', label: '2' },
+    { id: '3', label: '3' }, { id: '4+', label: '4+' },
+  ];
+
+  const kidsAgeOptions = [
+    { id: '0-5',   label: '0-5' },
+    { id: '5-10',  label: '5-10' },
+    { id: '10-15', label: '10-15' },
+    { id: '16+',   label: '16+' },
+    { id: 'other', label: t('s11_am_other') },
+  ];
+
+  const afterMealOptions = [
+    { id: 'board', label: t('s11_am_board') },
+    { id: 'talk',  label: t('s11_am_talk')  },
+    { id: 'tv',    label: t('s11_am_tv')    },
+    { id: 'other', label: t('s11_am_other') },
+  ];
+
+  const titles   = ['', t('s16_1_title'), t('s16_3_title'), t('s16_2_title')];
+  const subtitles = ['', t('s16_1_sub'),  t('s16_3_sub'),  t('s16_2_sub')];
+  const icons     = ['', '🏡', '✨', '🍽️'];
 
   return (
     <>
@@ -188,8 +205,111 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
           </div>
         )}
 
-        {/* ── Step 2: Lifestyle & Accommodations ── */}
+        {/* ── Step 2: Get to know you (photo + light questions) ── */}
         {step === 2 && (
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_photo_label')}</label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
+                style={data.hostPreview ? { backgroundImage: `url(${data.hostPreview})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
+              >
+                {!data.hostPreview && (
+                  <>
+                    <span className="text-3xl mb-2">📷</span>
+                    <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
+                    <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
+                  </>
+                )}
+              </div>
+              <p className="text-center text-[11px] text-warm-400 mt-2">{t('s16_photo_note')}</p>
+            </div>
+
+            <p className="text-sm text-warm-500 leading-relaxed">{t('s16_q_intro')}</p>
+
+            <RadioGroup
+              label={t('s16_q_kids')}
+              vertical={false}
+              options={kidsCountOptions}
+              value={data.hostNumKids || ''}
+              onChange={set('hostNumKids')}
+            />
+
+            <div>
+              <RadioGroup
+                label={t('s16_q_kids_age')}
+                vertical={false}
+                options={kidsAgeOptions}
+                value={data.hostKidsAgeRange || ''}
+                onChange={set('hostKidsAgeRange')}
+              />
+              {data.hostKidsAgeRange === 'other' && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={data.hostKidsAgeRangeOther || ''}
+                    onChange={(e) => set('hostKidsAgeRangeOther')(e.target.value)}
+                    placeholder={t('s11_am_other_ph')}
+                    className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                  />
+                </div>
+              )}
+            </div>
+
+            <Input
+              label={t('s16_q_friday_dish')}
+              value={data.hostFridayDish || ''}
+              onChange={set('hostFridayDish')}
+            />
+
+            <div>
+              <MultiCheck
+                label={t('s16_q_aftermeal')}
+                options={afterMealOptions}
+                values={data.hostAfterMeal || []}
+                onChange={set('hostAfterMeal')}
+              />
+              {(data.hostAfterMeal || []).includes('other') && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={data.hostAfterMealOther || ''}
+                    onChange={(e) => set('hostAfterMealOther')(e.target.value)}
+                    placeholder={t('s11_am_other_ph')}
+                    className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                  />
+                </div>
+              )}
+            </div>
+
+            <Input
+              label={t('s16_q_tradition')}
+              value={data.hostFridayTradition || ''}
+              onChange={set('hostFridayTradition')}
+            />
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_q_more')}</label>
+              <textarea
+                value={data.hostMoreInfo || ''}
+                onChange={e => set('hostMoreInfo')(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Lifestyle & Accommodations ── */}
+        {step === 3 && (
           <div className="space-y-6 animate-fade-in">
             <div>
               <p className="text-sm font-semibold text-gray-800 mb-3">{t('s16_kosher')}</p>
@@ -270,47 +390,6 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
               </div>
             </div>
 
-          </div>
-        )}
-
-        {/* ── Step 3: Home Vibe ── */}
-        {step === 3 && (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_vibe_label')}</label>
-              <textarea
-                value={data.hostVibe || ''}
-                onChange={e => set('hostVibe')(e.target.value)}
-                placeholder={t('s16_vibe_ph')}
-                rows={5}
-                className={`w-full px-4 py-3 rounded-xl border text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 ${errors.hostVibe ? 'border-red-300 focus:border-red-400' : 'border-warm-200 focus:border-brand-300'}`}
-              />
-              {errors.hostVibe && <p className="text-xs text-red-600 mt-1.5">{errors.hostVibe}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_photo_label')}</label>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-                onChange={handleFileChange} 
-              />
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
-                style={data.hostPreview ? { backgroundImage: `url(${data.hostPreview})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
-              >
-                {!data.hostPreview && (
-                  <>
-                    <span className="text-3xl mb-2">📷</span>
-                    <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
-                    <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
         )}
       </div>
