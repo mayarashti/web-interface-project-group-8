@@ -311,7 +311,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
-      <Card className="mb-4">
+      <Card className="p-5 mb-4">
         <p className="section-label mb-3">{t('s12_personal')}</p>
         <Row label={t('s12_full')}  value={data.fullName} />
         <Row label={t('s12_phone')} value={data.phone} />
@@ -320,7 +320,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
 
 
 
-      <Card className="mb-4">
+      <Card className="p-5 mb-4">
         <p className="section-label mb-3">{t('s12_prefs')}</p>
         <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
         <Row label={t('s12_shab')}   value={shab[data.shabbatKeeps]} />
@@ -329,7 +329,7 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       </Card>
 
       {data.bio && (
-        <Card className="mb-4 bg-brand-50 border-brand-100">
+        <Card className="p-5 mb-4 bg-brand-50 border-brand-100">
           <p className="section-label mb-2">{t('s12_bio')}</p>
           <p className="text-sm text-gray-700 leading-relaxed italic">"{data.bio}"</p>
         </Card>

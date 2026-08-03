@@ -421,14 +421,14 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
       sub={t('s12_sub')}
     >
       <div className="pb-32">
-        <Card className="mb-4">
+        <Card className="p-5 mb-4">
           <p className="section-label mb-3">{t('s12_personal')}</p>
           <Row label={t('s16_sum_name')}  value={data.hostName} />
           <Row label={t('s12_phone')}     value={data.hostPhone} />
           <Row label={t('s16_sum_city')}  value={data.hostCity} />
         </Card>
 
-        <Card className="mb-4">
+        <Card className="p-5 mb-4">
           <p className="section-label mb-3">{t('s16_2_title')}</p>
           <Row label={t('s16_sum_kosh')}       value={koshMap[data.hostKosher]} />
           <Row label={t('s16_sum_shab')}        value={shabbatMap[data.hostShabbat]} />
@@ -438,7 +438,7 @@ function S17HostSummary({ data, onEdit, onSubmit, onBack }) {
         </Card>
 
         {data.hostVibe && (
-          <Card className="mb-4 bg-brand-50 border-brand-100">
+          <Card className="p-5 mb-4 bg-brand-50 border-brand-100">
             <p className="section-label mb-2">{t('s16_sum_vibe')}</p>
             <p className="text-sm text-gray-700 leading-relaxed italic">"{data.hostVibe}"</p>
           </Card>

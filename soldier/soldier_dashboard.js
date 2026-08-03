@@ -1226,136 +1226,43 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
       />
       <div className="w-full max-w-md mx-auto px-5 space-y-6">
         
-        {/* Open Requests Section */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">{t('s15_open_requests')}</h2>
-          </div>
-
-          {/* Small plus button above all requests */}
-          <div className="flex justify-start">
-            <button 
-              onClick={onNewRequest}
-              className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-sm hover:bg-brand-600 transition-colors"
-              title={t('s15_new_req')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {requests.length === 0 ? (
-              <p className="text-warm-500 text-sm italic">{t('s15_no_requests_title')}</p>
+        {/* Profile Picture at the top (Circular Avatar with Edit overlay) */}
+        <div className="flex flex-col items-center justify-center pt-4">
+          <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-28 h-28 rounded-full cursor-pointer group shadow-md active:scale-95 transition-all">
+            {(form.avatarPreview || data.profile_img_url) && !form.removePhoto ? (
+              <img src={form.avatarPreview || data.profile_img_url} className="w-28 h-28 rounded-full object-cover border-2 border-white" alt="Avatar" />
             ) : (
-              requests.map(req => {
-                const matchCount = getMatchCount(req);
-                const formatDate = (dateStr) => {
-                  if (!dateStr) return '';
-                  const d = new Date(dateStr);
-                  if (isNaN(d.getTime())) return dateStr;
-                  return d.toLocaleDateString('he-IL').replace(/\//g, '.');
-                };
-                
-                return (
-                  <div key={req.id} className="relative flex items-center gap-3">
-                    <button
-                      onClick={() => {
-                        console.log('Viewing matches for request:', req.id);
-                        onViewMatches(req.id);
-                      }}
-                      className="flex-1 text-right p-5 pr-6 rounded-2xl bg-white border border-warm-200 shadow-sm hover:border-brand-200 transition-all flex items-center justify-between group/btn"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-gray-900">{formatDate(req.when)}</span>
-                        <span className={req.status === 'matched' ? "text-support-600 text-xs font-semibold" : "text-brand-600 text-xs font-semibold"}>
-                          {req.status === 'matched' ? t('s15_match_success') : t('s15_searching_sub')}
-                        </span>
-                        {req.status && (
-                          <span className={clsx(
-                            'mt-0.5 inline-flex text-[11px] font-bold px-2 py-0.5 rounded-full w-fit border',
-                            req.status === 'matched'   && 'bg-support-50 text-support-600 border-support-100',
-                            req.status === 'searching' && 'bg-brand-50 text-brand-600 border-brand-100',
-                            req.status === 'canceled'  && 'bg-warm-100 text-warm-500 border-warm-200',
-                          )}>
-                            {req.status === 'matched'   && t('status_matched')}
-                            {req.status === 'searching' && t('status_searching')}
-                            {req.status === 'canceled'  && t('status_canceled')}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center group-hover/btn:bg-brand-500 group-hover/btn:text-white transition-colors">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                          <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                      </div>
-                    </button>
-                    
-                    {/* Action buttons next to the request button */}
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEditRequest(req); }}
-                        className="w-10 h-10 rounded-xl bg-white text-warm-500 border border-warm-200 flex items-center justify-center hover:bg-brand-50 hover:text-brand-600 shadow-sm transition-colors"
-                        title={t('s15_edit_req')}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                          <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM51.31,160,136,75.31,152.69,92,68,176.68ZM48,179.31,76.69,208H48Zm48,25.38L79.31,188,164,103.31,180.69,120Zm96-96L147.31,64l24-24L216,84.68Z"/>
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if(confirm(t('confirm_delete'))) onDeleteRequest(req.id); }}
-                        className="w-10 h-10 rounded-xl bg-white text-warm-500 border border-warm-200 flex items-center justify-center hover:bg-red-50 hover:text-red-600 shadow-sm transition-colors"
-                        title={t('delete_request')}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+              <div className="w-28 h-28 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="text-3xl text-warm-500 font-bold">{(form.fullName || '?')[0]}</span>
+              </div>
             )}
+            <div className="absolute bottom-0 left-0 w-8 h-8 bg-brand-500 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </div>
           </div>
-        </section>
+          {((form.avatarPreview || data.profile_img_url) && !form.removePhoto) && (
+            <button 
+              onClick={() => setForm(prev => ({ ...prev, removePhoto: true, avatarFile: null, avatarPreview: null }))}
+              className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1 rounded-full border border-red-100 mt-3"
+            >
+              {t('remove_photo') || 'הסר תמונה'}
+            </button>
+          )}
+        </div>
 
         {/* Personal Details Section */}
-        <Card className="space-y-4">
+        <Card className="p-5 space-y-4">
           <h2 className="section-label">{t('s12_personal')}</h2>
-          
-          <div className="flex flex-col items-center justify-center mb-6 mt-2">
-            <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group mb-2">
-              {(form.avatarPreview || data.profile_img_url) && !form.removePhoto ? (
-                <img src={form.avatarPreview || data.profile_img_url} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar" />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
-                  <span className="text-xl text-warm-500 font-bold">{(form.fullName || '?')[0]}</span>
-                </div>
-              )}
-              <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-white text-xs">✎</span>
-              </div>
-            </div>
-            {((form.avatarPreview || data.profile_img_url) && !form.removePhoto) && (
-              <button 
-                onClick={() => setForm(prev => ({ ...prev, removePhoto: true, avatarFile: null, avatarPreview: null }))}
-                className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1 rounded-full border border-red-100 mt-1"
-              >
-                {t('remove_photo') || 'הסר תמונה'}
-              </button>
-            )}
-          </div>
-
           <Input label={t('s3_first')} value={form.fullName} onChange={setF('fullName')} />
           <Input label={t('s3_phone')} value={form.phone} onChange={setF('phone')} />
         </Card>
 
         {/* Preferences Section */}
-        <Card className="space-y-4">
+        <Card className="p-5 space-y-4">
           <h2 className="section-label">{t('s12_prefs')}</h2>
           <RadioGroup 
             label={t('s7_kosh')} 
@@ -1381,7 +1288,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
         </Card>
 
         {/* Bio Section */}
-        <Card className="space-y-4">
+        <Card className="p-5 space-y-4">
           <h2 className="section-label">{t('s11_bio')}</h2>
           <div>
             <textarea value={form.bio} onChange={e => setF('bio')(e.target.value)}
