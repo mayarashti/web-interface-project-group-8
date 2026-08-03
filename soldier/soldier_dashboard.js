@@ -156,10 +156,19 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
               }
             }
           }}
-          onRematch={(req, reason) => {
-            // Mock rematch logic: update request status correctly for React
-            const newRequests = data.requests.map(r => r.id === req.id ? { ...r, status: 'searching' } : r);
-            setData({ ...data, requests: newRequests });
+          onRematch={async (req, reason, matchId) => {
+            setData(prev => ({
+              ...prev,
+              requests: (prev.requests || []).map(r => r.id === req.id ? { ...r, status: 'searching', is_match: false } : r),
+            }));
+            if (window.db && matchId) {
+              try {
+                const fn = firebase.functions().httpsCallable('requestRematch');
+                await fn({ match_id: matchId, is_permanent: false });
+              } catch (e) {
+                console.error('Rematch error:', e);
+              }
+            }
           }}
           onViewMap={(family) => { setActiveRequest(null); onViewMatches(activeRequest.id, family); }}
         />
@@ -1319,7 +1328,7 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     || (request?.status === 'matched' ? window.MAP_FAMILIES?.[0] : null);
 
   const handleRematchSubmit = () => {
-    onRematch(request, rematchReason);
+    onRematch(request, rematchReason, realMatch?.id);
     setView('status');
     setRematchReason('');
     onClose();
