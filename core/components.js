@@ -1196,6 +1196,227 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
   );
 }
 
+/* GuestProfileCard — the soldier's profile exactly as families see it.
+   Shared by the soldier registration summary (live preview) and the
+   host dashboard's registered-soldiers list, so both render identically. */
+function GuestProfileCard({ guest, lang }) {
+  const koshLabels = {
+    mehadrin:  lang === 'he' ? 'מהדרין' : 'Mehadrin',
+    separated: lang === 'he' ? 'כשר' : 'Kosher',
+  };
+  const koshLabel = koshLabels[guest.kosher] || (lang === 'he' ? 'רגיל' : 'Regular');
+
+  const allergyLabels = {
+    gluten:  lang === 'he' ? 'ללא גלוטן' : 'Gluten Free',
+    lactose: lang === 'he' ? 'ללא לקטוז' : 'Lactose Free',
+    nuts:    lang === 'he' ? 'ללא אגוזים' : 'Nut Free',
+    peanuts: lang === 'he' ? 'ללא בוטנים' : 'Peanut Free',
+    veg:     lang === 'he' ? 'צמחוני' : 'Vegetarian',
+    vegan:   lang === 'he' ? 'טבעוני' : 'Vegan',
+    fish:    lang === 'he' ? 'ללא דגים' : 'Fish Free',
+    other:   lang === 'he' ? 'אלרגיה' : 'Allergy',
+  };
+  const afterMealLabels = {
+    board: lang === 'he' ? 'משחק קופסא' : 'Board games',
+    talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
+    tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
+  };
+  const aboutLines = [
+    guest.qOrigin          && { icon: '🌍', label: lang === 'he' ? 'מאיפה במקור' : 'Originally from', value: guest.qOrigin },
+    guest.qOffDuty         && { icon: '🎒', label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty', value: guest.qOffDuty },
+    guest.qFridayTradition && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: guest.qFridayTradition },
+    guest.qFavoriteDish    && { icon: '🍲', label: lang === 'he' ? 'מנה אהובה על השולחן' : 'Favorite dish', value: guest.qFavoriteDish },
+    guest.qDislikedFood    && { icon: '🚫', label: lang === 'he' ? 'ממש לא אוהב לאכול' : "Really doesn't like", value: guest.qDislikedFood },
+    (guest.qAfterMeal || []).length > 0 && {
+      icon: '🎲',
+      label: lang === 'he' ? 'הכי כיף אחרי הארוחה' : 'Favorite after the meal',
+      value: guest.qAfterMeal.map(v => v === 'other' ? (guest.qAfterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
+    },
+    guest.qMoreInfo        && { icon: '📝', label: lang === 'he' ? 'עוד משהו לספר' : 'Anything else', value: guest.qMoreInfo },
+  ].filter(Boolean);
+
+  const groupSize = guest.groupSize || 1;
+  const groupLabel = groupSize > 1
+    ? (lang === 'he' ? `קבוצה של ${groupSize}` : `Group of ${groupSize}`)
+    : (lang === 'he' ? 'יחיד' : 'Solo');
+
+  const subLine = [
+    guest.unit ? `${lang === 'he' ? 'יחידה' : 'Unit'} ${guest.unit}` : null,
+    guest.age  ? `${guest.age} ${lang === 'he' ? 'שנים' : 'y/o'}` : null,
+  ].filter(Boolean).join(' · ') || (lang === 'he' ? 'חייל משרת' : 'Serving Soldier');
+
+  return (
+    <React.Fragment>
+      <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
+        <div
+          className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
+          style={{ background: guest.photoUrl ? undefined : (guest.avatarColor || '#B0BA99') }}
+        >
+          {guest.photoUrl ? (
+            <img src={guest.photoUrl} alt={guest.name} className="w-full h-full object-cover" />
+          ) : (
+            (guest.name || '?')[0]
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-baseline gap-2">
+            <h4 className="font-bold text-gray-800 text-sm truncate">{guest.name || (lang === 'he' ? 'שם מלא' : 'Full Name')}</h4>
+            {guest.joinDateText && (
+              <span className="text-[10px] text-warm-400 flex-shrink-0">
+                {lang === 'he' ? 'נרשם ב-' : 'Joined '} {guest.joinDateText}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-warm-500 mt-0.5">{subLine}</p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
+              <span>{groupLabel}</span>
+            </span>
+            {(guest.logisticsItems || []).map(item => (
+              <span key={item.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded-md border border-brand-100">
+                <span>{item.label}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'רמת כשרות' : 'Kosher Level'}</span>
+          <span className="font-bold text-gray-800">🍽️ {koshLabel}</span>
+        </div>
+        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'אלרגיות ומגבלות' : 'Allergies'}</span>
+          {(guest.allergies || []).length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {guest.allergies.map(a => (
+                <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-lg">
+                  {allergyLabels[a] || a}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="font-medium text-gray-500">🍴 {lang === 'he' ? 'אין הגבלות' : 'None'}</span>
+          )}
+        </div>
+      </div>
+
+      {aboutLines.length > 0 ? (
+        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-3 space-y-1.5">
+          {aboutLines.map((l, i) => (
+            <p key={i} className="text-xs text-warm-600 leading-relaxed">
+              <span className="me-1">{l.icon}</span>
+              <span className="font-bold text-warm-700">{l.label}: </span>
+              <span>{l.value}</span>
+            </p>
+          ))}
+        </div>
+      ) : guest.bio ? (
+        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-3 leading-relaxed">
+          "{guest.bio}"
+        </div>
+      ) : null}
+    </React.Fragment>
+  );
+}
+
+/* HostProfileCard — the host family's profile exactly as soldiers see it.
+   Mirrors GuestProfileCard's design language for a consistent, warm card. */
+function HostProfileCard({ host, lang }) {
+  const koshLabels = {
+    mehadrin:  lang === 'he' ? 'מהדרין' : 'Mehadrin',
+    separated: lang === 'he' ? 'כשר' : 'Kosher',
+  };
+  const koshLabel = koshLabels[host.kosher] || (lang === 'he' ? 'רגיל' : 'Regular');
+
+  const shabLabels = {
+    keeps:       lang === 'he' ? 'שומרי שבת' : 'Shabbat Observant',
+    traditional: lang === 'he' ? 'מסורתי' : 'Traditional',
+  };
+  const shabLabel = shabLabels[host.shabbat] || (lang === 'he' ? 'חילוני' : 'Secular');
+
+  const afterMealLabels = {
+    board: lang === 'he' ? 'משחק קופסא' : 'Board games',
+    talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
+    tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
+  };
+
+  const kidsAgeLabel = host.kidsAgeRange === 'other'
+    ? (host.kidsAgeRangeOther || (lang === 'he' ? 'אחר' : 'Other'))
+    : host.kidsAgeRange;
+
+  const aboutLines = [
+    host.numKids          && { icon: '👨‍👩‍👧', label: lang === 'he' ? 'כמה ילדים בבית' : 'Kids at home', value: host.numKids },
+    kidsAgeLabel           && { icon: '🧒', label: lang === 'he' ? 'טווח גילאים' : 'Age range', value: kidsAgeLabel },
+    host.fridayDish       && { icon: '🍽️', label: lang === 'he' ? 'מאכל קבוע בשישי' : 'Regular Friday dish', value: host.fridayDish },
+    (host.afterMeal || []).length > 0 && {
+      icon: '🎲',
+      label: lang === 'he' ? 'אוהבים לעשות אחרי הארוחה' : 'Love doing after the meal',
+      value: host.afterMeal.map(v => v === 'other' ? (host.afterMealOther || (lang === 'he' ? 'אחר' : 'Other')) : (afterMealLabels[v] || v)).join(', '),
+    },
+    host.fridayTradition  && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: host.fridayTradition },
+    host.moreInfo          && { icon: '📝', label: lang === 'he' ? 'עוד לספר' : 'Anything else', value: host.moreInfo },
+  ].filter(Boolean);
+
+  return (
+    <React.Fragment>
+      <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
+        <div
+          className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
+          style={{ background: host.photoUrl ? undefined : (host.avatarColor || '#B0BA99') }}
+        >
+          {host.photoUrl ? (
+            <img src={host.photoUrl} alt={host.name} className="w-full h-full object-cover" />
+          ) : (
+            (host.name || '?')[0]
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-gray-800 text-sm truncate">{host.name || (lang === 'he' ? 'שם המשפחה' : 'Family Name')}</h4>
+          <p className="text-xs text-warm-500 mt-0.5">
+            {host.city || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')}
+          </p>
+          {host.hasPets && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
+                <span>🐾 {lang === 'he' ? 'יש חיות מחמד' : 'Has pets'}</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'רמת כשרות' : 'Kosher Level'}</span>
+          <span className="font-bold text-gray-800">🍽️ {koshLabel}</span>
+        </div>
+        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
+          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">{lang === 'he' ? 'שמירת שבת' : 'Shabbat'}</span>
+          <span className="font-bold text-gray-800">🕯️ {shabLabel}</span>
+        </div>
+      </div>
+
+      {aboutLines.length > 0 ? (
+        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl mt-3 space-y-1.5">
+          {aboutLines.map((l, i) => (
+            <p key={i} className="text-xs text-warm-600 leading-relaxed">
+              <span className="me-1">{l.icon}</span>
+              <span className="font-bold text-warm-700">{l.label}: </span>
+              <span>{l.value}</span>
+            </p>
+          ))}
+        </div>
+      ) : host.vibe ? (
+        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-3 leading-relaxed">
+          "{host.vibe}"
+        </div>
+      ) : null}
+    </React.Fragment>
+  );
+}
+
 window.ProgressBar = ProgressBar;
 window.Btn = Btn;
 window.Input = Input;
@@ -1214,6 +1435,8 @@ window.LocationInput = LocationInput;
 window.MapPinModal = MapPinModal;
 window.FridayDatePicker = FridayDatePicker;
 window.RadiusMapModal = RadiusMapModal;
+window.GuestProfileCard = GuestProfileCard;
+window.HostProfileCard = HostProfileCard;
 window.PreferencesPromptModal = PreferencesPromptModal;
 
 window.HomeIcon = HomeIcon;
