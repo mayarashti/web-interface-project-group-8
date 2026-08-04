@@ -42,14 +42,9 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
         onBack={onBack}
         onNext={() => { if (validate()) setShowPrefModal(true); }}
         step={1}
-        total={3}
-        icon=""
-        title={
-          <span className="flex flex-col">
-            <span>{lang === 'he' ? 'יצירת חשבון' : 'Create Account'}</span>
-            <span className="text-lg font-medium text-warm-500 mt-1">{lang === 'he' ? 'חייל' : 'Soldier'}</span>
-          </span>
-        }
+        total={4}
+        icon="🪶"
+        title={t('s3_title')}
         onInfo={onInfo}
       >
         <div className="space-y-6 pb-32">
@@ -99,25 +94,150 @@ function S3PersonalDetails({ data, setData, onNext, onBack, onInfo, onSkipPrefer
   );
 }
 
-/* S7Preferences — Consolidated preferences page */
-var { useState, useRef } = React;
+/* S4Profile — Profile photo & self-introduction */
+var { useState: useStateS4, useRef: useRefS4 } = React;
 
-function S7Preferences({ data, setData, onNext, onBack }) {
-  const { t, lang } = useLang();
-  const fileInputRef = useRef(null);
+function S4Profile({ data, setData, onNext, onBack }) {
+  const { t } = useLang();
+  const fileInputRef = useRefS4(null);
 
   const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setData(prev => ({ 
-        ...prev, 
-        avatarFile: file, 
-        avatarPreview: URL.createObjectURL(file) 
+      setData(prev => ({
+        ...prev,
+        avatarFile: file,
+        avatarPreview: URL.createObjectURL(file)
       }));
     }
   };
+
+  const afterMealOpts = [
+    { value: 'board', label: t('s11_am_board') },
+    { value: 'talk',  label: t('s11_am_talk')  },
+    { value: 'tv',    label: t('s11_am_tv')    },
+    { value: 'other', label: t('s11_am_other') },
+  ];
+
+  return (
+    <ScreenLayout
+      onBack={onBack}
+      onNext={onNext}
+      step={2}
+      total={4}
+      icon="📸"
+      title={t('s11_title')}
+      sub={t('s11_sub')}
+    >
+      <div className="pb-32">
+        <div className="flex justify-center mb-6">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
+            {data.avatarPreview ? (
+              data.avatarPreview.startsWith('blob:') ? (
+                <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                  style={{ background: data.avatarPreview }}
+                >
+                  {(data.fullName || '?')[0]}
+                </div>
+              )
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
+              </div>
+            )}
+            <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs">+</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-center text-[11px] text-warm-400 mb-1">{t('s11_photo')}</p>
+        <p className="text-center text-[11px] text-warm-400 mb-6">{t('s11_photo_note')}</p>
+
+        <p className="text-sm text-warm-500 leading-relaxed mb-6">{t('s11_q_intro')}</p>
+
+        <div className="space-y-5">
+          <Input
+            label={t('s11_q_origin')}
+            value={data.qOrigin || ''}
+            onChange={set('qOrigin')}
+          />
+          <Input
+            label={t('s11_q_offduty')}
+            value={data.qOffDuty || ''}
+            onChange={set('qOffDuty')}
+          />
+          <Input
+            label={t('s11_q_tradition')}
+            value={data.qFridayTradition || ''}
+            onChange={set('qFridayTradition')}
+          />
+          <Input
+            label={t('s11_q_dish')}
+            value={data.qFavoriteDish || ''}
+            onChange={set('qFavoriteDish')}
+          />
+          <Input
+            label={t('s11_q_dislike')}
+            value={data.qDislikedFood || ''}
+            onChange={set('qDislikedFood')}
+          />
+
+          <div>
+            <MultiCheck
+              label={t('s11_q_aftermeal')}
+              options={afterMealOpts}
+              values={data.qAfterMeal || []}
+              onChange={set('qAfterMeal')}
+            />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_aftermeal_sub')}</p>
+            {(data.qAfterMeal || []).includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={data.qAfterMealOther || ''}
+                  onChange={e => set('qAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">{t('s11_q_more')}</label>
+            <textarea
+              value={data.qMoreInfo || ''}
+              onChange={e => set('qMoreInfo')(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+              maxLength={300}
+            />
+          </div>
+        </div>
+      </div>
+    </ScreenLayout>
+  );
+}
+
+/* S7Preferences — Consolidated preferences page */
+var { useState, useRef } = React;
+
+function S7Preferences({ data, setData, onNext, onBack }) {
+  const { t, lang } = useLang();
+
+  const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
 
   const langOpts = [
     { value: 'he',    label: t('lang_he')    },
@@ -146,9 +266,9 @@ function S7Preferences({ data, setData, onNext, onBack }) {
     <ScreenLayout
       onBack={onBack}
       onNext={() => { if (validate()) onNext(); }}
-      step={2}
-      total={3}
-      icon={<CutleryIcon />}
+      step={3}
+      total={4}
+      icon="🍽️"
       title={t('s7_title')}
       sub={t('s7_sub')}
     >
@@ -221,62 +341,32 @@ function S7Preferences({ data, setData, onNext, onBack }) {
           ]}
         />
 
-        {/* Profile Section (Bio & Photo) */}
-        <div className="pt-6 border-t border-warm-200">
-          <p className="text-sm font-semibold text-warm-600 mb-4">{t('s11_title')}</p>
-
-          <div className="flex justify-center mb-6">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              style={{ display: 'none' }} 
-              onChange={handleFileChange} 
-            />
-            <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
-              {data.avatarPreview ? (
-                data.avatarPreview.startsWith('blob:') ? (
-                  <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
-                ) : (
-                  <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
-                    style={{ background: data.avatarPreview }}
-                  >
-                    {(data.fullName || '?')[0]}
-                  </div>
-                )
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
-                  <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
-                </div>
-              )}
-              <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-white text-xs">+</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-center text-[11px] text-warm-400 mb-5">{t('s11_photo')}</p>
-
-          <textarea
-            value={data.bio || ''}
-            onChange={e => set('bio')(e.target.value)}
-            placeholder={t('s11_bio_ph')}
-            className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
-            rows={4}
-            maxLength={300}
-          />
-          <p className="text-[10px] text-warm-400 mt-1 text-start">{(data.bio || '').length}/300</p>
-        </div>
       </div>
     </ScreenLayout>
   );
 }
 
-/* S12Summary — Registration summary & submit */
+/* S12Summary — Live, editable preview of the profile exactly as host families see it */
+var { useState: useStateS12, useRef: useRefS12 } = React;
 
-function S12Summary({ data, onEdit, onSubmit, onBack }) {
-  const { t } = useLang();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+function S12Summary({ data, setData, onSubmit, onBack }) {
+  const { t, lang } = useLang();
+  const [isSubmitting, setIsSubmitting] = useStateS12(false);
+  const [showEdit, setShowEdit] = useStateS12(false);
+  const fileInputRef = useRefS12(null);
+
+  const set = (key) => (val) => setData(prev => ({ ...prev, [key]: val }));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setData(prev => ({
+        ...prev,
+        avatarFile: file,
+        avatarPreview: URL.createObjectURL(file)
+      }));
+    }
+  };
 
   const handleNext = async () => {
     if (isSubmitting) return;
@@ -288,16 +378,31 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
     }
   };
 
-  const Row = ({ label, value }) => value ? (
-    <div className="flex justify-between items-start py-2.5 border-b border-warm-100 last:border-0">
-      <span className="text-xs text-warm-500 font-medium w-32 flex-shrink-0">{label}</span>
-      <span className="text-sm text-gray-800 text-start flex-1 ms-2">{value}</span>
-    </div>
-  ) : null;
+  const allergyOpts = [
+    { value: 'gluten',     label: t('a_gluten')  },
+    { value: 'lactose',    label: t('a_lactose') },
+    { value: 'nuts',       label: t('a_nuts')    },
+    { value: 'peanuts',    label: t('a_peanuts') },
+    { value: 'veg',        label: t('a_veg')     },
+    { value: 'vegan',      label: t('a_vegan')   },
+    { value: 'fish',       label: t('a_fish')    },
+    { value: 'other',      label: t('a_other')   },
+  ];
 
-  const kosh = { none: t('map_none'), separated: t('map_kosh'), mehadrin: t('map_meh') };
-  const shab = { none: t('map_sec'), traditional: t('map_trad'), keeps: t('map_obs') };
-  const pets = { ok: t('map_pets_ok'), notok: t('map_pets_no'), allergy: t('map_pets_al') };
+  const langOpts = [
+    { value: 'he',    label: t('lang_he')    },
+    { value: 'en',    label: t('lang_en')    },
+    { value: 'ru',    label: t('lang_ru')    },
+    { value: 'ar',    label: t('lang_ar')    },
+    { value: 'other', label: t('lang_other') },
+  ];
+
+  const afterMealOpts = [
+    { value: 'board', label: t('s11_am_board') },
+    { value: 'talk',  label: t('s11_am_talk')  },
+    { value: 'tv',    label: t('s11_am_tv')    },
+    { value: 'other', label: t('s11_am_other') },
+  ];
 
   return (
     <ScreenLayout
@@ -305,39 +410,205 @@ function S12Summary({ data, onEdit, onSubmit, onBack }) {
       onNext={handleNext}
       isNextLoading={isSubmitting}
       nextLabel={t('s12_submit')}
-      step={3}
-      total={3}
-      icon={<SummaryIcon />}
+      step={4}
+      total={4}
+      icon="🎉"
       title={t('s12_title')}
       sub={t('s12_sub')}
     >
-      <Card className="p-5 mb-4">
-        <p className="section-label mb-3">{t('s12_personal')}</p>
-        <Row label={t('s12_full')}  value={data.fullName} />
-        <Row label={t('s12_phone')} value={data.phone} />
-        <Row label={t('s12_age')}   value={data.age} />
+      {/* Live preview — the exact same GuestProfileCard host families see on your registered-soldier card */}
+      <p className="section-label mb-2 flex items-center gap-1.5">
+        <span>👀</span><span>{t('s12_preview_badge')}</span>
+      </p>
+      <Card className="mb-2 p-4 border border-warm-200 shadow-sm bg-white">
+        <GuestProfileCard
+          lang={lang}
+          guest={{
+            name: data.fullName,
+            age: data.age,
+            photoUrl: data.avatarPreview && data.avatarPreview.startsWith('blob:') ? data.avatarPreview : null,
+            avatarColor: data.avatarPreview && !data.avatarPreview.startsWith('blob:') ? data.avatarPreview : '#B0BA99',
+            kosher: data.kosher,
+            allergies: data.allergies,
+            qOrigin: data.qOrigin,
+            qOffDuty: data.qOffDuty,
+            qFridayTradition: data.qFridayTradition,
+            qFavoriteDish: data.qFavoriteDish,
+            qDislikedFood: data.qDislikedFood,
+            qAfterMeal: data.qAfterMeal,
+            qAfterMealOther: data.qAfterMealOther,
+            qMoreInfo: data.qMoreInfo,
+            bio: data.bio,
+          }}
+        />
       </Card>
 
+      <button
+        type="button"
+        onClick={() => setShowEdit(v => !v)}
+        className="w-full flex items-center justify-between gap-3 mt-6 mb-4 py-2 text-start"
+      >
+        <p className="text-xs text-warm-500 flex-1">{t('s12_edit_sub')}</p>
+        <svg
+          className="w-5 h-5 text-warm-400 flex-shrink-0 transition-transform duration-200"
+          style={{ transform: showEdit ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
 
+      {!showEdit ? null : (
+      <React.Fragment>
+      {/* Hero: photo + name/phone/age — click the avatar to change or add a photo */}
+      <Card className="mb-4 p-5 text-center">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <div className="flex justify-center mb-2">
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full cursor-pointer group">
+            {data.avatarPreview ? (
+              data.avatarPreview.startsWith('blob:') ? (
+                <img src={data.avatarPreview} className="w-20 h-20 rounded-full object-cover shadow-md" alt="Avatar Preview" />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                  style={{ background: data.avatarPreview }}
+                >
+                  {(data.fullName || '?')[0]}
+                </div>
+              )
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="w-8 h-8 rounded-full bg-white border border-warm-200 flex items-center justify-center text-lg leading-none" aria-hidden="true">+</span>
+              </div>
+            )}
+            <div className="absolute -bottom-1 -left-1 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs">+</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-warm-400 mb-5">{t('s12_photo_edit')}</p>
 
-      <Card className="p-5 mb-4">
-        <p className="section-label mb-3">{t('s12_prefs')}</p>
-        <Row label={t('s12_kosh')}   value={kosh[data.kosher]} />
-        <Row label={t('s12_shab')}   value={shab[data.shabbatKeeps]} />
-        <Row label={t('s12_allerg')} value={(data.allergies || []).map(a => a === 'other' ? t('a_other') : t('a_' + a)).join(', ') || t('s12_no_allerg')} />
-        <Row label={t('s12_pets')}   value={pets[data.pets]} />
+        <Input label={t('s12_full')}  value={data.fullName || ''} onChange={set('fullName')} />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={t('s12_phone')} type="tel" value={data.phone || ''} onChange={set('phone')} />
+          <Input label={t('s12_age')} type="number" value={data.age || ''} onChange={set('age')} />
+        </div>
       </Card>
 
-      {data.bio && (
-        <Card className="p-5 mb-4 bg-brand-50 border-brand-100">
-          <p className="section-label mb-2">{t('s12_bio')}</p>
-          <p className="text-sm text-gray-700 leading-relaxed italic">"{data.bio}"</p>
-        </Card>
+      {/* Preferences — same fields families see on your request card */}
+      <Card className="mb-4 p-5">
+        <p className="section-label mb-4">🍽️ {t('s12_prefs')}</p>
+        <RadioGroup
+          label={t('s7_kosh')}
+          value={data.kosher || ''}
+          onChange={set('kosher')}
+          options={[
+            { value: 'mehadrin',  label: t('s7_meh'),    sub: t('s7_meh_s')    },
+            { value: 'separated', label: t('s7_kosh_k'), sub: t('s7_kosh_k_s') },
+            { value: 'none',      label: t('s7_none'),   sub: t('s7_none_s')   },
+          ]}
+        />
+        <RadioGroup
+          label={t('s7_shab')}
+          value={data.shabbatKeeps || ''}
+          onChange={set('shabbatKeeps')}
+          options={[
+            { value: 'keeps',       label: t('s7_yes'),        sub: t('s7_yes_s')     },
+            { value: 'traditional', label: t('s16_shab_trad'), sub: t('s7_trad_s')   },
+            { value: 'none',        label: t('s7_no'),         sub: t('s7_no_s')      },
+          ]}
+        />
+        <div className="mt-2">
+          <MultiCheck
+            label={t('s9_title')}
+            options={allergyOpts}
+            values={data.allergies || []}
+            onChange={set('allergies')}
+          />
+          {(data.allergies || []).includes('other') && (
+            <div className="mt-3">
+              <textarea
+                value={data.allergyNote || ''}
+                onChange={e => set('allergyNote')(e.target.value)}
+                placeholder={t('s9_note_ph')}
+                className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+                rows={2}
+              />
+            </div>
+          )}
+        </div>
+        <div className="mt-5">
+          <MultiCheck
+            label={t('s10_lang')}
+            options={langOpts}
+            values={data.languages || ['he']}
+            onChange={set('languages')}
+          />
+        </div>
+        <div className="mt-5">
+          <RadioGroup
+            label={t('s10_pets')}
+            value={data.pets || ''}
+            onChange={set('pets')}
+            options={[
+              { value: 'ok',      label: t('s10_pets_ok') },
+              { value: 'notok',   label: t('s10_pets_no') },
+              { value: 'allergy', label: t('s10_pets_al') },
+            ]}
+          />
+        </div>
+      </Card>
+
+      {/* About you — the warm answers families read on your card */}
+      <Card className="mb-4 p-5 bg-brand-50 border-brand-100">
+        <p className="section-label mb-4">💬 {t('s12_about_title')}</p>
+        <div className="space-y-4">
+          <Input label={t('s11_q_origin')}   value={data.qOrigin || ''}          onChange={set('qOrigin')} />
+          <Input label={t('s11_q_offduty')}  value={data.qOffDuty || ''}         onChange={set('qOffDuty')} />
+          <Input label={t('s11_q_tradition')} value={data.qFridayTradition || ''} onChange={set('qFridayTradition')} />
+          <Input label={t('s11_q_dish')}     value={data.qFavoriteDish || ''}    onChange={set('qFavoriteDish')} />
+          <Input label={t('s11_q_dislike')}  value={data.qDislikedFood || ''}    onChange={set('qDislikedFood')} />
+
+          <div>
+            <MultiCheck
+              label={t('s11_q_aftermeal')}
+              options={afterMealOpts}
+              values={data.qAfterMeal || []}
+              onChange={set('qAfterMeal')}
+            />
+            {(data.qAfterMeal || []).includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={data.qAfterMealOther || ''}
+                  onChange={e => set('qAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">{t('s11_q_more')}</label>
+            <textarea
+              value={data.qMoreInfo || ''}
+              onChange={e => set('qMoreInfo')(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+              maxLength={300}
+            />
+          </div>
+        </div>
+      </Card>
+      </React.Fragment>
       )}
-
-      <div className="mt-4">
-        <Btn variant="secondary" onClick={onEdit}>{t('s12_edit')}</Btn>
-      </div>
     </ScreenLayout>
   );
 }

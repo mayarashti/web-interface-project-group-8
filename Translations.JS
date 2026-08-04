@@ -360,6 +360,11 @@ const T = {
     map_sleep:'צריך/ה מקום לישון', map_walk:'נדרש מרחק הליכה',
     map_fri:'ארוחת ליל שישי', map_lun:'ארוחת צהריים שבת', map_del:'משלוח לבסיסים',
     map_fri_s:'ליל שישי', map_lun_s:'צהריים שבת', map_del_s:'משלוח',
+
+    /* Emergency Host */
+    emergency_host_title: 'חייל זקוק לאירוח דחוף!',
+    host_him_btn: 'הזמן אותו',
+    emergency_already_taken: 'תודה על העזרה, החייל מצא מארח',
   },
 
   /* ══════════════════════════════════════════
@@ -651,5 +656,10 @@ const T = {
     map_sleep:'Needs overnight', map_walk:'Walking distance required',
     map_fri:'Friday Night Dinner', map_lun:'Saturday Lunch', map_del:'Base Delivery',
     map_fri_s:'Friday dinner', map_lun_s:'Sat. lunch', map_del_s:'Delivery',
+
+    /* Emergency Host */
+    emergency_host_title: 'Emergency Host Needed!',
+    host_him_btn: 'Host him',
+    emergency_already_taken: 'Thanks for the help, that soldier found a home',
   }
 };
