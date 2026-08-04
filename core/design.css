@@ -169,7 +169,7 @@ button:disabled {
   content: '';
   position: absolute;
   z-index: -1;
-  left: calc(50% - 50px);
+  left: calc(50% - 135px);
   bottom: 2.2rem;
   width: 450px;
   height: 555px;
@@ -184,10 +184,10 @@ button:disabled {
 /* Mobile viewport (widths up to 640px) — larger, higher, offset right */
 @media (max-width: 640px) {
   .screen-enter::before {
-    left: calc(50% - 180px); /* slightly offset to the right from center (50px shift) */
+    left: calc(50% - 230px); /* dead center */
     width: 460px;
     height: 570px;
-    bottom: 8rem;           /* positioned higher up on the screen */
+    bottom: 6rem;           /* positioned higher up on the screen */
     transform: rotate(-15deg);
     opacity: 0.12;
   }
