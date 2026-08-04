@@ -2990,7 +2990,7 @@ async function runEmergencyMatchmaking() {
 
       const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
       if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
-        const hasHosting = familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when);
+        const hasHosting = Boolean(familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when));
         validFamilies.push({ family, hasHosting });
       }
     }
@@ -3040,7 +3040,7 @@ async function runEmergencyMatchmaking() {
           date: request.when, 
           name: soldier.name || "חייל",
           distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null,
-          has_hosting: hasHosting
+          has_hosting: Boolean(hasHosting)
         }
       );
     }
