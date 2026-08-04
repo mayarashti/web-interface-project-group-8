@@ -1220,85 +1220,32 @@ function HostingDetailsView({ hosting, host, onBack, onEdit, onCancel, onOpenRec
 
                 return (
                   <Card key={g.id || g.soldier_id || g.name} className="p-4 border border-warm-200 shadow-sm bg-white hover:border-brand-200 transition-colors">
-                    {/* Soldier Info Row */}
-                    <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
-                      <div
-                        className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
-                        style={{ background: g.avatarColor || '#B0BA99' }}
-                      >
-                        {g.profile_img_url ? (
-                          <img src={g.profile_img_url} alt={g.name} className="w-full h-full object-cover" />
-                        ) : (
-                          (g.name || '?')[0]
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline gap-2">
-                          <h4 className="font-bold text-gray-800 text-sm truncate">
-                            {g.name}
-                          </h4>
-                          <span className="text-[10px] text-warm-400 flex-shrink-0">
-                            {lang === 'he' ? 'נרשם ב-' : 'Joined '} {joinDateText}
-                          </span>
-                        </div>
-                        
-                        <p className="text-xs text-warm-500 mt-0.5">
-                          {[g.unit ? `${t('s19_unit')} ${g.unit}` : null, g.age ? `${g.age} ${lang === 'he' ? 'שנים' : 'y/o'}` : null].filter(Boolean).join(' · ') || (lang === 'he' ? 'חייל משרת' : 'Serving Soldier')}
-                        </p>
+                    <GuestProfileCard
+                      lang={lang}
+                      guest={{
+                        name: g.name,
+                        age: g.age,
+                        unit: g.unit,
+                        joinDateText,
+                        photoUrl: g.profile_img_url,
+                        avatarColor: g.avatarColor,
+                        groupSize: g.groupSize,
+                        logisticsItems,
+                        kosher: g.kosher,
+                        allergies: g.allergies,
+                        qOrigin: g.qOrigin,
+                        qOffDuty: g.qOffDuty,
+                        qFridayTradition: g.qFridayTradition,
+                        qFavoriteDish: g.qFavoriteDish,
+                        qDislikedFood: g.qDislikedFood,
+                        qAfterMeal: g.qAfterMeal,
+                        qAfterMealOther: g.qAfterMealOther,
+                        qMoreInfo: g.qMoreInfo,
+                        bio: g.bio,
+                      }}
+                    />
 
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md">
-                            {(g.groupSize || 1) > 1 ? <UsersIcon className="w-3.5 h-3.5 text-gray-500" /> : <UserIcon className="w-3.5 h-3.5 text-gray-500" />}
-                            <span>
-                              {(g.groupSize || 1) > 1 
-                                ? (lang === 'he' ? `קבוצה של ${g.groupSize}` : `Group of ${g.groupSize}`)
-                                : (lang === 'he' ? 'יחיד' : 'Solo')}
-                            </span>
-                          </span>
-                          {logisticsItems.map(item => (
-                            <span key={item.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded-md border border-brand-100">
-                              {item.icon}
-                              <span>{item.label}</span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Soldier Preferences */}
-                    <div className="space-y-3 text-xs">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100">
-                          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">
-                            {lang === 'he' ? 'רמת כשרות' : 'Kosher Level'}
-                          </span>
-                          <span className="font-bold text-gray-800">{renderKosherBadge(g.kosher, lang)}</span>
-                        </div>
-
-                        <div className="bg-warm-50/60 p-2 rounded-xl border border-warm-100 flex flex-col justify-center">
-                          <span className="text-[10px] text-warm-400 font-bold block mb-0.5">
-                            {lang === 'he' ? 'אלרגיות ומגבלות' : 'Allergies'}
-                          </span>
-                          {(g.allergies || []).length > 0 ? (
-                            <div className="flex flex-wrap gap-1 mt-0.5">
-                              {(g.allergies || []).map(a => renderAllergyBadge(a, lang))}
-                            </div>
-                          ) : (
-                            <span className="font-medium text-gray-500 flex items-center gap-1 mt-0.5">
-                              <UtensilsIcon className="w-3.5 h-3.5 text-gray-400" strokeWidth={2.2} />
-                              <span>{lang === 'he' ? 'אין הגבלות' : 'None'}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {g.bio && (
-                        <div className="p-2.5 bg-warm-50/30 border-s-2 border-brand-300 rounded-e-xl italic text-warm-600 mt-1 leading-relaxed">
-                          "{g.bio}"
-                        </div>
-                      )}
-
+                    <div className="mt-1">
                       {(() => {
                         const phone = getGuestPhone(g);
                         return (
