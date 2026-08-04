@@ -856,11 +856,15 @@ exports.getDebugLogs = onCall(async (req) => {
     .get();
   const activeMatches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  const familiesSnap = await db.collection("families").get();
+  const registeredFamilies = familiesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
   return {
     notifications,
     unmatchedSearches,
     availableHostings,
     activeMatches,
+    registeredFamilies,
     timestamp: new Date().toISOString()
   };
 });
@@ -2979,6 +2983,7 @@ async function runEmergencyMatchmaking() {
 
       for (const family of families) {
         if (familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when)) {
+          console.log(`  ℹ️ [EMERGENCY SKIP] Family "${family.hostName || family.id}": Already hosting on ${request.when}`);
           continue;
         }
         const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
@@ -2986,6 +2991,8 @@ async function runEmergencyMatchmaking() {
           validFamilies.push(family);
         }
       }
+
+      console.log(`  📋 [EMERGENCY CANDIDATES] ${validFamilies.length} families passed hard filters for emergency check.`);
 
       // We should ideally calculate distance here.
       const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
@@ -3007,7 +3014,12 @@ async function runEmergencyMatchmaking() {
         const family = validFamilies[i];
         const dist = distances[i];
         let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
-        if (isNum(dist) && dist > radius) continue; // exceed distance
+        if (isNum(dist) && dist > radius) {
+          console.log(`  ❌ [EMERGENCY DISTANCE REJECT] Family "${family.hostName || family.id}": Distance ${dist}km > Radius ${radius}km`);
+          continue;
+        }
+
+        console.log(`  🔔 [EMERGENCY NOTIFY] Notifying Family "${family.hostName || family.id}" (${family.id}) about Soldier Request ${searchDoc.id}`);
 
         await createNotification(
           family.id,
