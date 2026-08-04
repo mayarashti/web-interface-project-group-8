@@ -41,6 +41,9 @@ setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY, TELEGRAM_BOT
 //   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
 // ─────────────────────────────────────────────────────────────────────────────
 async function createNotification(userId, role, content, type = 'general', title = '', payload = {}) {
+  console.log(`🔔 [NOTIFICATION] Recipient Role: ${role} | User/Family ID: ${userId} | Type: ${type} | Title: "${title || '(none)'}"`);
+  console.log(`   Content: "${content}"`);
+
   await db.collection('notifications').add({
     user_id: userId,
     role,
@@ -58,9 +61,12 @@ async function createNotification(userId, role, content, type = 'general', title
     const userSnap = await db.collection(collection).doc(userId).get();
     const chatId = userSnap.exists ? userSnap.data().telegram_chat_id : null;
     if (chatId) {
+      console.log(`  📲 Mirroring notification to Telegram chatId: ${chatId} for ${role} ID: ${userId}`);
       const token = TELEGRAM_BOT_TOKEN.value();
       const text = title ? `<b>${title}</b>\n\n${content}` : content;
       await sendTelegramMessage(token, chatId, text);
+    } else {
+      console.log(`  ℹ️ No Telegram chat_id linked for ${role} ID: ${userId}`);
     }
   } catch (e) {
     console.error('Telegram mirror error:', e);
@@ -199,63 +205,86 @@ async function fetchTravelDistancesKm(origin, destinations, mode = "driving") {
 // ──────────────────────────────────────────────────────────────────
 // HARD FILTER — returns false if this family cannot host this soldier
 // ──────────────────────────────────────────────────────────────────
+// HARD FILTER — returns false if this family cannot host this soldier
+// ──────────────────────────────────────────────────────────────────
 function passesHardFilters(soldier, request, family, hosting, bannedIds, compromiseLevel) {
+  const famName = family.hostName || hosting.family_id;
+
   // Ban list (permanent + per-request)
-  if (bannedIds.has(hosting.family_id)) return false;
+  if (bannedIds.has(hosting.family_id)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): On ban list`);
+    return false;
+  }
 
   // Capacity — only confirmed guests (in hosting.guests) count against the limit.
-  // Pending (unconfirmed) matches do NOT reserve a spot: first to confirm wins.
   const maxGuests = parseInt(hosting.soldiers) || 0;
   const confirmedCount = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
   const available = maxGuests - confirmedCount;
-  if (available < (request.guestCount ?? 1)) return false;
+  if (available < (request.guestCount ?? 1)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Capacity full/insufficient (avail: ${available}, needed: ${request.guestCount ?? 1})`);
+    return false;
+  }
 
   // Shabbat — never compromised
-  if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) return false;
+  if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Shabbat incompatible (soldier: ${request.shabbat}, family: ${family.hostShabbat})`);
+    return false;
+  }
 
   // Kosher — never compromised
   if (request.kosher && request.kosher !== "none") {
-    if (!isKosherCompatible(request.kosher, family.hostKosher)) return false;
+    if (!isKosherCompatible(request.kosher, family.hostKosher)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Kosher incompatible (soldier: ${request.kosher}, family: ${family.hostKosher})`);
+      return false;
+    }
   }
 
-  // Diet/Allergies — soldier's allergies must be covered by family's cooking.
-  // Map soldier allergy IDs to the corresponding family cooking IDs (they use
-  // different id strings for the same concept).  Allergies with no family-side
-  // equivalent ('peanuts', 'fish', 'other') are skipped — we cannot enforce
-  // them via the family cooking list and blocking matches over them is wrong.
+  // Diet/Allergies
   const ALLERGY_TO_COOKING = { gluten: "celiac", vegetarian: "veg" };
   const UNMATCHABLE = new Set(["peanuts", "fish", "other"]);
   const soldierAllergies = (soldier.allergies ?? [])
     .filter((a) => !UNMATCHABLE.has(a))
     .map((a) => ALLERGY_TO_COOKING[a] ?? a);
   const familyCooking = family.hostCooking ?? [];
-  if (soldierAllergies.some((a) => !familyCooking.includes(a))) return false;
+  if (soldierAllergies.some((a) => !familyCooking.includes(a))) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Diet/Allergies incompatible`);
+    return false;
+  }
 
   // Accommodation — if soldier needs to sleep over, family must offer it
-  if (request.needSleep === true && hosting.sleepOvernight !== true) return false;
+  if (request.needSleep === true && hosting.sleepOvernight !== true) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Overnight sleep required but not offered`);
+    return false;
+  }
 
-  // If the soldier is allergic to animals and the family has a life - a rigid restriction, there is no possibility of adjustment.
-if (soldier.pets === "allergy" && family.hasPets === true) return false; 
+  // Pet allergy
+  if (soldier.pets === "allergy" && family.hasPets === true) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Pet allergy vs family has pets`);
+    return false;
+  }
 
-  // Pets — hard filter unless we're in PETS compromise mode
+  // Pets comfort
   if (compromiseLevel < COMPROMISE.PETS) {
-    if (request.petsComfort === "no" && family.hasPets === true) return false;
+    if (request.petsComfort === "no" && family.hasPets === true) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Pets comfort "no"`);
+      return false;
+    }
   }
-  // Note: even in compromise mode we still apply "no" as hard if you want —
-  // the user said petsComfort only has "ok"/"no", not "allergic".
-  // Since there's no "allergic" value, "no" becomes a soft compromise.
 
-  // Time window — compromised in TIME mode (±1h exact → ±2.5h compromise)
+  // Time window
   if (compromiseLevel < COMPROMISE.TIME) {
-    if (!isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Time window mismatch (soldier: ${request.startTime}, family: ${hosting.time})`);
+      return false;
+    }
   } else {
-    if (!isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Time window mismatch in compromise mode`);
+      return false;
+    }
   }
 
-  // NOTE: the geographic radius is NOT enforced here. Distance needs one
-  // batched Google Distance Matrix call for all candidates at once, so it is
-  // handled in runMatchingForRequest after the cheap hard filters run.
-
+  console.log(`  ✅ [FILTER PASS] Family "${famName}" (${hosting.family_id}) passed all hard filters!`);
   return true;
 }
 
@@ -325,6 +354,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   if (!soldierSnap.exists) return null;
   const soldier = soldierSnap.data();
 
+  console.log(`🔎 [MATCHING SCAN] Request ID: ${requestId} | Soldier ID: ${request.soldier_id} | Date: ${request.when} | Compromise Level: ${compromiseLevel}`);
+
   // Build combined ban list
   const bannedIds = new Set([
     ...(soldier.banned_families ?? []),
@@ -338,7 +369,12 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     .where("is_fully_booked", "==", false)
     .get();
 
-  if (hostingsSnap.empty) return null;
+  if (hostingsSnap.empty) {
+    console.log(`   ⚠️ No family_hostings found for date: ${request.when}`);
+    return null;
+  }
+
+  console.log(`   📋 Found ${hostingsSnap.docs.length} candidate hosting offers on date ${request.when}`);
 
   const prelim = [];
 
@@ -358,13 +394,12 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     prelim.push({ hosting, family });
   }
 
-  if (prelim.length === 0) return null;
+  if (prelim.length === 0) {
+    console.log(`   ⚠️ 0 family hostings passed hard filters for request ${requestId} (compromise: ${compromiseLevel})`);
+    return null;
+  }
 
   // ── LOCATION ────────────────────────────────────────────────────
-  // travelDistance is the soldier's max acceptable distance (km). In RADIUS
-  // compromise mode we widen it by 20%. Distances come from Google Distance
-  // Matrix (real road/walking distance) and fall back to straight-line
-  // haversine when the API or family coordinates are unavailable.
   let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
   if (compromiseLevel >= COMPROMISE.RADIUS) radius *= 1.2;
 
@@ -398,7 +433,10 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   const candidates = [];
   prelim.forEach((c, i) => {
     const distanceKm = distances[i];
-    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) return; // too far
+    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) {
+      console.log(`   ❌ [DISTANCE REJECT] Family "${c.family.hostName}" (${c.family.id}): distance ${distanceKm}km exceeds radius ${radius}km`);
+      return;
+    }
     candidates.push({
       ...c,
       distanceKm,
@@ -406,7 +444,10 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     });
   });
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    console.log(`   ⚠️ 0 candidates within radius ${radius}km for request ${requestId}`);
+    return null;
+  }
 
   // Highest score wins; ties broken by the closer family.
   candidates.sort(
@@ -415,6 +456,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   const best = candidates[0];
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
+
+  console.log(`   🎯 [MATCH SUCCESS] Matched Request ${requestId} (Soldier: ${request.soldier_id}) with Family "${best.family.hostName}" (Family ID: ${best.family.id}, Hosting ID: ${best.hosting.id}) | Score: ${best.score}`);
 
   // Save the match — guest details are NOT stored here; use soldier_request_id
   // to look them up from soldier_hosting_searches + soldiers when needed.
@@ -778,6 +821,40 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
 exports.forceCheckPendingRequests = onCall(async (req) => {
   await runCheckPendingRequests();
   return { success: true, timestamp: new Date().toISOString() };
+});
+
+// Diagnostic endpoint to inspect notifications and matching state
+exports.getDebugLogs = onCall(async (req) => {
+  const notifsSnap = await db.collection("notifications").orderBy("sent_at", "desc").limit(20).get();
+  const notifications = notifsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+  const searchesSnap = await db.collection("soldier_hosting_searches")
+    .where("is_match", "==", false)
+    .where("when", "in", [todayStr, tomorrowStr])
+    .get();
+  const unmatchedSearches = searchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const hostingsSnap = await db.collection("family_hostings")
+    .where("is_fully_booked", "==", false)
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+  const availableHostings = hostingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const matchesSnap = await db.collection("active_matches")
+    .where("hosting_date", "in", [todayStr, tomorrowStr])
+    .get();
+  const activeMatches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  return {
+    notifications,
+    unmatchedSearches,
+    availableHostings,
+    activeMatches,
+    timestamp: new Date().toISOString()
+  };
 });
 
 // ──────────────────────────────────────────────────────────────────
