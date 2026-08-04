@@ -543,13 +543,15 @@ exports.onNewFamilyHosting = onDocumentCreated(
 );
 
 // ──────────────────────────────────────────────────────────────────
-// SCHEDULED: every hour — apply compromise for requests within 24h
+// CORE 24-HOUR MATCHING & ALERTS ALGORITHM
 // ──────────────────────────────────────────────────────────────────
-exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
+async function runCheckPendingRequests() {
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+  console.log(`🚀 Starting 24h algorithm run for dates: ${todayStr}, ${tomorrowStr}`);
 
   const snap = await db
     .collection("soldier_hosting_searches")
@@ -557,12 +559,13 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     .where("when", "in", [todayStr, tomorrowStr])
     .get();
 
+  console.log(`📋 Found ${snap.docs.length} unmatched soldier searches to process.`);
+
   for (const doc of snap.docs) {
     await tryAllCompromiseLevels(doc.id);
   }
 
   // Safety net: find pending matches whose hosting became full in the meantime.
-  // This catches cases where confirmMatch didn't run (e.g. direct Firestore write).
   const pendingSnap = await db
     .collection("active_matches")
     .where("status", "==", "pending_soldier_approval")
@@ -635,7 +638,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
   }
 
   // ── REMINDER B: soldier meal details 12h before confirmed hosting ─
-  const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
   const confirmedMatchesSnap = await db.collection("active_matches")
     .where("status", "==", "approved")
     .where("hosting_date", "in", [todayStr, tomorrowStr])
@@ -646,7 +648,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     if ((match.reminders_sent ?? []).includes("meal_12h")) continue;
     if (!match.host_offer_id) continue;
 
-    // Fetch hosting to get the time
     const hostingSnap = await db.collection("family_hostings").doc(match.host_offer_id).get();
     if (!hostingSnap.exists) continue;
     const hosting = hostingSnap.data();
@@ -657,7 +658,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     const msUntil = hostingDatetime - now;
     if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
 
-    // Fetch family to get address
     const familySnap = await db.collection("families").doc(match.family_id).get();
     const family = familySnap.exists ? familySnap.data() : {};
     const address = family.hostAddress || family.hostCity || "";
@@ -710,7 +710,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
   }
 
   // ── REMINDER E: family hosting 18h away with no confirmed guests ──
-  const eigteenHoursFromNow = new Date(now.getTime() + 18 * 60 * 60 * 1000);
   const upcomingHostingsSnap = await db.collection("family_hostings")
     .where("date", "in", [todayStr, tomorrowStr])
     .get();
@@ -766,6 +765,19 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
       await reqDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("unmatched_25h") });
     } catch (e) { console.error("notification error (unmatched_25h):", e); }
   }
+
+  console.log("🏁 24h algorithm run completed.");
+}
+
+// Scheduled hourly execution
+exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
+  await runCheckPendingRequests();
+});
+
+// Callable endpoint to trigger on demand
+exports.forceCheckPendingRequests = onCall(async (req) => {
+  await runCheckPendingRequests();
+  return { success: true, timestamp: new Date().toISOString() };
 });
 
 // ──────────────────────────────────────────────────────────────────
