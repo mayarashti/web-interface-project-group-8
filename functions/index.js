@@ -2935,109 +2935,117 @@ exports.sendWednesdayHostingReminder = onSchedule(
 // ──────────────────────────────────────────────────────────────────
 
 async function runEmergencyMatchmaking() {
+  const now = new Date();
+  // Get today and tomorrow dates in YYYY-MM-DD
+  const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const todayStr = today.toISOString().split("T")[0];
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    const now = new Date();
-    // Get today and tomorrow dates in YYYY-MM-DD
-    const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const todayStr = today.toISOString().split("T")[0];
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  const searchesSnap = await db.collection("soldier_hosting_searches")
+    .where("is_match", "==", false)
+    .where("when", "in", [todayStr, tomorrowStr])
+    .get();
 
-    const searchesSnap = await db.collection("soldier_hosting_searches")
-      .where("is_match", "==", false)
-      .where("when", "in", [todayStr, tomorrowStr])
-      .get();
+  if (searchesSnap.empty) return;
 
-    if (searchesSnap.empty) return;
+  const familiesSnap = await db.collection("families").get();
+  if (familiesSnap.empty) return;
+  const families = familiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    const familiesSnap = await db.collection("families").get();
-    if (familiesSnap.empty) return;
-    const families = familiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const hostingsSnap = await db.collection("family_hostings")
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+  
+  const familyHostingDates = {};
+  hostingsSnap.docs.forEach(d => {
+    const h = d.data();
+    if (h.status !== "canceled") {
+      if (!familyHostingDates[h.family_id]) familyHostingDates[h.family_id] = [];
+      familyHostingDates[h.family_id].push(h.date);
+    }
+  });
 
-    const hostingsSnap = await db.collection("family_hostings")
-      .where("date", "in", [todayStr, tomorrowStr])
-      .get();
-    
-    const familyHostingDates = {};
-    hostingsSnap.docs.forEach(d => {
-      const h = d.data();
-      if (h.status !== "canceled" && (h.guests && h.guests.length > 0)) {
-        if (!familyHostingDates[h.family_id]) familyHostingDates[h.family_id] = [];
-        familyHostingDates[h.family_id].push(h.date);
-      }
-    });
+  for (const searchDoc of searchesSnap.docs) {
+    const request = searchDoc.data();
+    const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
+    if (!soldierSnap.exists) continue;
+    const soldier = soldierSnap.data();
 
-    for (const searchDoc of searchesSnap.docs) {
-      const request = searchDoc.data();
-      const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
-      if (!soldierSnap.exists) continue;
-      const soldier = soldierSnap.data();
+    const bannedIds = new Set([
+      ...(soldier.banned_families ?? []),
+      ...(request.temporarily_banned_families ?? []),
+    ]);
 
-      const bannedIds = new Set([
-        ...(soldier.banned_families ?? []),
-        ...(request.temporarily_banned_families ?? []),
-      ]);
+    const validFamilies = [];
 
-      const validFamilies = [];
-
-      for (const family of families) {
-        if (familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when)) {
-          console.log(`  ℹ️ [EMERGENCY SKIP] Family "${family.hostName || family.id}": Already hosting on ${request.when}`);
-          continue;
-        }
-        const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
-        if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
-          validFamilies.push(family);
-        }
+    for (const family of families) {
+      // 1. SKIP family if they ALREADY accepted a 24-hour emergency soldier for this date!
+      const accepted24hDates = family.accepted_24h_dates || family.took_24h_dates || [];
+      if (accepted24hDates.includes(request.when)) {
+        console.log(`  ℹ️ [EMERGENCY SKIP] Family "${family.hostName || family.id}": Already accepted a 24h soldier for ${request.when}`);
+        continue;
       }
 
-      console.log(`  📋 [EMERGENCY CANDIDATES] ${validFamilies.length} families passed hard filters for emergency check.`);
-
-      // We should ideally calculate distance here.
-      const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
-      let distances = validFamilies.map(() => null);
-      if (hasSoldierCoords) {
-        const refinable = validFamilies.map((f, i) => ({ i, lat: f.hostLat, lng: f.hostLng })).filter(f => isNum(f.lat) && isNum(f.lng));
-        if (refinable.length > 0) {
-          const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
-          const real = await fetchTravelDistancesKm(
-            { lat: request.lat, lng: request.lng },
-            refinable.map(f => ({ lat: f.lat, lng: f.lng })),
-            mode
-          );
-          refinable.forEach((f, k) => { if (isNum(real[k])) distances[f.i] = real[k]; });
-        }
-      }
-
-      for (let i = 0; i < validFamilies.length; i++) {
-        const family = validFamilies[i];
-        const dist = distances[i];
-        let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
-        if (isNum(dist) && dist > radius) {
-          console.log(`  ❌ [EMERGENCY DISTANCE REJECT] Family "${family.hostName || family.id}": Distance ${dist}km > Radius ${radius}km`);
-          continue;
-        }
-
-        console.log(`  🔔 [EMERGENCY NOTIFY] Notifying Family "${family.hostName || family.id}" (${family.id}) about Soldier Request ${searchDoc.id}`);
-
-        await createNotification(
-          family.id,
-          "host",
-          `חייל זקוק לאירוח מחר! האם תוכלו לארח את ${soldier.name || 'החייל'}?`,
-          "emergency_host",
-          "חייל זקוק לאירוח דחוף!",
-          { 
-            search_id: searchDoc.id, 
-            soldier_id: soldierSnap.id, 
-            date: request.when, 
-            name: soldier.name,
-            distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null
-          }
-        );
+      const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
+      if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
+        const hasHosting = familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when);
+        validFamilies.push({ family, hasHosting });
       }
     }
+
+    console.log(`  📋 [EMERGENCY CANDIDATES] ${validFamilies.length} families passed hard filters for request ${searchDoc.id}`);
+
+    // We should ideally calculate distance here.
+    const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
+    let distances = validFamilies.map(() => null);
+    if (hasSoldierCoords) {
+      const refinable = validFamilies.map((item, i) => ({ i, lat: item.family.hostLat, lng: item.family.hostLng })).filter(f => isNum(f.lat) && isNum(f.lng));
+      if (refinable.length > 0) {
+        const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
+        const real = await fetchTravelDistancesKm(
+          { lat: request.lat, lng: request.lng },
+          refinable.map(f => ({ lat: f.lat, lng: f.lng })),
+          mode
+        );
+        refinable.forEach((f, k) => { if (isNum(real[k])) distances[f.i] = real[k]; });
+      }
+    }
+
+    for (let i = 0; i < validFamilies.length; i++) {
+      const { family, hasHosting } = validFamilies[i];
+      const dist = distances[i];
+      let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
+      if (isNum(dist) && dist > radius) {
+        console.log(`  ❌ [EMERGENCY DISTANCE REJECT] Family "${family.hostName || family.id}": Distance ${dist}km > Radius ${radius}km`);
+        continue;
+      }
+
+      const contentMessage = hasHosting
+        ? `חייל זקוק לאירוח מחר! האם תוכלו להוסיף מקום באירוח שלכם ולארח את ${soldier.name || 'החייל'}?`
+        : `חייל זקוק לאירוח מחר! האם תוכלו לפתוח אירוח ולארח את ${soldier.name || 'החייל'}?`;
+
+      console.log(`  🔔 [EMERGENCY NOTIFY] Notifying Family "${family.hostName || family.id}" (${family.id}) [hasHosting: ${hasHosting}] about Soldier Request ${searchDoc.id}`);
+
+      await createNotification(
+        family.id,
+        "host",
+        contentMessage,
+        "emergency_host",
+        "חייל זקוק לאירוח דחוף!",
+        { 
+          search_id: searchDoc.id, 
+          soldier_id: soldierSnap.id, 
+          date: request.when, 
+          name: soldier.name || "חייל",
+          distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null,
+          has_hosting: hasHosting
+        }
+      );
+    }
   }
+}
 
 exports.dailyEmergencyMatches = onSchedule(
   { schedule: "0 20 * * *", timeZone: "Asia/Jerusalem" },
@@ -3068,6 +3076,9 @@ exports.acceptEmergencyHost = onCall(async (req) => {
     }
 
     const date = request.when;
+    const familyRef = db.collection("families").doc(uid);
+    const familySnap = await transaction.get(familyRef);
+    const familyData = familySnap.exists ? familySnap.data() : {};
 
     const hostingsQuery = db.collection("family_hostings")
       .where("family_id", "==", uid)
@@ -3103,27 +3114,41 @@ exports.acceptEmergencyHost = onCall(async (req) => {
       hostingId = existingDoc.id;
       const existing = existingDoc.data();
       const currentGuests = existing.guests || [];
-      const newOccupied = (existing.occupied || 0) + (request.guestCount || 1);
-      const isFull = newOccupied >= (parseInt(existing.soldiers) || 0) ? true : false;
+      const addedGuests = request.guestCount || 1;
+      const currentSoldiersCapacity = parseInt(existing.soldiers) || 0;
+      const currentOccupied = existing.occupied || 0;
+      const newOccupied = currentOccupied + addedGuests;
+      const newSoldiersCapacity = Math.max(currentSoldiersCapacity + addedGuests, newOccupied);
       
       transaction.update(existingDoc.ref, {
+        soldiers: newSoldiersCapacity,
         guests: [...currentGuests, {
           id: request.soldier_id,
           name: request.soldierName || "Soldier",
-          groupSize: request.guestCount || 1
+          groupSize: addedGuests
         }],
         occupied: newOccupied,
-        is_fully_booked: isFull
+        is_fully_booked: true
       });
     }
 
     transaction.update(searchRef, { is_match: true });
+
+    // Set flag on family document so they don't get any more 24h messages for this date!
+    transaction.update(familyRef, {
+      accepted_24h_dates: FieldValue.arrayUnion(date),
+      took_24h_dates: FieldValue.arrayUnion(date)
+    });
 
     const activeMatchRef = db.collection("active_matches").doc();
     transaction.set(activeMatchRef, {
       id: activeMatchRef.id,
       soldier_request_id: search_id,
       host_offer_id: hostingId,
+      family_id: uid,
+      family_name: familyData.hostName ?? null,
+      family_city: familyData.hostCity ?? null,
+      hosting_date: date,
       status: "approved",
       created_at: FieldValue.serverTimestamp(),
       distance_km: null
