@@ -214,7 +214,7 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
   );
 }
 
-function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onLogout, data, setData }) {
+function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onFillPreferences, onLogout, data, setData }) {
   const { t, lang } = useLang();
   const [activeRequest, setActiveRequest] = useState(null);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
@@ -370,7 +370,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onL
           onNow={() => {
             setShowPrefModal(false);
             setData(prev => ({ ...prev, pendingNewRequest: true }));
-            onProfile();
+            onFillPreferences();
           }}
           onLater={() => setShowPrefModal(false)}
         />
@@ -735,7 +735,7 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
 /* ——————————————————————————————————————————— 
    S15Home — Soldier home screen
 ————————————————————————————————————————————— */
-function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
+function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, onBack, onLogout }) {
   const { t, lang } = useLang();
   const [selected, setSelected] = useState(data.focusFamilyForMap || null);
   const [hovered, setHovered] = useState(null);
@@ -896,7 +896,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onBack, onLogout }) {
           onNow={() => {
             setShowPrefModal(false);
             setData(prev => ({ ...prev, pendingNewRequest: true }));
-            onProfile();
+            onFillPreferences();
           }}
           onLater={() => setShowPrefModal(false)}
         />

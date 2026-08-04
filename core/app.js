@@ -245,6 +245,35 @@ function App() {
     }
   };
 
+  const completeSoldierPreferences = async () => {
+    if (window.DB && formData.uid) {
+      try {
+        let profileUrl = null;
+        if (formData.avatarFile) {
+          profileUrl = await window.DB.uploadProfileImage(formData.uid, formData.avatarFile, 'soldiers');
+        }
+
+        const { avatarFile, avatarPreview, ...restData } = formData;
+        const toSave = { ...restData, soldierPreferencesSkipped: false, pendingNewRequest: false };
+        if (profileUrl) toSave.profile_img_url = profileUrl;
+
+        await window.DB.saveSoldierProfile(formData.uid, toSave);
+        setFormData(prev => ({
+          ...prev,
+          soldierPreferencesSkipped: false,
+          pendingNewRequest: false,
+          ...(profileUrl ? { profile_img_url: profileUrl } : {}),
+        }));
+      } catch (err) {
+        alert("Error saving profile: " + err.message);
+        return;
+      }
+    } else {
+      setFormData(prev => ({ ...prev, soldierPreferencesSkipped: false, pendingNewRequest: false }));
+    }
+    handleNewRequest();
+  };
+
   const registerHost = async (nextScreen, skipped = false) => {
     if (window.DB) {
       let uid = formData.uid;
@@ -295,12 +324,12 @@ function App() {
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
     3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(4)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} onInfo={() => setShowInfo(true)} />,
-    4:  <S4Profile          data={formData} setData={setFormData} onNext={() => go(7)} onBack={() => go(3)} />,
+    4:  <S4Profile          data={formData} setData={setFormData} onNext={() => go(7)} onBack={() => go(formData.pendingNewRequest ? 24 : 3)} />,
     7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(4)} />,
-    12: <S12Summary   data={formData} setData={setFormData} onSubmit={() => registerSoldier(13)} onBack={() => go(7)} />,
+    12: <S12Summary   data={formData} setData={setFormData} onSubmit={() => formData.pendingNewRequest ? completeSoldierPreferences() : registerSoldier(13)} onBack={() => go(7)} />,
     13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
-    15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onBack={() => go(24)} onLogout={handleLogout} />,
+    15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onFillPreferences={() => go(4)} onBack={() => go(24)} onLogout={handleLogout} />,
     23: <S15NewRequest 
           data={formData} 
           setData={setFormData} 
@@ -348,7 +377,7 @@ function App() {
             go(24);
           }}
         />,
-    24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} onLogout={handleLogout} />,
+    24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} onFillPreferences={() => go(4)} onLogout={handleLogout} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
     16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} onSkipPreferences={() => registerHost(17, true)} onInfo={() => setShowInfo(true)} />,
