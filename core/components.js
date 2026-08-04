@@ -1144,14 +1144,16 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
             </div>
           ) : (
             notifications.map((n, i) => {
-              const isActionable = onNotificationClick && n.payload && (n.payload.request_id || n.payload.hosting_id);
+              const isEmergency = n.type === 'emergency_host';
+              const isActionable = onNotificationClick && (isEmergency || (n.payload && (n.payload.request_id || n.payload.hosting_id)));
               return (
                 <div
                   key={n.id || i}
                   className={clsx(
-                    'px-4 py-3 border-b border-warm-50 transition-colors',
+                    'px-4 py-3 border-b transition-colors',
+                    isEmergency ? 'bg-red-50 border-red-100 hover:bg-red-100' : 'border-warm-50',
                     isActionable ? 'cursor-pointer' : 'cursor-default',
-                    n.read ? 'bg-white hover:bg-warm-50' : 'bg-brand-50/60 hover:bg-brand-50'
+                    !isEmergency && (n.read ? 'bg-white hover:bg-warm-50' : 'bg-brand-50/60 hover:bg-brand-50')
                   )}
                   onClick={() => {
                     if (!n.read && onMarkRead) onMarkRead(n.id);
@@ -1162,18 +1164,33 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
                     {/* unread dot */}
                     <div className={clsx(
                       'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
-                      n.read ? 'bg-transparent' : 'bg-brand-500'
+                      n.read ? 'bg-transparent' : (isEmergency ? 'bg-red-500' : 'bg-brand-500')
                     )} />
                     <div className="min-w-0 flex-1">
                       {n.title && (
-                        <p className={clsx('text-sm leading-snug mb-0.5', n.read ? 'font-medium text-gray-700' : 'font-bold text-gray-900')}>
+                        <p className={clsx('text-sm leading-snug mb-0.5', isEmergency ? 'font-bold text-red-700' : (n.read ? 'font-medium text-gray-700' : 'font-bold text-gray-900'))}>
                           {n.title}
                         </p>
                       )}
                       <p className="text-xs text-warm-500 leading-relaxed">{n.content || n.message}</p>
                       <p className="text-[11px] text-warm-400 mt-1">{n.time}</p>
+                      
+                      {isEmergency && (
+                        <div className="mt-2">
+                          <button 
+                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-sm transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!n.read && onMarkRead) onMarkRead(n.id);
+                              if (onNotificationClick) { onNotificationClick(n); onClose(); }
+                            }}
+                          >
+                            {lang === 'he' ? 'הזמן אותו' : 'Host him'}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    {isActionable && (
+                    {isActionable && !isEmergency && (
                       <svg className="flex-shrink-0 mt-0.5 text-brand-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="9 18 15 12 9 6"/>
                       </svg>

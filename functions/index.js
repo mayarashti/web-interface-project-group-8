@@ -2820,3 +2820,224 @@ exports.sendWednesdayHostingReminder = onSchedule(
 );
 
 
+// ──────────────────────────────────────────────────────────────────
+// EMERGENCY MATCHMAKING - DAILY AT 20:00 ISRAEL TIME
+// ──────────────────────────────────────────────────────────────────
+
+async function runEmergencyMatchmaking() {
+
+    const now = new Date();
+    // Get today and tomorrow dates in YYYY-MM-DD
+    const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayStr = today.toISOString().split("T")[0];
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+    const searchesSnap = await db.collection("soldier_hosting_searches")
+      .where("is_match", "==", false)
+      .where("when", "in", [todayStr, tomorrowStr])
+      .get();
+
+    if (searchesSnap.empty) return;
+
+    const familiesSnap = await db.collection("families").get();
+    if (familiesSnap.empty) return;
+    const families = familiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const hostingsSnap = await db.collection("family_hostings")
+      .where("date", "in", [todayStr, tomorrowStr])
+      .get();
+    
+    const familyHostingDates = {};
+    hostingsSnap.docs.forEach(d => {
+      const h = d.data();
+      if (h.status !== "canceled" && (h.guests && h.guests.length > 0)) {
+        if (!familyHostingDates[h.family_id]) familyHostingDates[h.family_id] = [];
+        familyHostingDates[h.family_id].push(h.date);
+      }
+    });
+
+    for (const searchDoc of searchesSnap.docs) {
+      const request = searchDoc.data();
+      const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
+      if (!soldierSnap.exists) continue;
+      const soldier = soldierSnap.data();
+
+      const bannedIds = new Set([
+        ...(soldier.banned_families ?? []),
+        ...(request.temporarily_banned_families ?? []),
+      ]);
+
+      const validFamilies = [];
+
+      for (const family of families) {
+        if (familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when)) {
+          continue;
+        }
+        const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
+        if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
+          validFamilies.push(family);
+        }
+      }
+
+      // We should ideally calculate distance here.
+      const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
+      let distances = validFamilies.map(() => null);
+      if (hasSoldierCoords) {
+        const refinable = validFamilies.map((f, i) => ({ i, lat: f.hostLat, lng: f.hostLng })).filter(f => isNum(f.lat) && isNum(f.lng));
+        if (refinable.length > 0) {
+          const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
+          const real = await fetchTravelDistancesKm(
+            { lat: request.lat, lng: request.lng },
+            refinable.map(f => ({ lat: f.lat, lng: f.lng })),
+            mode
+          );
+          refinable.forEach((f, k) => { if (isNum(real[k])) distances[f.i] = real[k]; });
+        }
+      }
+
+      for (let i = 0; i < validFamilies.length; i++) {
+        const family = validFamilies[i];
+        const dist = distances[i];
+        let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
+        if (isNum(dist) && dist > radius) continue; // exceed distance
+
+        await createNotification(
+          family.id,
+          "host",
+          `חייל זקוק לאירוח מחר! האם תוכלו לארח את ${soldier.name || 'החייל'}?`,
+          "emergency_host",
+          "חייל זקוק לאירוח דחוף!",
+          { 
+            search_id: searchDoc.id, 
+            soldier_id: soldierSnap.id, 
+            date: request.when, 
+            name: soldier.name,
+            distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null
+          }
+        );
+      }
+    }
+  }
+
+exports.dailyEmergencyMatches = onSchedule(
+  { schedule: "0 20 * * *", timeZone: "Asia/Jerusalem" },
+  runEmergencyMatchmaking
+);
+
+exports.triggerEmergencyMatches = onCall(async (req) => {
+  await runEmergencyMatchmaking();
+  return { success: true };
+});
+
+// ──────────────────────────────────────────────────────────────────
+// ACCEPT EMERGENCY HOST
+// ──────────────────────────────────────────────────────────────────
+exports.acceptEmergencyHost = onCall(async (req) => {
+  const { search_id } = req.data;
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "User must be logged in");
+
+  return await db.runTransaction(async (transaction) => {
+    const searchRef = db.collection("soldier_hosting_searches").doc(search_id);
+    const searchSnap = await transaction.get(searchRef);
+    if (!searchSnap.exists) throw new HttpsError("not-found", "Search not found");
+    
+    const request = searchSnap.data();
+    if (request.is_match) {
+      return { success: false, reason: 'taken' };
+    }
+
+    const date = request.when;
+
+    const hostingsQuery = db.collection("family_hostings")
+      .where("family_id", "==", uid)
+      .where("date", "==", date)
+      .where("status", "==", "open");
+    const hostingsSnap = await transaction.get(hostingsQuery);
+    
+    let hostingId;
+    if (hostingsSnap.empty) {
+      const newHostingRef = db.collection("family_hostings").doc();
+      hostingId = newHostingRef.id;
+      transaction.set(newHostingRef, {
+        id: hostingId,
+        family_id: uid,
+        date: date,
+        time: request.startTime || "19:00",
+        soldiers: request.guestCount || 1,
+        sleepOvernight: request.needSleep || false,
+        pickup: request.transport || false,
+        notes: "Emergency hosting opened",
+        status: "open",
+        guests: [{
+          id: request.soldier_id,
+          name: request.soldierName || "Soldier",
+          groupSize: request.guestCount || 1
+        }],
+        occupied: request.guestCount || 1,
+        is_fully_booked: true,
+        created_at: FieldValue.serverTimestamp()
+      });
+    } else {
+      const existingDoc = hostingsSnap.docs[0];
+      hostingId = existingDoc.id;
+      const existing = existingDoc.data();
+      const currentGuests = existing.guests || [];
+      const newOccupied = (existing.occupied || 0) + (request.guestCount || 1);
+      const isFull = newOccupied >= (parseInt(existing.soldiers) || 0) ? true : false;
+      
+      transaction.update(existingDoc.ref, {
+        guests: [...currentGuests, {
+          id: request.soldier_id,
+          name: request.soldierName || "Soldier",
+          groupSize: request.guestCount || 1
+        }],
+        occupied: newOccupied,
+        is_fully_booked: isFull
+      });
+    }
+
+    transaction.update(searchRef, { is_match: true });
+
+    const activeMatchRef = db.collection("active_matches").doc();
+    transaction.set(activeMatchRef, {
+      id: activeMatchRef.id,
+      soldier_request_id: search_id,
+      host_offer_id: hostingId,
+      status: "approved",
+      created_at: FieldValue.serverTimestamp(),
+      distance_km: null
+    });
+
+    return { success: true };
+  }).then(async (res) => {
+    if (res.success) {
+      // Background cleanup of notifications
+      try {
+        const batch = db.batch();
+        // Clear this family's other emergency notifications
+        const famNotifs = await db.collection("notifications")
+          .where("user_id", "==", uid)
+          .where("type", "==", "emergency_host")
+          .get();
+        famNotifs.forEach(doc => batch.update(doc.ref, { read: true }));
+        
+        // Clear this search's emergency notifications for all families
+        const allNotifs = await db.collection("notifications")
+          .where("type", "==", "emergency_host")
+          .get();
+        allNotifs.forEach(doc => {
+          if (doc.data().payload?.search_id === search_id) {
+            batch.update(doc.ref, { read: true });
+          }
+        });
+        await batch.commit();
+      } catch (e) {
+        console.error("Error cleaning up notifications", e);
+      }
+    }
+    return res;
+  });
+});

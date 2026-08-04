@@ -789,7 +789,24 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
         uid={data.uid}
         telegramConnected={!!data.telegram_chat_id}
-        onNotificationClick={(notif) => {
+        onNotificationClick={async (notif) => {
+          if (notif.type === 'emergency_host') {
+            const searchId = notif.payload?.search_id;
+            if (!searchId) return;
+            try {
+              const fn = firebase.functions().httpsCallable('acceptEmergencyHost');
+              const res = await fn({ search_id: searchId });
+              if (res.data.success) {
+                alert(t('s17_ok') || "Success!");
+              } else if (res.data.reason === 'taken') {
+                alert(t('emergency_already_taken'));
+              }
+            } catch (e) {
+              console.error(e);
+              alert(e.message);
+            }
+            return;
+          }
           const hostingId = notif.payload?.hosting_id;
           if (hostingId) {
             setSelectedHostingId(hostingId);
