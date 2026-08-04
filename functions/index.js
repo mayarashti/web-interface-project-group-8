@@ -833,37 +833,42 @@ exports.forceCheckPendingRequests = onCall(async (req) => {
 
 // Diagnostic endpoint to inspect notifications and matching state
 exports.getDebugLogs = onCall(async (req) => {
-  const notifsSnap = await db.collection("notifications").orderBy("sent_at", "desc").limit(20).get();
+  const targetId = "oEkbSNCmbubKv4zlZSp3B8LzMiU2";
+
+  const notifsSnap = await db.collection("notifications").orderBy("sent_at", "desc").limit(30).get();
   const notifications = notifsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   const todayStr = new Date().toISOString().split("T")[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
-  const searchesSnap = await db.collection("soldier_hosting_searches")
-    .where("is_match", "==", false)
-    .where("when", "in", [todayStr, tomorrowStr])
-    .get();
-  const unmatchedSearches = searchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const searchesSnap = await db.collection("soldier_hosting_searches").get();
+  const allSearches = searchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  const hostingsSnap = await db.collection("family_hostings")
-    .where("is_fully_booked", "==", false)
-    .where("date", "in", [todayStr, tomorrowStr])
-    .get();
-  const availableHostings = hostingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const hostingsSnap = await db.collection("family_hostings").get();
+  const allFamilyHostings = hostingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  const matchesSnap = await db.collection("active_matches")
-    .where("hosting_date", "in", [todayStr, tomorrowStr])
-    .get();
-  const activeMatches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const matchesSnap = await db.collection("active_matches").get();
+  const allActiveMatches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   const familiesSnap = await db.collection("families").get();
   const registeredFamilies = familiesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  const targetFamilyDoc = await db.collection("families").doc(targetId).get();
+  const targetFamilyData = targetFamilyDoc.exists ? targetFamilyDoc.data() : null;
+
+  const targetFamilyHostings = allFamilyHostings.filter(h => h.family_id === targetId);
+  const targetFamilyMatches = allActiveMatches.filter(m => m.family_id === targetId);
+  const targetFamilyNotifs = notifications.filter(n => n.user_id === targetId);
+
   return {
-    notifications,
-    unmatchedSearches,
-    availableHostings,
-    activeMatches,
+    targetId,
+    targetFamilyData,
+    targetFamilyHostings,
+    targetFamilyMatches,
+    targetFamilyNotifs,
+    allSearches,
+    allFamilyHostings,
+    allActiveMatches,
     registeredFamilies,
     timestamp: new Date().toISOString()
   };
