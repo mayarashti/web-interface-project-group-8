@@ -809,6 +809,14 @@ async function runCheckPendingRequests() {
     } catch (e) { console.error("notification error (unmatched_25h):", e); }
   }
 
+  // ── EMERGENCY NOTIFICATIONS TO ALL MATCHING REGISTERED FAMILIES ──────
+  console.log("🚨 [EMERGENCY NOTIFICATIONS] Scanning registered families who haven't opened hostings yet...");
+  try {
+    await runEmergencyMatchmaking();
+  } catch (err) {
+    console.error("❌ Error in runEmergencyMatchmaking:", err);
+  }
+
   console.log("🏁 24h algorithm run completed.");
 }
 
