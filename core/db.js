@@ -105,6 +105,47 @@ window.DB = {
     }
   },
 
+  // Favorite families (soldier only)
+  // Stored as an array of family ids on soldiers/{uid}.favorite_families.
+  // Private to the soldier — families never see or read this field.
+  async addFavoriteFamily(uid, familyId) {
+    if (!uid || !familyId) return false;
+    try {
+      await window.db.collection('soldiers').doc(uid).set({
+        favorite_families: firebase.firestore.FieldValue.arrayUnion(familyId)
+      }, { merge: true });
+      return true;
+    } catch (e) {
+      console.error('Error adding favorite family:', e);
+      return false;
+    }
+  },
+
+  async removeFavoriteFamily(uid, familyId) {
+    if (!uid || !familyId) return false;
+    try {
+      await window.db.collection('soldiers').doc(uid).set({
+        favorite_families: firebase.firestore.FieldValue.arrayRemove(familyId)
+      }, { merge: true });
+      return true;
+    } catch (e) {
+      console.error('Error removing favorite family:', e);
+      return false;
+    }
+  },
+
+  // Returns an unsubscribe function. Calls `callback` with the array of favorite
+  // family ids whenever it changes — needed so a favorite added from the Telegram
+  // bot shows up in the web app without a reload.
+  subscribeToFavorites(uid, callback) {
+    return window.db.collection('soldiers').doc(uid)
+      .onSnapshot(doc => {
+        callback((doc.exists && doc.data().favorite_families) || []);
+      }, err => {
+        console.error('favorites listener error:', err);
+      });
+  },
+
   // Hosting Searches (Soldier requests)
   async createHostingSearch(soldierId, data) {
     try {

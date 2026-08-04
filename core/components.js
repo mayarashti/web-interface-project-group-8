@@ -788,7 +788,7 @@ function SectionTitle({ title, sub }) {
   );
 }
 
-function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo, onNotifications, notificationsCount = 0 }) {
+function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, onLogout, onInfo, onNotifications, notificationsCount = 0, onFavorites }) {
   const { lang, setLang, t } = useLang();
   return (
     <>
@@ -845,6 +845,18 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
                     {notificationsCount > 9 ? '9+' : notificationsCount}
                   </span>
                 )}
+              </button>
+            )}
+            {onFavorites && (
+              <button
+                onClick={onFavorites}
+                className="app-icon-btn"
+                aria-label={t('fav_btn_title')}
+                title={t('fav_btn_title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
               </button>
             )}
             {actions}
@@ -1036,6 +1048,44 @@ function PreferencesPromptModal({ isOpen, context, onNow, onLater }) {
   );
 }
 
+/* ConfirmDialog — generic yes/no prompt. Replaces the native confirm() for
+   destructive actions. Same portal + z-index pattern as PreferencesPromptModal. */
+function ConfirmDialog({ isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onCancel, danger = false, icon }) {
+  const { t, lang } = useLang();
+  if (!isOpen) return null;
+
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in"
+      style={{ zIndex: 9999 }}
+      dir={lang === 'he' ? 'rtl' : 'ltr'}
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-slide-up"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="text-center mb-6">
+            {icon && <div className="mb-3 flex justify-center">{icon}</div>}
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{title}</h2>
+            {message && <p className="text-sm text-warm-500 leading-relaxed">{message}</p>}
+          </div>
+          <div className="space-y-3">
+            <Btn variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+              {confirmLabel || t('fav_yes')}
+            </Btn>
+            <Btn variant="secondary" onClick={onCancel}>
+              {cancelLabel || t('fav_no')}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onMarkRead, onNotificationClick, uid, telegramConnected }) {
   const { lang } = useLang();
   const isRtl = lang === 'he';
@@ -1145,7 +1195,7 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
           ) : (
             notifications.map((n, i) => {
               const isEmergency = n.type === 'emergency_host';
-              const isActionable = onNotificationClick && (isEmergency || (n.payload && (n.payload.request_id || n.payload.hosting_id)));
+              const isActionable = onNotificationClick && (isEmergency || (n.payload && (n.payload.request_id || n.payload.hosting_id || n.payload.family_id)));
               return (
                 <div
                   key={n.id || i}
@@ -1464,6 +1514,7 @@ window.MultiCheck = MultiCheck;
 window.SectionTitle = SectionTitle;
 window.AppHeader = AppHeader;
 window.NotificationsPanel = NotificationsPanel;
+window.ConfirmDialog = ConfirmDialog;
 window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;
 window.LocationInput = LocationInput;

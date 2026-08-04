@@ -221,6 +221,11 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
   const hasRequests = data.requests && data.requests.length > 0;
   const [showPrefModal, setShowPrefModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favoritePrompt, setFavoritePrompt] = useState(null); // payload of a favorite_prompt notification
+  const [favoriteHosting, setFavoriteHosting] = useState(null); // payload of a favorite_hosting_open notification
+  const [favoriteToast, setFavoriteToast] = useState(null);
+  const [joiningHosting, setJoiningHosting] = useState(false);
   const notifications = data.notifications || [];
 
   const handleNewRequestClick = () => {
@@ -231,8 +236,83 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
     }
   };
 
+  const handleNotificationClick = (notif) => {
+    // "How was the hosting?" — offer to add the family to favorites.
+    if (notif.type === 'favorite_prompt' && notif.payload?.family_id) {
+      setFavoritePrompt(notif.payload);
+      return;
+    }
+    // A favorite family opened a new hosting.
+    if (notif.type === 'favorite_hosting_open' && notif.payload?.hosting_id) {
+      setFavoriteHosting(notif.payload);
+      return;
+    }
+    const reqId = notif.payload?.request_id;
+    const req = reqId
+      ? (data.requests || []).find(r => r.id === reqId)
+      : (data.requests || []).find(r => r.is_match);
+    if (req) setActiveRequest(req);
+  };
+
+  // A favorites notification tapped on S15Home is handed over here.
+  useEffect(() => {
+    const pending = data.pendingFavoriteNotif;
+    if (!pending) return;
+    setData(prev => ({ ...prev, pendingFavoriteNotif: null }));
+    handleNotificationClick(pending);
+  }, [data.pendingFavoriteNotif]);
+
+  const showToast = (msg) => {
+    setFavoriteToast(msg);
+    setTimeout(() => setFavoriteToast(null), 3000);
+  };
+
+  const handleAddFavorite = async () => {
+    const payload = favoritePrompt;
+    setFavoritePrompt(null);
+    if (!payload?.family_id || !window.DB) return;
+    const ok = await window.DB.addFavoriteFamily(data.uid, payload.family_id);
+    if (ok) showToast(t('fav_added'));
+  };
+
+  // One-tap join: the callable creates the request and approves the match, and
+  // the soldier_hosting_searches listener drops the new card into the list.
+  const handleJoinHosting = async () => {
+    const hostingId = favoriteHosting?.hosting_id;
+    if (!hostingId || joiningHosting) return;
+    setJoiningHosting(true);
+    try {
+      const fn = firebase.functions().httpsCallable('joinFavoriteHosting');
+      const res = await fn({ hosting_id: hostingId });
+      const d = res.data || {};
+      setFavoriteHosting(null);
+      if (d.success) {
+        showToast(t('fav_join_success'));
+      } else {
+        showToast(
+          d.reason === 'full' ? t('fav_join_full')
+          : d.reason === 'has_request' ? t('fav_join_has_request')
+          : d.reason === 'gone' ? t('fav_hosting_gone')
+          : t('fav_join_error')
+        );
+      }
+    } catch (e) {
+      console.error('Join favorite hosting error:', e);
+      setFavoriteHosting(null);
+      showToast(t('fav_join_error'));
+    } finally {
+      setJoiningHosting(false);
+    }
+  };
+
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-10">
+      <FavoritesPanel
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        favoriteIds={data.favorite_families || []}
+        uid={data.uid}
+      />
       <NotificationsPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -241,14 +321,38 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
         uid={data.uid}
         telegramConnected={!!data.telegram_chat_id}
-        onNotificationClick={(notif) => {
-          const reqId = notif.payload?.request_id;
-          const req = reqId
-            ? (data.requests || []).find(r => r.id === reqId)
-            : (data.requests || []).find(r => r.is_match);
-          if (req) setActiveRequest(req);
-        }}
+        onNotificationClick={handleNotificationClick}
       />
+
+      <FavoriteHostingModal
+        payload={favoriteHosting}
+        onClose={() => setFavoriteHosting(null)}
+        onJoin={handleJoinHosting}
+        joining={joiningHosting}
+      />
+
+      <ConfirmDialog
+        isOpen={!!favoritePrompt}
+        title={t('fav_prompt_title')}
+        message={favoritePrompt ? t('fav_prompt_sub', favoritePrompt.family_name || '') : ''}
+        confirmLabel={t('fav_yes')}
+        cancelLabel={t('fav_no')}
+        onConfirm={handleAddFavorite}
+        onCancel={() => setFavoritePrompt(null)}
+        icon={(
+          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-400">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+        )}
+      />
+
+      {favoriteToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-semibold shadow-lg animate-fade-in text-center max-w-[90vw]" style={{ zIndex: 9998 }}>
+          {favoriteToast}
+        </div>
+      )}
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
@@ -261,6 +365,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
         )}
         onNotifications={() => setShowNotifications(true)}
         notificationsCount={notifications.filter(n => !n.read).length}
+        onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
 
@@ -700,6 +805,46 @@ function StoryViewer({ family, onClose, onSeeHostings }) {
 /* ———————————————————————————————————————————
    FamilyInfoCard — compact details beside the map
 ————————————————————————————————————————————— */
+/* mapFamilyToInfoCard — turns a raw `families` document (host* field names) into
+   the shape FamilyInfoCard expects. Pass the matching `family_hostings` document
+   to fill in capacity/occupancy; `extra` merges on top (e.g. compromise_notes). */
+function mapFamilyToInfoCard(familyId, d, hosting = {}, extra = {}) {
+  const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
+  const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
+  const capacity = parseInt(hosting.soldiers) || null;
+  const occupied = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0) || hosting.occupied || 0;
+  return {
+    id: familyId,
+    name: d.hostName,
+    city: d.hostCity,
+    shabbat: d.hostShabbat,
+    kosher: d.hostKosher,
+    hasPets: d.hasPets,
+    vibe: d.hostVibe,
+    shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
+    phoneDisplay: d.hostPhone,
+    waDigits,
+    lat: d.hostLat,
+    lng: d.hostLng,
+    capacity,
+    occupied,
+    profile_img_url: d.profile_img_url,
+    img_urls: d.img_urls,
+    stories: d.stories,
+    storiesCount: d.storiesCount,
+    storiesUpdatedAt: d.storiesUpdatedAt,
+    numKids: d.hostNumKids,
+    kidsAgeRange: d.hostKidsAgeRange,
+    kidsAgeRangeOther: d.hostKidsAgeRangeOther,
+    fridayDish: d.hostFridayDish,
+    afterMeal: d.hostAfterMeal,
+    afterMealOther: d.hostAfterMealOther,
+    fridayTradition: d.hostFridayTradition,
+    moreInfo: d.hostMoreInfo,
+    ...extra,
+  };
+}
+
 function FamilyInfoCard({ family, onClose, className = '' }) {
   const { t, lang } = useLang();
   const [showViewer, setShowViewer] = useState(false);
@@ -901,6 +1046,271 @@ function FamilyStrip({ families, selectedId, onSelect, onHover }) {
   );
 }
 
+/* ———————————————————————————————————————————
+   FavoritesPanel — the soldier's private favorite families.
+   Opens from the star button in AppHeader, styled like NotificationsPanel.
+————————————————————————————————————————————— */
+function FavoritesPanel({ isOpen, onClose, favoriteIds = [], uid }) {
+  const { t, lang } = useLang();
+  const isRtl = lang === 'he';
+  const [families, setFamilies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);   // family shown in the details modal
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const cacheRef = useRef({});
+
+  useEffect(() => {
+    if (!isOpen || !window.db) return;
+    let canceled = false;
+    const ids = favoriteIds || [];
+    const missing = ids.filter(id => !cacheRef.current[id]);
+
+    const load = async () => {
+      if (missing.length > 0) setLoading(true);
+      await Promise.all(missing.map(async (id) => {
+        try {
+          const doc = await window.db.collection('families').doc(id).get();
+          if (doc.exists) cacheRef.current[id] = mapFamilyToInfoCard(doc.id, doc.data());
+        } catch (e) {
+          console.error('Error loading favorite family:', e);
+        }
+      }));
+      if (canceled) return;
+      setFamilies(ids.map(id => cacheRef.current[id]).filter(Boolean));
+      setLoading(false);
+    };
+    load();
+    return () => { canceled = true; };
+  }, [isOpen, (favoriteIds || []).join(',')]);
+
+  const handleRemove = async () => {
+    const family = pendingRemove;
+    setPendingRemove(null);
+    if (!family || !window.DB) return;
+    setSelected(null);
+    // The soldier-doc listener in core/app.js pushes the new list back down,
+    // which re-runs the effect above and drops the row.
+    await window.DB.removeFavoriteFamily(uid, family.id);
+  };
+
+  return (
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 z-40" dir={isRtl ? 'rtl' : 'ltr'} onClick={onClose}>
+          <div
+            className="absolute bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{
+              top: '80px',
+              left: '8px',
+              width: 'min(340px, calc(100vw - 16px))',
+              maxHeight: '480px',
+              border: '1px solid #e8e0d8',
+              animation: 'notif-drop 0.18s cubic-bezier(0.16,1,0.3,1) both',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Small caret pointing up toward the star icon */}
+            <div style={{ position: 'absolute', top: '-7px', left: '22px', width: '14px', height: '7px', overflow: 'visible' }}>
+              <svg width="14" height="7" viewBox="0 0 14 7" fill="none">
+                <path d="M0 7 L7 0 L14 7" fill="white" stroke="#e8e0d8" strokeWidth="1" strokeLinejoin="round"/>
+                <path d="M1 7 L7 1 L13 7" fill="white" stroke="white" strokeWidth="1"/>
+              </svg>
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-warm-100 flex-shrink-0">
+              <h3 className="text-base font-bold text-gray-900">{t('fav_title')}</h3>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-warm-100 text-warm-500 hover:bg-warm-200 transition-colors text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto overscroll-contain flex-1">
+              {loading && families.length === 0 ? (
+                <div className="flex justify-center gap-1.5 py-14">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+              ) : families.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center space-y-3 px-6">
+                  <div className="w-12 h-12 rounded-full bg-warm-100 flex items-center justify-center text-warm-400">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                  </div>
+                  <p className="text-warm-500 text-sm font-medium">{t('fav_empty')}</p>
+                  <p className="text-warm-400 text-xs leading-relaxed">{t('fav_empty_sub')}</p>
+                </div>
+              ) : (
+                families.map(fam => (
+                  <div
+                    key={fam.id}
+                    className="px-4 py-3 border-b border-warm-50 flex items-center gap-3 bg-white hover:bg-warm-50 transition-colors cursor-pointer"
+                    onClick={() => setSelected(fam)}
+                  >
+                    <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border border-warm-200">
+                      <img
+                        src={fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)}
+                        alt={fam.name}
+                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">{fam.name}</p>
+                      {fam.city && <p className="text-xs text-warm-500 truncate">{fam.city}</p>}
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setPendingRemove(fam); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-full text-amber-400 hover:bg-amber-50 transition-colors flex-shrink-0"
+                      aria-label={t('fav_remove_tooltip')}
+                      title={t('fav_remove_tooltip')}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Family details — same card the soldier sees after a match is approved */}
+      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.name || ''} className="max-w-md max-h-[93vh]">
+        {selected && (
+          <div className="space-y-3">
+            <FamilyInfoCard family={selected} onClose={null} />
+            <button
+              onClick={() => setPendingRemove(selected)}
+              className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors"
+            >
+              {t('fav_remove_title')}
+            </button>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!pendingRemove}
+        danger
+        title={t('fav_remove_confirm_title')}
+        message={pendingRemove ? t('fav_remove_confirm_sub', pendingRemove.name) : ''}
+        confirmLabel={t('fav_yes')}
+        cancelLabel={t('fav_no')}
+        onConfirm={handleRemove}
+        onCancel={() => setPendingRemove(null)}
+      />
+    </>
+  );
+}
+
+/* ———————————————————————————————————————————
+   FavoriteHostingModal — opened from a `favorite_hosting_open` notification.
+   Shows the family exactly as after an approved match, plus this hosting's
+   details. `onJoin` is optional — without it the modal is view-only.
+————————————————————————————————————————————— */
+function FavoriteHostingModal({ payload, onClose, onJoin, joining = false }) {
+  const { t, lang } = useLang();
+  const [family, setFamily] = useState(null);
+  const [hosting, setHosting] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!payload?.hosting_id || !window.db) return;
+    let canceled = false;
+    setLoading(true);
+    setFamily(null);
+    setHosting(null);
+    Promise.all([
+      window.db.collection('family_hostings').doc(payload.hosting_id).get(),
+      payload.family_id
+        ? window.db.collection('families').doc(payload.family_id).get()
+        : Promise.resolve(null),
+    ]).then(([hostingDoc, familyDoc]) => {
+      if (canceled) return;
+      const h = hostingDoc.exists ? hostingDoc.data() : null;
+      setHosting(h);
+      if (familyDoc?.exists) setFamily(mapFamilyToInfoCard(familyDoc.id, familyDoc.data(), h || {}));
+      setLoading(false);
+    }).catch(e => {
+      console.error('Error loading favorite hosting:', e);
+      if (!canceled) setLoading(false);
+    });
+    return () => { canceled = true; };
+  }, [payload?.hosting_id, payload?.family_id]);
+
+  if (!payload) return null;
+
+  const capacity = parseInt(hosting?.soldiers) || 0;
+  const taken = (hosting?.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
+  const free = Math.max(capacity - taken, 0);
+  const gone = !loading && (!hosting || hosting.status === 'canceled');
+  const full = !gone && hosting && (hosting.is_fully_booked || (capacity > 0 && free === 0));
+
+  const dateLabel = hosting?.date
+    ? new Date(`${hosting.date}T00:00:00`).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'long' })
+    : '';
+
+  const detailRows = hosting ? [
+    dateLabel && { icon: '📅', label: t('s20_prev_date'), value: dateLabel },
+    hosting.time && { icon: '🕯️', label: t('s20_prev_time'), value: hosting.time },
+    capacity > 0 && { icon: '🪑', label: t('s15_capacity'), value: `${free} ${t('s15_spots_free')} · ${taken} ${t('s15_spots_taken')}` },
+    hosting.sleepOvernight && { icon: '🛏️', label: t('s12_sleep'), value: t('s15_sleep_available') },
+    hosting.pickup && { icon: '🚗', label: t('guest_needs_transport'), value: t('fav_hosting_pickup') },
+    hosting.note && { icon: '💬', label: t('fav_hosting_note'), value: hosting.note },
+  ].filter(Boolean) : [];
+
+  return (
+    <Modal isOpen={!!payload} onClose={onClose} title={t('fav_hosting_title')} className="max-w-md max-h-[93vh]">
+      {loading ? (
+        <div className="flex justify-center gap-1.5 py-10">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+      ) : gone ? (
+        <p className="py-8 text-center text-sm text-warm-500">{t('fav_hosting_gone')}</p>
+      ) : (
+        <div className="space-y-3">
+          {family && <FamilyInfoCard family={family} onClose={null} />}
+
+          {detailRows.length > 0 && (
+            <div className="p-3 bg-brand-50/50 border border-brand-100 rounded-xl space-y-1.5">
+              <p className="text-xs font-bold text-brand-700 mb-1">{t('fav_hosting_details')}</p>
+              {detailRows.map((r, i) => (
+                <p key={i} className="text-xs text-warm-600 leading-relaxed">
+                  <span className="me-1">{r.icon}</span>
+                  <span className="font-bold text-warm-700">{r.label}: </span>
+                  <span>{r.value}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {full && (
+            <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 text-center">
+              {t('fav_hosting_full')}
+            </div>
+          )}
+
+          {onJoin && !full && (
+            <Btn onClick={() => onJoin(hosting)} loading={joining}>
+              {t('fav_join_btn')}
+            </Btn>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function MapView({ families, onSelect, selectedId, hoveredId }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
@@ -994,6 +1404,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
   const [hovered, setHovered] = useState(null);
   const [showPrefModal, setShowPrefModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const notifications = data.notifications || [];
 
@@ -1054,6 +1465,12 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+      <FavoritesPanel
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        favoriteIds={data.favorite_families || []}
+        uid={data.uid}
+      />
       <NotificationsPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -1063,6 +1480,12 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
         uid={data.uid}
         telegramConnected={!!data.telegram_chat_id}
         onNotificationClick={(notif) => {
+          // Favorites prompts are handled on S15Landing — hand the notification over.
+          if (notif.type === 'favorite_prompt' || notif.type === 'favorite_hosting_open') {
+            setData(prev => ({ ...prev, pendingFavoriteNotif: notif }));
+            onBack();
+            return;
+          }
           const reqId = notif.payload?.request_id;
           const req = reqId
             ? (data.requests || []).find(r => r.id === reqId)
@@ -1083,6 +1506,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
         )}
         onNotifications={() => setShowNotifications(true)}
         notificationsCount={notifications.filter(n => !n.read).length}
+        onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
 
@@ -1633,42 +2057,10 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               : Promise.resolve(null),
           ]).then(([familyDoc, hostingDoc]) => {
             if (!familyDoc.exists) return;
-            const d = familyDoc.data();
             const h = hostingDoc?.exists ? hostingDoc.data() : {};
-            const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
-            const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
-            const capacity = parseInt(h.soldiers) || null;
-            const occupied = (h.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0) || h.occupied || 0;
-            setFullFamily({
-              id: familyDoc.id,
-              name: d.hostName,
-              city: d.hostCity,
-              shabbat: d.hostShabbat,
-              kosher: d.hostKosher,
-              hasPets: d.hasPets,
-              vibe: d.hostVibe,
-              shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
-              phoneDisplay: d.hostPhone,
-              waDigits,
-              lat: d.hostLat,
-              lng: d.hostLng,
-              capacity,
-              occupied,
+            setFullFamily(mapFamilyToInfoCard(familyDoc.id, familyDoc.data(), h, {
               compromise_notes: match.compromise_notes,
-              profile_img_url: d.profile_img_url,
-              img_urls: d.img_urls,
-              stories: d.stories,
-              storiesCount: d.storiesCount,
-              storiesUpdatedAt: d.storiesUpdatedAt,
-              numKids: d.hostNumKids,
-              kidsAgeRange: d.hostKidsAgeRange,
-              kidsAgeRangeOther: d.hostKidsAgeRangeOther,
-              fridayDish: d.hostFridayDish,
-              afterMeal: d.hostAfterMeal,
-              afterMealOther: d.hostAfterMealOther,
-              fridayTradition: d.hostFridayTradition,
-              moreInfo: d.hostMoreInfo,
-            });
+            }));
           });
         }
       });
@@ -1810,6 +2202,9 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
   );
 }
 
+window.FavoritesPanel = FavoritesPanel;
+window.FavoriteHostingModal = FavoriteHostingModal;
+window.mapFamilyToInfoCard = mapFamilyToInfoCard;
 window.S15Landing = S15Landing;
 window.S15Home = S15Home;
 window.S15NewRequest = S15NewRequest;

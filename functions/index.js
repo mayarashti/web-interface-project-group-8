@@ -39,8 +39,11 @@ setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY, TELEGRAM_BOT
 //
 // Usage inside any Cloud Function:
 //   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
+//
+// telegramKeyboard — optional inline keyboard (from inlineKeyboard()/btn()) so the
+// user can act straight from Telegram. In-app notifications are unaffected.
 // ─────────────────────────────────────────────────────────────────────────────
-async function createNotification(userId, role, content, type = 'general', title = '', payload = {}) {
+async function createNotification(userId, role, content, type = 'general', title = '', payload = {}, telegramKeyboard = null) {
   console.log(`🔔 [NOTIFICATION] Recipient Role: ${role} | User/Family ID: ${userId} | Type: ${type} | Title: "${title || '(none)'}"`);
   console.log(`   Content: "${content}"`);
 
@@ -64,7 +67,7 @@ async function createNotification(userId, role, content, type = 'general', title
       console.log(`  📲 Mirroring notification to Telegram chatId: ${chatId} for ${role} ID: ${userId}`);
       const token = TELEGRAM_BOT_TOKEN.value();
       const text = title ? `<b>${title}</b>\n\n${content}` : content;
-      await sendTelegramMessage(token, chatId, text);
+      await sendTelegramMessage(token, chatId, text, telegramKeyboard);
     } else {
       console.log(`  ℹ️ No Telegram chat_id linked for ${role} ID: ${userId}`);
     }
@@ -319,6 +322,11 @@ function passesHardFilters(soldier, request, family, hosting, bannedIds, comprom
         // Exact Shabbat level match bonus
     if (request.shabbat && request.shabbat !== "none" && request.shabbat === family.hostShabbat) score += 10;
 
+    // Favorite family — the soldier already hosted here and asked to hear from
+    // them again. Large enough to beat any combination of soft preferences, but
+    // it never bypasses passesHardFilters.
+    if ((soldier.favorite_families ?? []).includes(family.id)) score += 50;
+
     return score;
   }
 
@@ -430,16 +438,25 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
 
   // Enforce the radius (only when the distance is actually known) and score,
   // adding a proximity bonus so the closest acceptable family wins.
+  // Favorite families are exempt from the radius cap: the soldier explicitly
+  // asked to be hosted by them again, so the distance is their call. Hard
+  // filters (kosher, Shabbat, allergies, capacity, sleep, bans) still apply.
+  const favoriteIds = soldier.favorite_families ?? [];
   const candidates = [];
   prelim.forEach((c, i) => {
     const distanceKm = distances[i];
+    const isFavorite = favoriteIds.includes(c.family.id);
     if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) {
-      console.log(`   ❌ [DISTANCE REJECT] Family "${c.family.hostName}" (${c.family.id}): distance ${distanceKm}km exceeds radius ${radius}km`);
-      return;
+      if (!isFavorite) {
+        console.log(`   ❌ [DISTANCE REJECT] Family "${c.family.hostName}" (${c.family.id}): distance ${distanceKm}km exceeds radius ${radius}km`);
+        return;
+      }
+      console.log(`   ⭐ [FAVORITE — RADIUS WAIVED] Family "${c.family.hostName}" (${c.family.id}): ${distanceKm}km exceeds radius ${radius}km but is a favorite`);
     }
     candidates.push({
       ...c,
       distanceKm,
+      isFavorite,
       score: scoreFamily(soldier, request, c.family, c.hosting) + proximityScore(distanceKm, radius),
     });
   });
@@ -449,11 +466,20 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     return null;
   }
 
-  // Highest score wins; ties broken by the closer family.
+  // An eligible favorite always wins — waiving the radius for it and then
+  // letting a closer family outscore it would make the waiver pointless.
+  // Among favorites (or among non-favorites) the highest score wins, with the
+  // closer family breaking ties. The soldier can still reject via requestRematch,
+  // which temporarily bans the family and re-runs matching.
   candidates.sort(
-    (a, b) => (b.score - a.score) || ((a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+    (a, b) => (Number(b.isFavorite) - Number(a.isFavorite))
+      || (b.score - a.score)
+      || ((a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
   );
   const best = candidates[0];
+  if (best.isFavorite) {
+    console.log(`   ⭐ [FAVORITE WINS] Family "${best.family.hostName}" (${best.family.id}) selected as a favorite of soldier ${request.soldier_id}`);
+  }
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
 
@@ -582,8 +608,77 @@ exports.onNewFamilyHosting = onDocumentCreated(
         await runMatchingForRequest(doc.id, COMPROMISE.NONE);
       }
     }
+
+    // ── Tell soldiers who favorited this family ─────────────────────
+    // Favorites are private: the family is never told who favorited them.
+    // Soldiers who already have a request for this date are skipped — if they
+    // are matched there is nothing to offer, and if they are still searching
+    // the favorites bonus in scoreFamily already steers the engine here.
+    try {
+      await notifyFavoritingSoldiers(event.params.hostingId, hosting);
+    } catch (err) {
+      console.error("❌ Error notifying favoriting soldiers:", err);
+    }
   }
 );
+
+// ──────────────────────────────────────────────────────────────────
+// Notify every soldier who has this family in favorite_families that a
+// new hosting just opened. Called from onNewFamilyHosting.
+// ──────────────────────────────────────────────────────────────────
+async function notifyFavoritingSoldiers(hostingId, hosting) {
+  if (!hosting?.family_id || hosting.status === "canceled") return;
+
+  const favSnap = await db
+    .collection("soldiers")
+    .where("favorite_families", "array-contains", hosting.family_id)
+    .get();
+
+  if (favSnap.empty) return;
+
+  const familySnap = await db.collection("families").doc(hosting.family_id).get();
+  const family = familySnap.exists ? familySnap.data() : {};
+  const familyName = family.hostName ?? "המשפחה";
+
+  const [, month, day] = String(hosting.date ?? "").split("-");
+  const dateLabel = day && month ? `${day}/${month}` : (hosting.date ?? "");
+
+  let content = `משפחת ${familyName} פתחה אירוח חדש בתאריך ${dateLabel}`;
+  if (hosting.time) content += ` בשעה ${hosting.time}`;
+  if (family.hostCity) content += ` ב${family.hostCity}`;
+  content += ".";
+  if (hosting.sleepOvernight) content += " יש אפשרות ללינה.";
+  if (hosting.pickup) content += " יש אפשרות להסעה.";
+  content += " רוצה להשתבץ?";
+
+  for (const soldierDoc of favSnap.docs) {
+    // Only skip soldiers who are already placed for that date. A soldier who is
+    // still searching does get the notification: the matching engine may never
+    // reach this family (it can fail a hard filter), so staying silent would
+    // leave them with neither a match nor an offer.
+    const existingReq = await db
+      .collection("soldier_hosting_searches")
+      .where("soldier_id", "==", soldierDoc.id)
+      .where("when", "==", hosting.date)
+      .get();
+    const alreadyPlaced = existingReq.docs.some((d) => d.data().is_match === true);
+    if (alreadyPlaced) {
+      console.log(`   ⏭️ [FAVORITE] Soldier ${soldierDoc.id} already placed on ${hosting.date} — skipping`);
+      continue;
+    }
+
+    try {
+      await createNotification(
+        soldierDoc.id, "soldier",
+        content,
+        "favorite_hosting_open",
+        "משפחה מועדפת פתחה אירוח!",
+        { hosting_id: hostingId, family_id: hosting.family_id, family_name: familyName },
+        inlineKeyboard([[btn("✅ אני רוצה להשתבץ", `fav_join:${hostingId}`)]])
+      );
+    } catch (e) { console.error("notification error (favorite_hosting_open):", e); }
+  }
+}
 
 // ──────────────────────────────────────────────────────────────────
 // CORE 24-HOUR MATCHING & ALERTS ALGORITHM
@@ -807,6 +902,59 @@ async function runCheckPendingRequests() {
       );
       await reqDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("unmatched_25h") });
     } catch (e) { console.error("notification error (unmatched_25h):", e); }
+  }
+
+  // ── REMINDER G: day after the hosting → offer to favorite the family ──
+  // Asks the soldier whether they want to hear about this family's future
+  // hostings. Only the soldier ever sees this — the family is never told.
+  const yesterdayStr  = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const twoDaysAgoStr = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const pastDates = [...new Set([yesterdayStr, twoDaysAgoStr])];
+
+  // A finished match lives in active_matches until archivePastEvents sweeps it
+  // into active_match_archive — and that runs once a day at an arbitrary hour.
+  // Scan both so the prompt is never lost to that race. `reminders_sent` is
+  // copied along on archiving, so the dedup key works across both collections.
+  const doneMatchDocs = [];
+
+  const doneActiveSnap = await db.collection("active_matches")
+    .where("status", "==", "approved")
+    .where("hosting_date", "in", pastDates)
+    .get();
+  doneMatchDocs.push(...doneActiveSnap.docs);
+
+  const doneArchivedSnap = await db.collection("active_match_archive")
+    .where("hosting_date", "in", pastDates)
+    .get();
+  doneMatchDocs.push(...doneArchivedSnap.docs.filter((d) => d.data().final_status === "done"));
+
+  console.log(`⭐ [FAVORITE PROMPT] Checking ${doneMatchDocs.length} finished match(es) from ${pastDates.join(", ")}`);
+
+  for (const matchDoc of doneMatchDocs) {
+    const match = matchDoc.data();
+    if ((match.reminders_sent ?? []).includes("favorite_prompt")) continue;
+    if (!match.family_id || !match.soldier_id) continue;
+
+    // Nothing to ask if the family is already a favorite.
+    const soldierSnap = await db.collection("soldiers").doc(match.soldier_id).get();
+    if (!soldierSnap.exists) continue;
+    if ((soldierSnap.data().favorite_families ?? []).includes(match.family_id)) continue;
+
+    const familyName = match.family_name ?? "המשפחה";
+    try {
+      await createNotification(
+        match.soldier_id, "soldier",
+        `איך היה האירוח אצל משפחת ${familyName}? אם נהנית, נוכל לעדכן אותך בכל פעם שהם פותחים אירוח חדש.`,
+        "favorite_prompt",
+        "איך היה האירוח?",
+        { family_id: match.family_id, family_name: familyName, match_id: matchDoc.id },
+        inlineKeyboard([[
+          btn("⭐ כן, עדכנו אותי", `fav_yes:${match.family_id}`),
+          btn("לא, תודה", `fav_no:${match.family_id}`),
+        ]])
+      );
+      await matchDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("favorite_prompt") });
+    } catch (e) { console.error("notification error (favorite_prompt):", e); }
   }
 
   // ── EMERGENCY NOTIFICATIONS TO ALL MATCHING REGISTERED FAMILIES ──────
@@ -1191,6 +1339,145 @@ exports.migrateValues = onCall(async (req) => {
     updated: stats,
     message: `עודכנו: ${stats.soldiers} חיילים, ${stats.families} משפחות, ${stats.requests} בקשות`,
   };
+});
+
+// ──────────────────────────────────────────────────────────────────
+// Join a favorite family's hosting in one tap.
+//
+// Creates the soldier's request already flagged is_match, then creates the
+// match as pending and immediately flips it to approved — that hands the real
+// work (capacity transaction, guest append, host notification) to the existing
+// onActiveMatchApproved trigger instead of duplicating it here.
+//
+// Returns { success:false, reason } for the expected refusals so the caller can
+// show a message: "gone" | "not_favorite" | "has_request" | "full".
+// Shared by the joinFavoriteHosting callable and the Telegram bot.
+// ──────────────────────────────────────────────────────────────────
+async function joinFavoriteHostingFor(soldierId, hostingId) {
+  const hostingSnap = await db.collection("family_hostings").doc(hostingId).get();
+  if (!hostingSnap.exists) return { success: false, reason: "gone" };
+  const hosting = hostingSnap.data();
+  if (hosting.status === "canceled") return { success: false, reason: "gone" };
+
+  const today = new Date().toISOString().split("T")[0];
+  if (!hosting.date || hosting.date < today) return { success: false, reason: "gone" };
+
+  const soldierSnap = await db.collection("soldiers").doc(soldierId).get();
+  if (!soldierSnap.exists) return { success: false, reason: "gone" };
+  const soldier = soldierSnap.data();
+
+  // Only families the soldier actually favorited — this is the authorization check.
+  if (!(soldier.favorite_families ?? []).includes(hosting.family_id)) {
+    return { success: false, reason: "not_favorite" };
+  }
+
+  // If the soldier already has a request for that date, reuse it instead of
+  // creating a second one. Only refuse when that request is already matched —
+  // then they are placed elsewhere and should cancel that first.
+  const existing = await db.collection("soldier_hosting_searches")
+    .where("soldier_id", "==", soldierId)
+    .where("when", "==", hosting.date)
+    .get();
+  const placed = existing.docs.find((d) => d.data().is_match === true);
+  if (placed) return { success: false, reason: "has_request" };
+  const reusable = existing.docs[0] ?? null;
+  const groupSize = reusable ? (reusable.data().guestCount ?? 1) : 1;
+
+  // Cheap pre-check; the transaction in onActiveMatchApproved is the real gate.
+  const capacity = parseInt(hosting.soldiers) || 0;
+  const taken = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
+  if (hosting.is_fully_booked || (capacity > 0 && taken + groupSize > capacity)) {
+    return { success: false, reason: "full" };
+  }
+
+  const familySnap = await db.collection("families").doc(hosting.family_id).get();
+  const family = familySnap.exists ? familySnap.data() : {};
+
+  // 1. The request. Either the soldier's existing open request for that date, or
+  //    a fresh one. Either way is_match is true before the match is created, so
+  //    the onNewSoldierRequest trigger's matching run exits immediately and
+  //    cannot produce a competing match.
+  let requestRef;
+  if (reusable) {
+    requestRef = reusable.ref;
+    await requestRef.update({
+      status: "matched",
+      is_match: true,
+      source: "favorite",
+      notification: FieldValue.delete(),   // clear any stale "no_spot_left" banner
+    });
+    console.log(`   ⭐ [FAVORITE JOIN] Reusing open request ${requestRef.id} for soldier ${soldierId} on ${hosting.date}`);
+  } else {
+    requestRef = db.collection("soldier_hosting_searches").doc();
+    await requestRef.set({
+      id: requestRef.id,
+      soldier_id: soldierId,
+      when: hosting.date,
+      startTime: hosting.time ?? "19:00",
+      guestCount: 1,
+      kosher: soldier.kosher ?? "none",
+      shabbat: soldier.shabbatKeeps ?? soldier.shabbat ?? "none",
+      needSleep: !!(soldier.needsSleep && hosting.sleepOvernight),
+      transport: false,
+      walkDistance: soldier.walkDistance ?? false,
+      petsComfort: soldier.pets === "notok" || soldier.pets === "allergy" ? "no" : "ok",
+      duration: "dinner",
+      location: family.hostCity ?? null,
+      lat: family.hostLat ?? null,
+      lng: family.hostLng ?? null,
+      travelDistance: DEFAULT_RADIUS_KM,
+      friendDietary: [],
+      temporarily_banned_families: [],
+      status: "matched",
+      is_match: true,
+      source: "favorite",
+      created_at: FieldValue.serverTimestamp(),
+      reminders_sent: [],
+    });
+  }
+
+  // 2. The match. Created pending, then approved so onActiveMatchApproved fires.
+  const matchRef = db.collection("active_matches").doc();
+  await matchRef.set({
+    id: matchRef.id,
+    soldier_request_id: requestRef.id,
+    soldier_id: soldierId,
+    host_offer_id: hostingId,
+    family_id: hosting.family_id,
+    family_name: family.hostName ?? null,
+    family_city: family.hostCity ?? null,
+    hosting_date: hosting.date ?? null,
+    group_size: groupSize,
+    status: "pending_soldier_approval",
+    score: null,
+    distance_km: null,
+    compromise_level: COMPROMISE.NONE,
+    compromise_notes: [],
+    source: "favorite",
+    created_at: new Date().toISOString(),
+    reminders_sent: [],
+  });
+  await matchRef.update({ status: "approved" });
+
+  return {
+    success: true,
+    request_id: requestRef.id,
+    match_id: matchRef.id,
+    family_name: family.hostName ?? null,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// CALLABLE: soldier taps "I want to join" on a favorite family's hosting
+// Call with: { hosting_id }
+// ──────────────────────────────────────────────────────────────────
+exports.joinFavoriteHosting = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { hosting_id } = req.data;
+  if (!hosting_id) throw new HttpsError("invalid-argument", "hosting_id is required");
+
+  return await joinFavoriteHostingFor(req.auth.uid, hosting_id);
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -2359,6 +2646,50 @@ exports.telegramWebhook = onRequest(
           await sendTelegramMessage(token, chatId, "✅ הבקשה בוטלה.",
             inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
         } catch (e) {
+          await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+        }
+        return;
+      }
+
+      // Favorites: "how was the hosting?" → add the family to favorites
+      if (data.startsWith("fav_yes:") || data.startsWith("fav_no:")) {
+        const isYes = data.startsWith("fav_yes:");
+        const familyId = data.slice(isYes ? 8 : 7);
+        if (session.role !== "soldier") return;
+        if (!isYes) {
+          return sendTelegramMessage(token, chatId, "אין בעיה, לא נעדכן אותך על אירוחים של המשפחה הזו.",
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        }
+        try {
+          await db.collection("soldiers").doc(session.user_id).set(
+            { favorite_families: FieldValue.arrayUnion(familyId) },
+            { merge: true }
+          );
+          await sendTelegramMessage(token, chatId,
+            "⭐ המשפחה נוספה למועדפים! נעדכן אותך בכל פעם שהם פותחים אירוח חדש.",
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        } catch (e) {
+          await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
+        }
+        return;
+      }
+
+      // Favorites: one-tap join of a favorite family's new hosting
+      if (data.startsWith("fav_join:")) {
+        const hostingId = data.slice(9);
+        if (session.role !== "soldier") return;
+        try {
+          const result = await joinFavoriteHostingFor(session.user_id, hostingId);
+          const message = result.success
+            ? `✅ שובצת לאירוח אצל משפחת ${result.family_name ?? "המשפחה"}! ההגעה אושרה, נתראה 🍽️`
+            : result.reason === "full"        ? "האירוח כבר מלא. נמשיך לחפש לך משפחה אחרת."
+            : result.reason === "has_request" ? "אתה כבר משובץ לתאריך הזה. כדי להתארח כאן, בטל קודם את השיבוץ הקיים."
+            : result.reason === "not_favorite" ? "המשפחה הזו כבר לא במועדפים שלך."
+            : "האירוח הזה כבר לא זמין.";
+          await sendTelegramMessage(token, chatId, message,
+            inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+        } catch (e) {
+          console.error("fav_join error:", e);
           await sendTelegramMessage(token, chatId, "אירעה שגיאה. נסה שוב.");
         }
         return;
