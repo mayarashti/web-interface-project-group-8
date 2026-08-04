@@ -666,7 +666,7 @@ function SoldierProfileModal({ guest, onClose }) {
   );
 }
 
-function S19HostHome({ data, setData, onProfile, onLogout }) {
+function S19HostHome({ data, setData, onProfile, onFillPreferences, onLogout }) {
   const { t, lang } = useLang();
   const hostings = data.hostings || [];
 
@@ -949,7 +949,7 @@ function S19HostHome({ data, setData, onProfile, onLogout }) {
         onNow={() => {
           setShowPrefModal(false);
           setData(prev => ({ ...prev, pendingNewHosting: true }));
-          window.setScreen(22);
+          onFillPreferences();
         }}
         onLater={() => setShowPrefModal(false)}
       />

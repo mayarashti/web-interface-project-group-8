@@ -98,7 +98,10 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
   };
 
   const handleBack = () => {
-    if (step > 1) goToStep(step - 1);
+    // When resuming a skipped questionnaire (started at step 2), step 1
+    // (account/location) was already completed at registration — exit
+    // straight back out instead of showing it again.
+    if (step > 1 && !(data.pendingNewHosting && step === 2)) goToStep(step - 1);
     else onBack();
   };
 
@@ -732,7 +735,7 @@ function S17HostSummary({ data, setData, onSubmit, onBack }) {
 }
 
 /* S18 Host Success */
-function S17HostSuccess({ onNext }) {
+function S17HostSuccess({ onHome }) {
   const { t } = useLang();
   return (
     <div className="screen-enter min-h-screen flex flex-col bg-warm-50">
@@ -745,7 +748,7 @@ function S17HostSuccess({ onNext }) {
         <p className="text-base text-warm-500 leading-relaxed mb-10 max-w-[300px]">
           {t('s17_sub')}
         </p>
-        <Btn onClick={onNext} className="w-full max-w-xs">{t('s17_btn')}</Btn>
+        <Btn onClick={onHome} className="w-full max-w-xs">{t('s17_btn')}</Btn>
       </div>
     </div>
   );

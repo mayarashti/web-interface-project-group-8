@@ -317,6 +317,39 @@ function App() {
     }
   };
 
+  const completeHostPreferences = async () => {
+    if (window.DB && formData.uid) {
+      try {
+        let profileUrl = null;
+        if (formData.hostFile) {
+          profileUrl = await window.DB.uploadProfileImage(formData.uid, formData.hostFile, 'families');
+        }
+
+        const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, pendingNewHosting, hostFile, hostPreview, hostRegStep, ...hostFields } = formData;
+        const toSave = { ...hostFields, hostPreferencesSkipped: false, pendingNewHosting: false };
+        if (profileUrl) {
+          toSave.profile_img_url = profileUrl;
+          toSave.img_urls = [profileUrl];
+        }
+
+        await window.DB.saveFamilyProfile(formData.uid, toSave);
+        setFormData(prev => ({
+          ...prev,
+          hostPreferencesSkipped: false,
+          pendingNewHosting: false,
+          ...(profileUrl ? { profile_img_url: profileUrl, img_urls: [profileUrl] } : {}),
+        }));
+      } catch (err) {
+        alert("Error saving profile: " + err.message);
+        return;
+      }
+    } else {
+      setFormData(prev => ({ ...prev, hostPreferencesSkipped: false, pendingNewHosting: false }));
+    }
+    setFormData(prev => ({ ...prev, editingHostingId: null }));
+    go(20);
+  };
+
   const screens = {
     /* login */
     0:  <S0Login      onBack={() => go(1)} onLogin={handleDemoLogin} />,
@@ -380,10 +413,10 @@ function App() {
     24: <S15Landing   data={formData} setData={setFormData} onNewRequest={handleNewRequest} onViewMatches={handleViewMatches} onEditRequest={(req) => handleNewRequest(req)} onProfile={() => go(21)} onFillPreferences={() => go(4)} onLogout={handleLogout} />,
     /* host flow */
     18: <S18HostExplain onNext={() => go(16)} onBack={() => go(1)} />,
-    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(1)} onSkipPreferences={() => registerHost(17, true)} onInfo={() => setShowInfo(true)} />,
-    25: <S17HostSummary data={formData} setData={setFormData} onSubmit={() => registerHost(17)} onBack={() => go(16)} />,
+    16: <S16HostRegistration data={formData} setData={setFormData} onNext={() => go(25)} onBack={() => go(formData.pendingNewHosting ? 19 : 1)} onSkipPreferences={() => registerHost(17, true)} onInfo={() => setShowInfo(true)} />,
+    25: <S17HostSummary data={formData} setData={setFormData} onSubmit={() => formData.pendingNewHosting ? completeHostPreferences() : registerHost(17)} onBack={() => go(16)} />,
     17: <S17HostSuccess onHome={() => go(19)} name={formData.hostFullName || formData.hostName || (lang === 'he' ? 'משפחה מארחת' : 'Host Family')} />,
-    19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} onLogout={handleLogout} />,
+    19: <S19HostHome    data={formData} setData={setFormData} onNewHosting={() => go(20)} onProfile={() => go(22)} onFillPreferences={() => { setFormData(prev => ({ ...prev, hostRegStep: 2 })); go(16); }} onLogout={handleLogout} />,
     20: <S20NewHosting  
           data={formData} 
           setData={setFormData} 
