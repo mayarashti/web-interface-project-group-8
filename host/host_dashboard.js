@@ -372,7 +372,7 @@ function RecipeModal({ guest, host, onClose }) {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: guest.dislikedFoods || [],
           allergies: guest.allergies || [],
-          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          dietaryPreferences: (guest.dietaryPreferences && guest.dietaryPreferences.length > 0) ? guest.dietaryPreferences : (guest.allergies || []).filter(a => a === 'veg' || a === 'vegetarian' || a === 'vegan'),
           isKosher: guest.kosher && guest.kosher !== 'none'
         },
         host: {
@@ -407,7 +407,7 @@ function RecipeModal({ guest, host, onClose }) {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: [...(guest.dislikedFoods || []), ...existingTitles],
           allergies: guest.allergies || [],
-          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          dietaryPreferences: (guest.dietaryPreferences && guest.dietaryPreferences.length > 0) ? guest.dietaryPreferences : (guest.allergies || []).filter(a => a === 'veg' || a === 'vegetarian' || a === 'vegan'),
           isKosher: guest.kosher && guest.kosher !== 'none'
         },
         host: {
