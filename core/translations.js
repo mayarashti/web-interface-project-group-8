@@ -587,6 +587,13 @@ const T = {
     s20_done_sub:'חיילים באזורכם יוכלו לראות את האירוח ולבקש להצטרף',
     s20_cook_dietary: 'לאילו העדפות אוכל אתם יכולים לבשל?',
     s20_cook_dietary_sub: 'בחרו את כל האפשרויות שמתאימות לכם',
+    s20_meal_details_title: 'ספרו לנו על הארוחה',
+    s20_meal_size_label: 'כמה אנשים בערך יהיו בארוחה?',
+    s20_attendees_label: 'מי יהיה?',
+    s20_att_immediate: 'משפחה מצומצמת',
+    s20_att_extended: 'משפחה מורחבת',
+    s20_att_friends: 'חברים של המשפחה',
+    s20_att_soldiers: 'חיילים נוספים',
 
     /* Preferences Prompt */
     pref_prompt_title: 'בוא נכיר',
@@ -1057,6 +1064,13 @@ const T = {
     s20_submit:'Publish Hosting',
     s20_done_title:'Hosting Published!',
     s20_done_sub:'Soldiers in your area will be able to see this hosting and request to join',
+    s20_meal_details_title: 'Tell us about the meal',
+    s20_meal_size_label: 'About how many people will be at the meal?',
+    s20_attendees_label: 'Who will be there?',
+    s20_att_immediate: 'Immediate family',
+    s20_att_extended: 'Extended family',
+    s20_att_friends: 'Family friends',
+    s20_att_soldiers: 'Additional soldiers',
     v_date:'Please choose a date', v_time:'Please choose a time', v_sol:'Please choose number of soldiers',
 
     /* Shared */

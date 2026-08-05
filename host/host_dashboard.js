@@ -1304,14 +1304,28 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
   const editingHosting = data.hostings?.find(h => h.id === data.editingHostingId);
 
   const [form, setFormState] = useState(() => {
-    if (editingHosting) return { ...editingHosting, soldiers: String(editingHosting.soldiers) };
-    return { date: '', time: '', customTime: '', soldiers: '', note: '', sleepOvernight: false, pickup: false };
+    if (editingHosting) {
+      return {
+        ...editingHosting,
+        soldiers: String(editingHosting.soldiers),
+        mealSize: editingHosting.mealSize || '',
+        attendees: editingHosting.attendees || [],
+      };
+    }
+    return { date: '', time: '', customTime: '', soldiers: '', note: '', sleepOvernight: false, pickup: false, mealSize: '', attendees: [] };
   });
   const [errors, setErrors] = useState({});
 
   const setF = (key) => (val) => setFormState(prev => ({ ...prev, [key]: val }));
 
   const SOLDIER_OPTS = ['1', '2', '3', '4', '5+'];
+  const MEAL_SIZE_OPTS = ['2', '3-5', '5-7', '7-10', '10+'];
+  const ATTENDEE_OPTS = [
+    { id: 'immediate_family', label: t('s20_att_immediate') },
+    { id: 'extended_family', label: t('s20_att_extended') },
+    { id: 'family_friends', label: t('s20_att_friends') },
+    { id: 'more_soldiers', label: t('s20_att_soldiers') },
+  ];
 
   const previousHostings = [...(data.hostings || [])]
     .filter(h => h.id !== data.editingHostingId)
@@ -1330,6 +1344,8 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
       note: prevHosting.note || '',
       sleepOvernight: prevHosting.sleepOvernight || false,
       pickup: prevHosting.pickup || false,
+      mealSize: prevHosting.mealSize || '',
+      attendees: prevHosting.attendees || [],
     });
   };
 
@@ -1443,6 +1459,38 @@ function S20NewHosting({ data, setData, onBack, onSubmit }) {
               label={t('s20_pickup')}
               checked={form.pickup}
               onChange={setF('pickup')}
+            />
+          </div>
+
+          {/* Meal details */}
+          <div className="space-y-4">
+            <p className="text-sm font-bold text-gray-800">{t('s20_meal_details_title')}</p>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-800 mb-2">{t('s20_meal_size_label')}</p>
+              <div className="flex gap-2">
+                {MEAL_SIZE_OPTS.map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setF('mealSize')(n)}
+                    className={`flex-1 h-12 rounded-xl text-sm font-bold border transition-all ${
+                      form.mealSize === n
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-md'
+                        : 'bg-white text-gray-600 border-warm-200 hover:border-warm-300'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <MultiCheck
+              label={t('s20_attendees_label')}
+              options={ATTENDEE_OPTS}
+              values={form.attendees}
+              onChange={setF('attendees')}
             />
           </div>
 
