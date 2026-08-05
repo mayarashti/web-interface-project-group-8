@@ -1341,6 +1341,8 @@ function GuestProfileCard({ guest, lang }) {
 /* HostProfileCard — the host family's profile exactly as soldiers see it.
    Mirrors GuestProfileCard's design language for a consistent, warm card. */
 function HostProfileCard({ host, lang }) {
+  const [showViewer, setShowViewer] = useState(false);
+
   const koshLabels = {
     mehadrin:  lang === 'he' ? 'מהדרין' : 'Mehadrin',
     separated: lang === 'he' ? 'כשר' : 'Kosher',
@@ -1380,14 +1382,22 @@ function HostProfileCard({ host, lang }) {
     <React.Fragment>
       <div className="flex items-start gap-3.5 pb-4 mb-4 border-b border-warm-100">
         <div
-          className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
-          style={{ background: host.photoUrl ? undefined : (host.avatarColor || '#B0BA99') }}
+          className={clsx('host-preview-avatar-ring', host.hasStories && 'story-ring-unseen', host.hasStories && 'cursor-pointer')}
+          onClick={host.hasStories ? () => setShowViewer(true) : undefined}
+          role={host.hasStories ? 'button' : undefined}
         >
-          {host.photoUrl ? (
-            <img src={host.photoUrl} alt={host.name} className="w-full h-full object-cover" />
-          ) : (
-            (host.name || '?')[0]
-          )}
+          <div className="host-preview-avatar-ring-gap">
+            <div
+              className="w-full h-full rounded-full flex items-center justify-center text-white text-base font-bold shadow-inner overflow-hidden"
+              style={{ background: host.photoUrl ? undefined : (host.avatarColor || '#B0BA99') }}
+            >
+              {host.photoUrl ? (
+                <img src={host.photoUrl} alt={host.name} className="w-full h-full object-cover" />
+              ) : (
+                (host.name || '?')[0]
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-gray-800 text-sm truncate">{host.name || (lang === 'he' ? 'שם המשפחה' : 'Family Name')}</h4>
@@ -1430,6 +1440,14 @@ function HostProfileCard({ host, lang }) {
           "{host.vibe}"
         </div>
       ) : null}
+
+      {showViewer && (
+        <StoryViewer
+          family={{ id: 'host-preview', name: host.name, stories: host.previewStories || [] }}
+          onClose={() => setShowViewer(false)}
+          onSeeHostings={() => setShowViewer(false)}
+        />
+      )}
     </React.Fragment>
   );
 }

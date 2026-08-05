@@ -416,6 +416,30 @@ const familyAvatarUrl = (bgColor, familyId) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
+/* StorySeen — client-side (localStorage-only, no Firestore) tracking of which
+   families' story albums a soldier has already opened, so the story ring can
+   render colored (unseen) vs. gray (seen) without any extra reads. */
+const STORY_SEEN_KEY = 'memulaim_stories_seen'; // { [familyId]: lastSeenEpochMs }
+
+const readStorySeenMap = () => {
+  try { return JSON.parse(localStorage.getItem(STORY_SEEN_KEY)) || {}; }
+  catch (e) { return {}; }
+};
+
+window.StorySeen = {
+  // 'none' | 'unseen' | 'seen'
+  getRingState(family) {
+    if (!family?.storiesCount) return 'none';
+    const lastSeen = readStorySeenMap()[family.id];
+    return (lastSeen && lastSeen >= (family.storiesUpdatedAt || 0)) ? 'seen' : 'unseen';
+  },
+  markSeen(familyId) {
+    const seenMap = readStorySeenMap();
+    seenMap[familyId] = Date.now();
+    try { localStorage.setItem(STORY_SEEN_KEY, JSON.stringify(seenMap)); } catch (e) {}
+  },
+};
+
 /* —— Mock host-family data (neighbourhood-level coords for privacy) —— */
 window.MAP_FAMILIES = [
   {
@@ -491,11 +515,195 @@ window.MAP_FAMILIES = [
 ];
 
 
-/* ——————————————————————————————————————————— 
+/* ———————————————————————————————————————————
+   StoryViewer — fullscreen tap-through viewer for a family's story album.
+   No external gesture library — plain pointer events (unified mouse+touch).
+————————————————————————————————————————————— */
+function StoryViewer({ family, onClose, onSeeHostings }) {
+  const { t, isRTL } = useLang();
+
+  const stories = React.useMemo(
+    () => [...(family?.stories || [])].sort((a, b) => a.order - b.order),
+    [family]
+  );
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [loadedMap, setLoadedMap] = useState({});
+  const [errorMap, setErrorMap] = useState({});
+  const [dragY, setDragY] = useState(0);
+
+  const containerRef = useRef(null);
+  const pointerRef = useRef(null); // { startX, startY, timer }
+
+  const atEnd = index >= stories.length;
+  const current = stories[index];
+
+  const prefersReducedMotion = () =>
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Reset whenever a different family's viewer opens.
+  useEffect(() => {
+    setIndex(0);
+    setLoadedMap({});
+    setErrorMap({});
+    setDragY(0);
+  }, [family?.id]);
+
+  // Mark seen, lock background scroll, and handle Escape — only while open.
+  useEffect(() => {
+    if (!family) return;
+    window.StorySeen.markSeen(family.id);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [family?.id]);
+
+  const goNext = () => setIndex(i => Math.min(i + 1, stories.length));
+  const goPrev = () => setIndex(i => Math.max(i - 1, 0));
+
+  // Auto-advance 5s after the current photo has actually finished loading —
+  // never while paused (long-press), at the end screen, or under
+  // prefers-reduced-motion (disabled entirely there, not just faster).
+  useEffect(() => {
+    if (!family || atEnd || paused || prefersReducedMotion()) return;
+    if (!current || !loadedMap[current.id]) return;
+    const timer = setTimeout(goNext, 5000);
+    return () => clearTimeout(timer);
+  }, [family, index, paused, loadedMap, current, atEnd]);
+
+  // Preload the next photo's full-resolution image.
+  useEffect(() => {
+    const next = stories[index + 1];
+    if (next?.url) { const img = new Image(); img.src = next.url; }
+  }, [index, stories]);
+
+  // A photo that failed to load is skipped automatically, not stuck on.
+  useEffect(() => {
+    if (current && errorMap[current.id]) goNext();
+  }, [current, errorMap]);
+
+  if (!family) return null;
+
+  const handlePointerDown = (e) => {
+    pointerRef.current = { startX: e.clientX, startY: e.clientY };
+    pointerRef.current.timer = setTimeout(() => {
+      if (pointerRef.current) { pointerRef.current.isLongPress = true; setPaused(true); }
+    }, 200);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!pointerRef.current) return;
+    const dy = e.clientY - pointerRef.current.startY;
+    if (dy > 0) setDragY(dy);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!pointerRef.current) return;
+    clearTimeout(pointerRef.current.timer);
+    const { startX, startY, isLongPress } = pointerRef.current;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    pointerRef.current = null;
+    setPaused(false);
+
+    if (dy > 80 && Math.abs(dy) > Math.abs(dx)) { onClose(); return; }
+    setDragY(0);
+    if (isLongPress) return; // releasing a long-press just resumes, no navigation
+    if (Math.abs(dx) > 40) return; // a horizontal drag isn't a tap — ignore
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const relX = (startX - rect.left) / rect.width;
+    if (relX < 1 / 3 || relX > 2 / 3) {
+      const tappedStart = relX < 1 / 3;
+      const goForward = isRTL ? tappedStart : !tappedStart;
+      if (goForward) goNext(); else goPrev();
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <div
+      ref={containerRef}
+      className="story-viewer"
+      dir={isRTL ? 'rtl' : 'ltr'}
+      style={dragY ? { transform: `translateY(${dragY}px)`, opacity: Math.max(1 - dragY / 400, 0.4) } : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      <div className="story-viewer-progress">
+        {stories.map((s, i) => (
+          <div key={s.id} className="story-viewer-progress-track">
+            <div className={clsx(
+              'story-viewer-progress-fill',
+              i < index && 'complete',
+              i === index && !atEnd && 'active',
+              i === index && !atEnd && paused && 'paused'
+            )} />
+          </div>
+        ))}
+      </div>
+
+      <div className="story-viewer-chrome-top">
+        <span className="story-viewer-family-name">{family.name}</span>
+        <button
+          className="story-viewer-close"
+          onClick={onClose}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          aria-label={t('close_label')}
+        >×</button>
+      </div>
+
+      {!atEnd && current && (
+        <div className="story-viewer-frame">
+          {!loadedMap[current.id] && !errorMap[current.id] && (
+            <div className="recipe-skeleton story-viewer-skeleton" />
+          )}
+          <img
+            key={current.id}
+            src={current.url}
+            alt={current.alt || current.caption || family.name}
+            className="story-viewer-image"
+            style={{ opacity: loadedMap[current.id] ? 1 : 0 }}
+            onLoad={() => setLoadedMap(m => ({ ...m, [current.id]: true }))}
+            onError={() => setErrorMap(m => ({ ...m, [current.id]: true }))}
+          />
+          {current.caption && <p className="story-viewer-caption">{current.caption}</p>}
+        </div>
+      )}
+
+      {atEnd && (
+        <div className="story-viewer-end">
+          <p className="story-viewer-end-title">{family.name}</p>
+          <button
+            className="story-viewer-cta"
+            onClick={() => onSeeHostings(family)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+          >
+            {t('story_viewer_cta')}
+          </button>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}
+
+/* ———————————————————————————————————————————
    FamilyInfoCard — compact details beside the map
 ————————————————————————————————————————————— */
 function FamilyInfoCard({ family, onClose, className = '' }) {
   const { t, lang } = useLang();
+  const [showViewer, setShowViewer] = useState(false);
+  const hasStories = (family.stories || []).length > 0;
 
   const koshLabel = family.kosher === 'mehadrin' ? t('map_meh')
     : family.kosher === 'separated' ? t('map_kosh') : t('map_none');
@@ -540,8 +748,22 @@ function FamilyInfoCard({ family, onClose, className = '' }) {
   return (
     <aside className={`family-info-card ${className}`}>
       <div className="family-info-card-header">
-        <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor || '#f3e2d3' }}>
-          <img src={family.profile_img_url || (family.img_urls && family.img_urls[0]) || familyAvatarUrl(family.imageColor, family.id)} alt={family.name} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+        <div
+          className={clsx(
+            'family-info-card-avatar-ring',
+            hasStories && 'cursor-pointer',
+            window.StorySeen.getRingState(family) === 'unseen' && 'story-ring-unseen',
+            window.StorySeen.getRingState(family) === 'seen' && 'story-ring-seen'
+          )}
+          onClick={hasStories ? () => setShowViewer(true) : undefined}
+          role={hasStories ? 'button' : undefined}
+          aria-label={hasStories ? t('story_ring_view_label') : undefined}
+        >
+          <div className="family-info-card-avatar-ring-gap">
+            <div className="family-info-card-avatar" style={{ backgroundColor: family.imageColor || '#f3e2d3' }}>
+              <img src={family.profile_img_url || (family.img_urls && family.img_urls[0]) || familyAvatarUrl(family.imageColor, family.id)} alt={family.name} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+            </div>
+          </div>
         </div>
         <div className="min-w-0 flex-1">
           <h2>{family.name}</h2>
@@ -615,6 +837,14 @@ function FamilyInfoCard({ family, onClose, className = '' }) {
           {t('s15_call')} &middot; {family.phoneDisplay}
         </button>
       </div>
+
+      {showViewer && (
+        <StoryViewer
+          family={family}
+          onClose={() => setShowViewer(false)}
+          onSeeHostings={() => setShowViewer(false)}
+        />
+      )}
     </aside>
   );
 }
@@ -623,29 +853,50 @@ function FamilyInfoCard({ family, onClose, className = '' }) {
    MapView — Leaflet map with fuzzy markers
 ————————————————————————————————————————————— */
 function FamilyStrip({ families, selectedId, onSelect, onHover }) {
+  const { t } = useLang();
+  const [viewerFamily, setViewerFamily] = useState(null);
+
   return (
     <div className="family-strip overflow-x-auto scrollbar-none pb-3 -mx-5 px-5">
       <div className="flex gap-4 items-start">
-        {families.map(fam => (
-          <button
-            key={fam.id}
-            onClick={() => onSelect(fam)}
-            onMouseEnter={() => onHover?.(fam)}
-            onMouseLeave={() => onHover?.(null)}
-            className={clsx(
-              'family-story-item transition-all duration-200',
-              selectedId === fam.id && 'selected'
-            )}
-          >
-            <div className="family-strip-avatar">
-              <div className="family-strip-avatar-inner">
-                <img src={fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)} alt={fam.name} className="family-strip-image" style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+        {families.map(fam => {
+          const hasStories = (fam.stories || []).length > 0;
+          return (
+            <button
+              key={fam.id}
+              onClick={() => onSelect(fam)}
+              onMouseEnter={() => onHover?.(fam)}
+              onMouseLeave={() => onHover?.(null)}
+              className={clsx(
+                'family-story-item transition-all duration-200',
+                selectedId === fam.id && 'selected'
+              )}
+            >
+              <div
+                className={clsx(
+                  'family-strip-avatar',
+                  window.StorySeen.getRingState(fam) === 'unseen' && 'story-ring-unseen',
+                  window.StorySeen.getRingState(fam) === 'seen' && 'story-ring-seen'
+                )}
+                onClick={hasStories ? (e) => { e.stopPropagation(); setViewerFamily(fam); } : undefined}
+                role={hasStories ? 'button' : undefined}
+                aria-label={hasStories ? t('story_ring_view_label') : undefined}
+              >
+                <div className="family-strip-avatar-inner">
+                  <img src={fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)} alt={fam.name} className="family-strip-image" style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                </div>
               </div>
-            </div>
-            <p>{fam.name}</p>
-          </button>
-        ))}
+              <p>{fam.name}</p>
+            </button>
+          );
+        })}
       </div>
+
+      <StoryViewer
+        family={viewerFamily}
+        onClose={() => setViewerFamily(null)}
+        onSeeHostings={(fam) => { setViewerFamily(null); onSelect(fam); }}
+      />
     </div>
   );
 }
@@ -681,9 +932,11 @@ function MapView({ families, onSelect, selectedId, hoveredId }) {
         dashArray: '5 5',
       }).addTo(map);
 
+      const ringState = window.StorySeen.getRingState(fam);
+      const ringClass = ringState === 'unseen' ? ' story-ring-unseen' : ringState === 'seen' ? ' story-ring-seen' : '';
       const makeIcon = (selected, hovered) => L.divIcon({
         className: '',
-        html: `<div class="host-marker-outer${selected ? ' selected' : hovered ? ' hovered' : ''}"><img class="host-marker-inner" src="${fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)}" style="object-fit:cover; width:100%; height:100%; border-radius:50%;" alt="${fam.name}"/></div>`,
+        html: `<div class="host-marker-outer${selected ? ' selected' : hovered ? ' hovered' : ''}"><div class="host-marker-ring${ringClass}"><img class="host-marker-inner" src="${fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)}" style="object-fit:cover; width:100%; height:100%; border-radius:50%;" alt="${fam.name}"/></div></div>`,
         iconSize: [56, 56],
         iconAnchor: [28, 56],
         popupAnchor: [0, -52],

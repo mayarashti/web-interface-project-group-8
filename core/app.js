@@ -274,6 +274,40 @@ function App() {
     handleNewRequest();
   };
 
+  // Uploads any staged (processed, EXIF-stripped) album photos to Storage
+  // and builds the `stories` array to save on the family doc. A single
+  // photo's upload failure is logged and skipped, not surfaced to the user —
+  // registration must not feel broken over one of up to 12 photos.
+  const uploadStagedAlbum = async (uid, staged) => {
+    const readyPhotos = (staged || []).filter(p => p.status === 'ready' && p.fullBlob && p.thumbBlob);
+    if (!readyPhotos.length) return null;
+
+    const results = await Promise.allSettled(readyPhotos.map(async (photo) => {
+      const [url, thumbUrl] = await Promise.all([
+        window.DB.uploadStoryImage(uid, photo.id, photo.fullBlob, 'full'),
+        window.DB.uploadStoryImage(uid, photo.id, photo.thumbBlob, 'thumb'),
+      ]);
+      return {
+        id: photo.id, url, thumbUrl,
+        caption: photo.caption || '',
+        alt: photo.caption || 'תמונה מהבית המארח',
+        width: photo.width, height: photo.height,
+        order: photo.order, createdAt: Date.now(),
+      };
+    }));
+
+    results.forEach(r => { if (r.status === 'rejected') console.error('Story upload failed:', r.reason); });
+
+    const stories = results
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value)
+      .sort((a, b) => a.order - b.order)
+      .map((s, i) => ({ ...s, order: i }));
+
+    if (!stories.length) return null;
+    return { stories, storiesCount: stories.length, storiesUpdatedAt: Date.now() };
+  };
+
   const registerHost = async (nextScreen, skipped = false) => {
     if (window.DB) {
       let uid = formData.uid;
@@ -294,15 +328,17 @@ function App() {
             profileUrl = await window.DB.uploadProfileImage(uid, formData.hostFile, 'families');
           }
 
-          const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, hostFile, hostPreview, hostRegStep, ...hostFields } = formData;
+          const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, hostFile, hostPreview, hostRegStep, hostAlbumStaged, ...hostFields } = formData;
           const toSave = { ...hostFields, hostPreferencesSkipped: skipped };
           if (profileUrl) {
             toSave.profile_img_url = profileUrl;
             toSave.img_urls = [profileUrl];
           }
+          const albumResult = await uploadStagedAlbum(uid, hostAlbumStaged);
+          if (albumResult) Object.assign(toSave, albumResult);
 
           await window.DB.saveFamilyProfile(uid, toSave);
-          setFormData(prev => ({ ...prev, role: 'host', hostPreferencesSkipped: skipped }));
+          setFormData(prev => ({ ...prev, role: 'host', hostPreferencesSkipped: skipped, hostAlbumStaged: [] }));
           go(nextScreen);
         } catch (err) {
           alert("Error saving profile: " + err.message + "\n\nDid you create the Firestore Database and update the Rules?");
@@ -325,18 +361,21 @@ function App() {
           profileUrl = await window.DB.uploadProfileImage(formData.uid, formData.hostFile, 'families');
         }
 
-        const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, pendingNewHosting, hostFile, hostPreview, hostRegStep, ...hostFields } = formData;
+        const { languages, requests, hostings, editingRequest, editingHostingId, selectedRequestId, pendingNewRequest, pendingNewHosting, hostFile, hostPreview, hostRegStep, hostAlbumStaged, ...hostFields } = formData;
         const toSave = { ...hostFields, hostPreferencesSkipped: false, pendingNewHosting: false };
         if (profileUrl) {
           toSave.profile_img_url = profileUrl;
           toSave.img_urls = [profileUrl];
         }
+        const albumResult = await uploadStagedAlbum(formData.uid, hostAlbumStaged);
+        if (albumResult) Object.assign(toSave, albumResult);
 
         await window.DB.saveFamilyProfile(formData.uid, toSave);
         setFormData(prev => ({
           ...prev,
           hostPreferencesSkipped: false,
           pendingNewHosting: false,
+          hostAlbumStaged: [],
           ...(profileUrl ? { profile_img_url: profileUrl, img_urls: [profileUrl] } : {}),
         }));
       } catch (err) {

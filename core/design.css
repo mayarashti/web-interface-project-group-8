@@ -472,6 +472,25 @@ html[lang="en"] .lang-toggle {
   display: block;
 }
 
+/* Story ring around the marker's photo inset. Counter-rotated the same way
+   as .host-marker-inner so it stays upright despite .host-marker-outer's
+   own -45deg rotation. No background by default (no visual change unless a
+   .story-ring-unseen/-seen modifier is added). */
+.host-marker-ring {
+  transform: rotate(45deg);
+  width: 39px;
+  height: 39px;
+  border-radius: var(--radius-full);
+  padding: 2px;
+  display: block;
+}
+
+.host-marker-ring .host-marker-inner {
+  transform: none;
+  width: 100%;
+  height: 100%;
+}
+
 .family-strip {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -532,6 +551,17 @@ html[lang="en"] .lang-toggle {
   box-shadow: 0 0 0 4px var(--brand-50);
 }
 
+/* Higher specificity than the rule above on purpose: the story ring's own
+   color should still win when a family is both selected and has stories —
+   only the outer glow (box-shadow) is what signals "selected" then. */
+.family-story-item.selected .family-strip-avatar.story-ring-unseen,
+.family-story-item.selected .family-strip-avatar.story-ring-seen {
+  background: var(--warm-400);
+}
+.family-story-item.selected .family-strip-avatar.story-ring-unseen {
+  background: conic-gradient(from 45deg, var(--brand-400), var(--brand-500), var(--warm-100), var(--brand-300), var(--brand-400));
+}
+
 .family-strip-avatar-inner {
   width: 100%;
   height: 100%;
@@ -546,6 +576,54 @@ html[lang="en"] .lang-toggle {
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+}
+
+/* Story ring — shared modifiers applied to whichever element already acts as
+   the "outer ring" background for a given avatar (.family-strip-avatar,
+   .family-info-card-avatar-ring, .host-marker-ring). Unseen = warm brand
+   gradient (deliberately not Instagram's own gradient); seen = thin flat
+   gray; no stories = no modifier applied at all, i.e. today's look. */
+.story-ring-unseen {
+  background: conic-gradient(from 45deg, var(--brand-400), var(--brand-500), var(--warm-100), var(--brand-300), var(--brand-400));
+}
+
+.story-ring-seen {
+  background: var(--warm-400);
+}
+
+/* Same wrapper technique as .family-info-card-avatar-ring, sized for
+   HostProfileCard's circular 48px preview avatar (a family previewing their
+   own registration-summary listing — always shown "unseen" since no soldier
+   has looked yet, never the gray "seen" ring). */
+.host-preview-avatar-ring {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-radius: var(--radius-full);
+  padding: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.host-preview-avatar-ring.story-ring-unseen {
+  padding: 3px;
+  background: conic-gradient(from 45deg, var(--brand-400), var(--brand-500), var(--warm-100), var(--brand-300), var(--brand-400));
+}
+
+.host-preview-avatar-ring-gap {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: inherit;
+  background: transparent;
+  padding: 0;
+}
+
+.host-preview-avatar-ring.story-ring-unseen .host-preview-avatar-ring-gap {
+  background: #fff;
+  padding: 2px;
 }
 
 .map-detail-layout {
@@ -585,10 +663,51 @@ html[lang="en"] .lang-toggle {
   gap: var(--space-2);
 }
 
-.family-info-card-avatar {
+/* Story-ring wrapper — fixed at the avatar's own size (48px) so adding it
+   never changes surrounding layout; no-op (zero padding, transparent) by
+   default so wrapping every avatar in it unconditionally causes no visual
+   change when a family has no stories. Same shape (rounded square) as the
+   avatar it wraps, not converted to a circle. */
+.family-info-card-avatar-ring {
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
+  box-sizing: border-box;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  transition: padding var(--transition-fast), background var(--transition-fast);
+}
+
+.family-info-card-avatar-ring.story-ring-unseen {
+  padding: 3px;
+  background: conic-gradient(from 45deg, var(--brand-400), var(--brand-500), var(--warm-100), var(--brand-300), var(--brand-400));
+}
+.family-info-card-avatar-ring.story-ring-seen {
+  padding: 3px;
+  background: var(--warm-400);
+}
+
+.family-info-card-avatar-ring-gap {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: inherit;
+  background: transparent;
+  padding: 0;
+}
+
+.family-info-card-avatar-ring.story-ring-unseen .family-info-card-avatar-ring-gap,
+.family-info-card-avatar-ring.story-ring-seen .family-info-card-avatar-ring-gap {
+  background: #fff;
+  padding: 2px;
+}
+
+.family-info-card-avatar {
+  width: 100%;
+  height: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--warm-200);
@@ -1029,4 +1148,155 @@ html[lang="en"] .lang-toggle {
   to {
     opacity: 1;
   }
+}
+
+/* ═══════════════════════════════════════════
+   Story Viewer — fullscreen story-style photo viewer
+   z-index 10000: one above the app's existing de-facto ceiling (9999,
+   used by Modal / .lang-toggle) so it always sits on top.
+═══════════════════════════════════════════ */
+.story-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  touch-action: none;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.story-viewer-progress {
+  display: flex;
+  gap: 4px;
+  padding: 10px 10px 0;
+  flex-shrink: 0;
+}
+
+.story-viewer-progress-track {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+
+.story-viewer-progress-fill {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: #fff;
+  border-radius: inherit;
+}
+
+.story-viewer-progress-fill.complete {
+  width: 100%;
+}
+
+.story-viewer-progress-fill.active {
+  animation: story-progress-fill 5s linear forwards;
+}
+
+.story-viewer-progress-fill.active.paused {
+  animation-play-state: paused;
+}
+
+@keyframes story-progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.story-viewer-chrome-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.story-viewer-family-name {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.story-viewer-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.story-viewer-frame {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.story-viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: opacity var(--transition-fast);
+}
+
+.story-viewer-skeleton {
+  position: absolute;
+  inset: 16px;
+  border-radius: var(--radius-lg);
+}
+
+.story-viewer-caption {
+  position: absolute;
+  inset-inline: 16px;
+  bottom: 24px;
+  color: #fff;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+}
+
+.story-viewer-end {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #fff;
+  padding: 24px;
+  text-align: center;
+}
+
+.story-viewer-end-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.story-viewer-cta {
+  background: var(--brand-500);
+  color: #fff;
+  font-weight: var(--font-weight-bold);
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
 }

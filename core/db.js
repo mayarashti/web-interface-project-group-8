@@ -17,6 +17,16 @@ window.DB = {
     }
   },
 
+  // Uploads one processed (resized, EXIF-stripped) album photo blob.
+  // Unlike uploadProfileImage, this re-throws on failure so callers can
+  // skip just this one photo instead of saving a broken url: null entry.
+  async uploadStoryImage(uid, storyId, blob, kind) {
+    const filePath = `profile_images/families/${uid}/story_${storyId}_${kind}.jpg`;
+    const storageRef = window.storage.ref().child(filePath);
+    await storageRef.put(blob, { contentType: 'image/jpeg' });
+    return await storageRef.getDownloadURL();
+  },
+
   async deleteProfileImage(url) {
     if (!url) return false;
     try {

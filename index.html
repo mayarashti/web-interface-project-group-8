@@ -111,11 +111,12 @@
       2. core/components.js
       3. auth/auth.js
       4. soldier/soldier_registration.js
-      5. soldier/soldier_dashboard.jsEdit c:\Users\mayar\OneDrive\Desktop\First Year\2th year\Semester B\web interface\web-interface-project-group-8\functions\index.js
-      Added 1 line
+      5. soldier/soldier_dashboard.js
       6. host/host_registration.js
       7. host/host_dashboard.js
       8. core/app.js
+    (core/image_utils.js loads earlier, above, as a plain non-babel script —
+    it has no JSX and host_registration.js calls window.ImageUtils directly.)
   -->
   <!-- Firebase SDK (Compat Version for CDN usage) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -127,6 +128,7 @@
   <!-- Initialize Firebase -->
   <script src="core/firebase.js?v=4"></script>
   <script src="core/db.js?v=3"></script>
+  <script src="core/image_utils.js?v=1"></script>
 
   <script type="text/babel" src="core/translations.js?v=14"></script>
   <script type="text/babel" src="core/components.js?v=13"></script>

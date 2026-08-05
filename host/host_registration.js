@@ -2,6 +2,246 @@
 
 var { useState, useEffect, useRef } = React;
 
+/* StoriesAlbumEditor — multi-photo album editor, staged on the shared wizard
+   `data`/`setData` (data.hostAlbumStaged) exactly like everything else in
+   this file, so it survives step navigation. Photos are only actually
+   uploaded to Storage at final wizard submit (core/app.js), not here —
+   this component only picks, processes (via window.ImageUtils), previews,
+   captions, reorders and deletes staged photos in memory. */
+const MAX_ALBUM_PHOTOS = 12;
+
+function StoriesAlbumEditor({ data, setData }) {
+  const { t } = useLang();
+  const albumInputRef = useRef(null);
+  const [pendingChipLabel, setPendingChipLabel] = useState(null);
+  const [activeCaptionId, setActiveCaptionId] = useState(null);
+  const [partialAddMsg, setPartialAddMsg] = useState(null);
+
+  const staged = data.hostAlbumStaged || [];
+  const sorted = [...staged].sort((a, b) => a.order - b.order);
+  const atMax = sorted.length >= MAX_ALBUM_PHOTOS;
+
+  const updateStaged = (updater) => {
+    setData(prev => ({ ...prev, hostAlbumStaged: updater(prev.hostAlbumStaged || []) }));
+  };
+
+  const chips = [
+    { key: 'table', label: t('s16_album_chip_table') },
+    { key: 'dish', label: t('s16_album_chip_dish') },
+    { key: 'entrance', label: t('s16_album_chip_entrance') },
+    { key: 'yard', label: t('s16_album_chip_yard') },
+  ];
+
+  const openPicker = (chipLabel) => {
+    setPendingChipLabel(chipLabel || null);
+    albumInputRef.current?.click();
+  };
+
+  const runProcessing = (id, file) => {
+    window.ImageUtils.processStoryImage(file)
+      .then(({ fullBlob, thumbBlob, width, height }) => {
+        updateStaged(list => list.map(p => {
+          if (p.id !== id) return p;
+          if (p.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+          return { ...p, file: null, fullBlob, thumbBlob, width, height, previewUrl: URL.createObjectURL(fullBlob), status: 'ready', errorMessage: null };
+        }));
+      })
+      .catch(() => {
+        updateStaged(list => list.map(p => p.id === id ? { ...p, status: 'error', errorMessage: t('s16_album_error_decode') } : p));
+      });
+  };
+
+  const handleFilesSelected = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-picking the same file later
+
+    const remaining = MAX_ALBUM_PHOTOS - staged.length;
+    const accepted = files.slice(0, Math.max(0, remaining));
+    if (files.length > accepted.length) {
+      setPartialAddMsg(t('s16_album_partial_add', accepted.length));
+      setTimeout(() => setPartialAddMsg(null), 4000);
+    }
+    if (!accepted.length) return;
+
+    const chipLabel = pendingChipLabel;
+    setPendingChipLabel(null);
+
+    let nextOrder = staged.length;
+    accepted.forEach((file, i) => {
+      const id = `story_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+      const entry = {
+        id, file, fullBlob: null, thumbBlob: null,
+        previewUrl: URL.createObjectURL(file),
+        width: 0, height: 0,
+        caption: i === 0 && chipLabel ? chipLabel : '',
+        order: nextOrder++,
+        status: 'processing', errorMessage: null,
+      };
+      updateStaged(list => [...list, entry]);
+      runProcessing(id, file);
+    });
+  };
+
+  const retry = (photo) => {
+    if (!photo.file) return;
+    updateStaged(list => list.map(p => p.id === photo.id ? { ...p, status: 'processing', errorMessage: null } : p));
+    runProcessing(photo.id, photo.file);
+  };
+
+  const remove = (id) => {
+    updateStaged(list => {
+      const target = list.find(p => p.id === id);
+      if (target?.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(target.previewUrl);
+      return list.filter(p => p.id !== id)
+        .sort((a, b) => a.order - b.order)
+        .map((p, i) => ({ ...p, order: i }));
+    });
+  };
+
+  const move = (id, direction) => {
+    updateStaged(list => {
+      const ordered = [...list].sort((a, b) => a.order - b.order);
+      const idx = ordered.findIndex(p => p.id === id);
+      const swapIdx = idx + direction;
+      if (idx === -1 || swapIdx < 0 || swapIdx >= ordered.length) return list;
+      const a = ordered[idx], b = ordered[swapIdx];
+      return list.map(p => {
+        if (p.id === a.id) return { ...p, order: b.order };
+        if (p.id === b.id) return { ...p, order: a.order };
+        return p;
+      });
+    });
+  };
+
+  const setCaption = (id, caption) => {
+    updateStaged(list => list.map(p => p.id === id ? { ...p, caption } : p));
+  };
+
+  const activeCaptionPhoto = sorted.find(p => p.id === activeCaptionId);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="section-label mb-1">{t('s16_album_title')}</p>
+        <p className="text-sm font-semibold text-gray-800">{t('s16_album_heading')}</p>
+        <p className="text-xs text-warm-500 mt-1 leading-relaxed">{t('s16_album_sub')}</p>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {chips.map(chip => (
+          <button
+            key={chip.key}
+            type="button"
+            onClick={() => openPicker(chip.label)}
+            disabled={atMax}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full border border-warm-200 bg-warm-50 text-xs font-semibold text-warm-600 hover:bg-brand-50 hover:border-brand-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-[11px] text-warm-400">{t('s16_album_privacy_note')}</p>
+
+      <input
+        type="file"
+        ref={albumInputRef}
+        accept="image/*,.heic,.heif"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFilesSelected}
+      />
+
+      <div className="grid grid-cols-3 gap-2">
+        {sorted.map((photo, i) => (
+          <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-warm-200 bg-warm-50">
+            <img
+              src={photo.previewUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              style={{ opacity: photo.status === 'ready' ? 1 : 0.4 }}
+            />
+
+            {photo.status === 'processing' && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+                <svg className="animate-spin h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+            )}
+
+            {photo.status === 'error' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-50/90 p-1 text-center">
+                <span className="text-lg">⚠️</span>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => retry(photo)} className="text-[10px] font-bold text-brand-700 underline">{t('s16_album_retry')}</button>
+                  <button type="button" onClick={() => remove(photo.id)} className="text-[10px] font-bold text-red-600 underline">{t('s16_album_remove')}</button>
+                </div>
+              </div>
+            )}
+
+            {photo.status === 'ready' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => remove(photo.id)}
+                  className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-xs leading-none"
+                  aria-label={t('s16_album_remove')}
+                >×</button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveCaptionId(activeCaptionId === photo.id ? null : photo.id)}
+                  className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[10px]"
+                  aria-label={t('s16_album_caption_ph')}
+                >✎</button>
+
+                <div className="absolute bottom-1 right-1 flex flex-col gap-0.5">
+                  {i > 0 && (
+                    <button type="button" onClick={() => move(photo.id, -1)} aria-label={t('s16_album_move_up')} className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[10px] leading-none">▲</button>
+                  )}
+                  {i < sorted.length - 1 && (
+                    <button type="button" onClick={() => move(photo.id, 1)} aria-label={t('s16_album_move_down')} className="w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[10px] leading-none">▼</button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+
+        {!atMax && (
+          <button
+            type="button"
+            onClick={() => openPicker(null)}
+            className="aspect-square rounded-xl border border-dashed border-warm-300 bg-warm-50 flex flex-col items-center justify-center hover:bg-brand-50 hover:border-brand-300 transition-colors"
+          >
+            <span className="text-2xl">+</span>
+            <span className="text-[10px] text-warm-500 mt-1">{t('s16_album_add')}</span>
+          </button>
+        )}
+      </div>
+
+      {atMax && <p className="text-xs text-warm-400 text-center">{t('s16_album_max_reached')}</p>}
+      {partialAddMsg && <p className="text-xs text-brand-600 text-center">{partialAddMsg}</p>}
+      {sorted.length === 0 && <p className="text-xs text-warm-400">{t('s16_album_empty_hint')}</p>}
+
+      {activeCaptionPhoto && (
+        <input
+          type="text"
+          autoFocus
+          value={activeCaptionPhoto.caption || ''}
+          onChange={(e) => setCaption(activeCaptionPhoto.id, e.target.value)}
+          onBlur={() => setActiveCaptionId(null)}
+          placeholder={t('s16_album_caption_ph')}
+          maxLength={80}
+          className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+        />
+      )}
+    </div>
+  );
+}
+
 function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences, onInfo }) {
   const { t } = useLang();
   const [step, setStep] = useState(data.hostRegStep || 1);
@@ -242,6 +482,8 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
               </div>
               <p className="text-center text-[11px] text-warm-400 mt-2">{t('s16_photo_note')}</p>
             </div>
+
+            <StoriesAlbumEditor data={data} setData={setData} />
 
             <p className="text-sm text-warm-500 leading-relaxed">{t('s16_q_intro')}</p>
 
@@ -526,6 +768,11 @@ function S17HostSummary({ data, setData, onSubmit, onBack }) {
             city: data.hostCity,
             photoUrl: data.hostPreview || null,
             avatarColor: '#B0BA99',
+            hasStories: (data.hostAlbumStaged || []).some(p => p.status === 'ready'),
+            previewStories: (data.hostAlbumStaged || [])
+              .filter(p => p.status === 'ready')
+              .sort((a, b) => a.order - b.order)
+              .map(p => ({ id: p.id, url: p.previewUrl, caption: p.caption, alt: p.caption || '', order: p.order })),
             kosher: data.hostKosher,
             shabbat: data.hostShabbat,
             hasPets: data.hasPets,
@@ -754,6 +1001,7 @@ function S17HostSuccess({ onHome }) {
   );
 }
 
+window.StoriesAlbumEditor = StoriesAlbumEditor;
 window.S16HostRegistration = S16HostRegistration;
 window.S17HostSummary = S17HostSummary;
 window.S17HostSuccess = S17HostSuccess;
