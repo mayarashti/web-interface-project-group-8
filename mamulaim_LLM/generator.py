@@ -15,7 +15,7 @@ class RecipeGenerator:
         if not key:
             raise ValueError("GROQ_API_KEY not found. Please check your environment or .env file.")
         self.client = AsyncGroq(api_key=key)
-        self.model = "llama-3.1-8b-instant"
+        self.model = "llama-3.3-70b-versatile"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def build_spoonacular_query(self, soldier: SoldierPreferences) -> Dict[str, Any]:
@@ -224,4 +224,102 @@ class RecipeGenerator:
             instructions=translated.get("instructions", []),
             description=translated.get("description", ""),
             matching_preferences=translated.get("matching_preferences", [])
+        )
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    async def generate_recipe_directly(
+        self,
+        target_preferences: List[str],
+        exclusion_constraints: List[str],
+        previous_recipe_titles: Optional[List[str]] = None
+    ) -> RecipeDetails:
+        """
+        Directly generate a high-quality Israeli Shabbat recipe from preferences.
+        """
+        system_prompt = (
+            "You are a master culinary chef specializing in authentic Israeli, Middle Eastern, Sephardic, and Ashkenazi home cooking, "
+            "specifically family-style Shabbat dinners. Your task is to generate a recipe in Hebrew that is: \n"
+            "1. A traditional, delicious, and common dish in the Israeli kitchen suitable for Shabbat dinner "
+            "(e.g., Moroccan Chrayme/Fish, Shabbat slow-cooked Hamin/Cholent, Roast Chicken with Silan/potatoes, "
+            "Mafrum, beef/chicken meatballs simmered in tomato sauce, Moroccan olives chicken, vegetarian/vegan Siniya, "
+            "stuffed peppers/vegetables, rich vegetable soup with couscous, etc.).\n"
+            "2. Tailored to the provided target preferences and strictly safe from all exclusion constraints.\n"
+            "   CRITICAL DIETARY CONSTRAINTS:\n"
+            "   - If 'vegetarian' is in the preferences or exclusions: The recipe MUST contain absolutely NO meat, poultry, chicken, beef, lamb, or fish. It must be a plant-based, dairy, or egg dish (e.g. Vegetarian Siniya, Couscous with vegetable soup, Shakshuka, roasted vegetables, pasta, etc.).\n"
+            "   - If 'vegan' is in the preferences or exclusions: The recipe MUST contain absolutely NO animal products (no meat, chicken, beef, fish, dairy, cheese, butter, cream, yogurt, eggs, honey, gelatin, etc.).\n"
+            "   - If 'celiac' or 'gluten' or 'gluten-free' or 'gluten free' is in the preferences or exclusions: The recipe MUST contain absolutely NO wheat, barley, rye, flour, pasta, bread, couscous, semolina, or gluten-containing ingredients.\n"
+            "3. Strictly Kosher if required: Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, crab, shrimp, etc.) "
+            "and MUST NOT mix meat (beef, chicken, turkey, lamb) and dairy (milk, cheese, butter, cream, yogurt) in the same recipe.\n"
+            "4. Distinct: It must be a completely different style/course of dish from any already selected recipes in this session.\n"
+            "5. Output format: Return ONLY a valid JSON object matching the target schema and nothing else.\n"
+            "   CRITICAL LANGUAGE RULE: All fields (title, description, ingredients, instructions, matching_preferences) MUST be written in Hebrew. However, the 'image_prompt' field MUST be written strictly in English describing the food scene (e.g. food photography of the dish, no people, no kitchen interiors, just the plate of food close up).\n\n"
+            "Target JSON structure:\n"
+            "{\n"
+            '  "title": "Hebrew recipe title",\n'
+            '  "description": "Hebrew description explaining the dish and why it perfectly matches the preferences",\n'
+            '  "ingredients": [\n'
+            '    "Hebrew translated ingredient with quantities (e.g. 4 כרעי עוף, 3 כפות סילאן, 1 כפית מלח)",\n'
+            '    "Hebrew translated ingredient with quantities"\n'
+            '  ],\n'
+            '  "instructions": [\n'
+            '    "Hebrew translated instruction step 1",\n'
+            '    "Hebrew translated instruction step 2"\n'
+            '  ],\n'
+            '  "matching_preferences": [\n'
+            '    "Matched preferences in Hebrew (e.g., כשר, ללא גלוטן, צמחוני, אהוב)"\n'
+            '  ],\n'
+            '  "readyInMinutes": 45,\n'
+            '  "servings": 4,\n'
+            '  "image_prompt": "A detailed, professional English food photography prompt for this specific dish to generate a realistic cookbook-style photo (e.g. \'Moroccan fish chrayme in a red sauce, served in a traditional clay pot, cilantro garnish, close-up, rustic table, cookbook style, warm lighting, depth of field\')"\n'
+            "}"
+        )
+
+        user_prompt = (
+            f"Generate a recipe matching these target preferences: {', '.join(target_preferences)}\n"
+            f"And these exclusions/allergies: {', '.join(exclusion_constraints)}\n"
+        )
+        if "כשר" in target_preferences or "kosher" in [p.lower() for p in target_preferences]:
+            user_prompt += "- Ensure the recipe is strictly Kosher (no meat + dairy, no pork/shellfish).\n"
+
+        if previous_recipe_titles:
+            user_prompt += (
+                f"\nAlready Selected Recipes in this session: {json.dumps(previous_recipe_titles)}\n"
+                f"CRITICAL: The new recipe must be a completely different type of dish/course from the already selected recipes. "
+                f"For example, if you already generated a chicken/meat main course, generate a vegetarian side dish, salad, or fish option.\n\n"
+            )
+
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+            max_tokens=1536
+        )
+
+        raw_content = response.choices[0].message.content
+        result = json.loads(raw_content)
+
+        title = result.get("title", "מתכון מותאם אישית")
+        image_prompt = result.get("image_prompt", title)
+        encoded_prompt = urllib.parse.quote(image_prompt)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=636&height=393&nologo=true&private=true"
+
+        import random
+        recipe_id = random.randint(1, 1000000)
+
+        return RecipeDetails(
+            id=recipe_id,
+            recipe_id=recipe_id,
+            title=title,
+            image=image_url,
+            image_url=image_url,
+            readyInMinutes=result.get("readyInMinutes", 45),
+            servings=result.get("servings", 4),
+            ingredients=result.get("ingredients", []),
+            instructions=result.get("instructions", []),
+            description=result.get("description", ""),
+            matching_preferences=result.get("matching_preferences", [])
         )

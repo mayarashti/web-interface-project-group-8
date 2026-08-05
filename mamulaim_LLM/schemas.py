@@ -15,6 +15,12 @@ class RecipeRecommendationRequest(BaseModel):
     soldier: SoldierPreferences
     host: HostFamilyInfo
 
+class RecipePlan(BaseModel):
+    recipe_id: int
+    target_preferences: List[str]
+    exclusion_constraints: List[str] = Field(default_factory=list)
+    satisfied_people: List[str] = Field(default_factory=list)
+
 class RecipeGenerationRequest(BaseModel):
     k: int = Field(gt=0, description="Total number of recipes to generate.")
     people: Dict[str, List[str]] = Field(

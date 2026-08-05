@@ -41,6 +41,9 @@ setGlobalOptions({ maxInstances: 10, secrets: [GOOGLE_MAPS_API_KEY, TELEGRAM_BOT
 //   await createNotification('uid123', 'soldier', 'נמצאה משפחה מארחת!', 'match', 'התאמה חדשה');
 // ─────────────────────────────────────────────────────────────────────────────
 async function createNotification(userId, role, content, type = 'general', title = '', payload = {}) {
+  console.log(`🔔 [NOTIFICATION] Recipient Role: ${role} | User/Family ID: ${userId} | Type: ${type} | Title: "${title || '(none)'}"`);
+  console.log(`   Content: "${content}"`);
+
   await db.collection('notifications').add({
     user_id: userId,
     role,
@@ -58,9 +61,12 @@ async function createNotification(userId, role, content, type = 'general', title
     const userSnap = await db.collection(collection).doc(userId).get();
     const chatId = userSnap.exists ? userSnap.data().telegram_chat_id : null;
     if (chatId) {
+      console.log(`  📲 Mirroring notification to Telegram chatId: ${chatId} for ${role} ID: ${userId}`);
       const token = TELEGRAM_BOT_TOKEN.value();
       const text = title ? `<b>${title}</b>\n\n${content}` : content;
       await sendTelegramMessage(token, chatId, text);
+    } else {
+      console.log(`  ℹ️ No Telegram chat_id linked for ${role} ID: ${userId}`);
     }
   } catch (e) {
     console.error('Telegram mirror error:', e);
@@ -199,63 +205,86 @@ async function fetchTravelDistancesKm(origin, destinations, mode = "driving") {
 // ──────────────────────────────────────────────────────────────────
 // HARD FILTER — returns false if this family cannot host this soldier
 // ──────────────────────────────────────────────────────────────────
+// HARD FILTER — returns false if this family cannot host this soldier
+// ──────────────────────────────────────────────────────────────────
 function passesHardFilters(soldier, request, family, hosting, bannedIds, compromiseLevel) {
+  const famName = family.hostName || hosting.family_id;
+
   // Ban list (permanent + per-request)
-  if (bannedIds.has(hosting.family_id)) return false;
+  if (bannedIds.has(hosting.family_id)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): On ban list`);
+    return false;
+  }
 
   // Capacity — only confirmed guests (in hosting.guests) count against the limit.
-  // Pending (unconfirmed) matches do NOT reserve a spot: first to confirm wins.
   const maxGuests = parseInt(hosting.soldiers) || 0;
   const confirmedCount = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
   const available = maxGuests - confirmedCount;
-  if (available < (request.guestCount ?? 1)) return false;
+  if (available < (request.guestCount ?? 1)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Capacity full/insufficient (avail: ${available}, needed: ${request.guestCount ?? 1})`);
+    return false;
+  }
 
   // Shabbat — never compromised
-  if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) return false;
+  if (!isShabbatCompatible(request.shabbat, family.hostShabbat)) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Shabbat incompatible (soldier: ${request.shabbat}, family: ${family.hostShabbat})`);
+    return false;
+  }
 
   // Kosher — never compromised
   if (request.kosher && request.kosher !== "none") {
-    if (!isKosherCompatible(request.kosher, family.hostKosher)) return false;
+    if (!isKosherCompatible(request.kosher, family.hostKosher)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Kosher incompatible (soldier: ${request.kosher}, family: ${family.hostKosher})`);
+      return false;
+    }
   }
 
-  // Diet/Allergies — soldier's allergies must be covered by family's cooking.
-  // Map soldier allergy IDs to the corresponding family cooking IDs (they use
-  // different id strings for the same concept).  Allergies with no family-side
-  // equivalent ('peanuts', 'fish', 'other') are skipped — we cannot enforce
-  // them via the family cooking list and blocking matches over them is wrong.
+  // Diet/Allergies
   const ALLERGY_TO_COOKING = { gluten: "celiac", vegetarian: "veg" };
   const UNMATCHABLE = new Set(["peanuts", "fish", "other"]);
   const soldierAllergies = (soldier.allergies ?? [])
     .filter((a) => !UNMATCHABLE.has(a))
     .map((a) => ALLERGY_TO_COOKING[a] ?? a);
   const familyCooking = family.hostCooking ?? [];
-  if (soldierAllergies.some((a) => !familyCooking.includes(a))) return false;
+  if (soldierAllergies.some((a) => !familyCooking.includes(a))) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Diet/Allergies incompatible`);
+    return false;
+  }
 
   // Accommodation — if soldier needs to sleep over, family must offer it
-  if (request.needSleep === true && hosting.sleepOvernight !== true) return false;
+  if (request.needSleep === true && hosting.sleepOvernight !== true) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Overnight sleep required but not offered`);
+    return false;
+  }
 
-  // If the soldier is allergic to animals and the family has a life - a rigid restriction, there is no possibility of adjustment.
-if (soldier.pets === "allergy" && family.hasPets === true) return false; 
+  // Pet allergy
+  if (soldier.pets === "allergy" && family.hasPets === true) {
+    console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Pet allergy vs family has pets`);
+    return false;
+  }
 
-  // Pets — hard filter unless we're in PETS compromise mode
+  // Pets comfort
   if (compromiseLevel < COMPROMISE.PETS) {
-    if (request.petsComfort === "no" && family.hasPets === true) return false;
+    if (request.petsComfort === "no" && family.hasPets === true) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Pets comfort "no"`);
+      return false;
+    }
   }
-  // Note: even in compromise mode we still apply "no" as hard if you want —
-  // the user said petsComfort only has "ok"/"no", not "allergic".
-  // Since there's no "allergic" value, "no" becomes a soft compromise.
 
-  // Time window — compromised in TIME mode (±1h exact → ±2.5h compromise)
+  // Time window
   if (compromiseLevel < COMPROMISE.TIME) {
-    if (!isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_TOLERANCE_MINUTES)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Time window mismatch (soldier: ${request.startTime}, family: ${hosting.time})`);
+      return false;
+    }
   } else {
-    if (!isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES)) return false;
+    if (!isTimeCompatible(request.startTime, hosting.time, TIME_COMPROMISE_MINUTES)) {
+      console.log(`  ❌ [FILTER REJECT] Family "${famName}" (${hosting.family_id}): Time window mismatch in compromise mode`);
+      return false;
+    }
   }
 
-  // NOTE: the geographic radius is NOT enforced here. Distance needs one
-  // batched Google Distance Matrix call for all candidates at once, so it is
-  // handled in runMatchingForRequest after the cheap hard filters run.
-
+  console.log(`  ✅ [FILTER PASS] Family "${famName}" (${hosting.family_id}) passed all hard filters!`);
   return true;
 }
 
@@ -325,6 +354,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   if (!soldierSnap.exists) return null;
   const soldier = soldierSnap.data();
 
+  console.log(`🔎 [MATCHING SCAN] Request ID: ${requestId} | Soldier ID: ${request.soldier_id} | Date: ${request.when} | Compromise Level: ${compromiseLevel}`);
+
   // Build combined ban list
   const bannedIds = new Set([
     ...(soldier.banned_families ?? []),
@@ -338,7 +369,12 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     .where("is_fully_booked", "==", false)
     .get();
 
-  if (hostingsSnap.empty) return null;
+  if (hostingsSnap.empty) {
+    console.log(`   ⚠️ No family_hostings found for date: ${request.when}`);
+    return null;
+  }
+
+  console.log(`   📋 Found ${hostingsSnap.docs.length} candidate hosting offers on date ${request.when}`);
 
   const prelim = [];
 
@@ -358,13 +394,12 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     prelim.push({ hosting, family });
   }
 
-  if (prelim.length === 0) return null;
+  if (prelim.length === 0) {
+    console.log(`   ⚠️ 0 family hostings passed hard filters for request ${requestId} (compromise: ${compromiseLevel})`);
+    return null;
+  }
 
   // ── LOCATION ────────────────────────────────────────────────────
-  // travelDistance is the soldier's max acceptable distance (km). In RADIUS
-  // compromise mode we widen it by 20%. Distances come from Google Distance
-  // Matrix (real road/walking distance) and fall back to straight-line
-  // haversine when the API or family coordinates are unavailable.
   let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
   if (compromiseLevel >= COMPROMISE.RADIUS) radius *= 1.2;
 
@@ -398,7 +433,10 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   const candidates = [];
   prelim.forEach((c, i) => {
     const distanceKm = distances[i];
-    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) return; // too far
+    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) {
+      console.log(`   ❌ [DISTANCE REJECT] Family "${c.family.hostName}" (${c.family.id}): distance ${distanceKm}km exceeds radius ${radius}km`);
+      return;
+    }
     candidates.push({
       ...c,
       distanceKm,
@@ -406,7 +444,10 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
     });
   });
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    console.log(`   ⚠️ 0 candidates within radius ${radius}km for request ${requestId}`);
+    return null;
+  }
 
   // Highest score wins; ties broken by the closer family.
   candidates.sort(
@@ -415,6 +456,8 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   const best = candidates[0];
 
   const compromiseNotes = buildCompromiseNotes(request, best.family, compromiseLevel);
+
+  console.log(`   🎯 [MATCH SUCCESS] Matched Request ${requestId} (Soldier: ${request.soldier_id}) with Family "${best.family.hostName}" (Family ID: ${best.family.id}, Hosting ID: ${best.hosting.id}) | Score: ${best.score}`);
 
   // Save the match — guest details are NOT stored here; use soldier_request_id
   // to look them up from soldier_hosting_searches + soldiers when needed.
@@ -543,13 +586,15 @@ exports.onNewFamilyHosting = onDocumentCreated(
 );
 
 // ──────────────────────────────────────────────────────────────────
-// SCHEDULED: every hour — apply compromise for requests within 24h
+// CORE 24-HOUR MATCHING & ALERTS ALGORITHM
 // ──────────────────────────────────────────────────────────────────
-exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
+async function runCheckPendingRequests() {
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+  console.log(`🚀 Starting 24h algorithm run for dates: ${todayStr}, ${tomorrowStr}`);
 
   const snap = await db
     .collection("soldier_hosting_searches")
@@ -557,12 +602,13 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     .where("when", "in", [todayStr, tomorrowStr])
     .get();
 
+  console.log(`📋 Found ${snap.docs.length} unmatched soldier searches to process.`);
+
   for (const doc of snap.docs) {
     await tryAllCompromiseLevels(doc.id);
   }
 
   // Safety net: find pending matches whose hosting became full in the meantime.
-  // This catches cases where confirmMatch didn't run (e.g. direct Firestore write).
   const pendingSnap = await db
     .collection("active_matches")
     .where("status", "==", "pending_soldier_approval")
@@ -635,7 +681,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
   }
 
   // ── REMINDER B: soldier meal details 12h before confirmed hosting ─
-  const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
   const confirmedMatchesSnap = await db.collection("active_matches")
     .where("status", "==", "approved")
     .where("hosting_date", "in", [todayStr, tomorrowStr])
@@ -646,7 +691,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     if ((match.reminders_sent ?? []).includes("meal_12h")) continue;
     if (!match.host_offer_id) continue;
 
-    // Fetch hosting to get the time
     const hostingSnap = await db.collection("family_hostings").doc(match.host_offer_id).get();
     if (!hostingSnap.exists) continue;
     const hosting = hostingSnap.data();
@@ -657,7 +701,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
     const msUntil = hostingDatetime - now;
     if (msUntil > 12 * 60 * 60 * 1000 || msUntil < 0) continue;
 
-    // Fetch family to get address
     const familySnap = await db.collection("families").doc(match.family_id).get();
     const family = familySnap.exists ? familySnap.data() : {};
     const address = family.hostAddress || family.hostCity || "";
@@ -710,7 +753,6 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
   }
 
   // ── REMINDER E: family hosting 18h away with no confirmed guests ──
-  const eigteenHoursFromNow = new Date(now.getTime() + 18 * 60 * 60 * 1000);
   const upcomingHostingsSnap = await db.collection("family_hostings")
     .where("date", "in", [todayStr, tomorrowStr])
     .get();
@@ -766,6 +808,70 @@ exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
       await reqDoc.ref.update({ reminders_sent: FieldValue.arrayUnion("unmatched_25h") });
     } catch (e) { console.error("notification error (unmatched_25h):", e); }
   }
+
+  // ── EMERGENCY NOTIFICATIONS TO ALL MATCHING REGISTERED FAMILIES ──────
+  console.log("🚨 [EMERGENCY NOTIFICATIONS] Scanning registered families who haven't opened hostings yet...");
+  try {
+    await runEmergencyMatchmaking();
+  } catch (err) {
+    console.error("❌ Error in runEmergencyMatchmaking:", err);
+  }
+
+  console.log("🏁 24h algorithm run completed.");
+}
+
+// Scheduled hourly execution
+exports.checkPendingRequests = onSchedule("every 60 minutes", async () => {
+  await runCheckPendingRequests();
+});
+
+// Callable endpoint to trigger on demand
+exports.forceCheckPendingRequests = onCall(async (req) => {
+  await runCheckPendingRequests();
+  return { success: true, timestamp: new Date().toISOString() };
+});
+
+// Diagnostic endpoint to inspect notifications and matching state
+exports.getDebugLogs = onCall(async (req) => {
+  const targetId = "oEkbSNCmbubKv4zlZSp3B8LzMiU2";
+
+  const notifsSnap = await db.collection("notifications").orderBy("sent_at", "desc").limit(30).get();
+  const notifications = notifsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+  const searchesSnap = await db.collection("soldier_hosting_searches").get();
+  const allSearches = searchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const hostingsSnap = await db.collection("family_hostings").get();
+  const allFamilyHostings = hostingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const matchesSnap = await db.collection("active_matches").get();
+  const allActiveMatches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const familiesSnap = await db.collection("families").get();
+  const registeredFamilies = familiesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const targetFamilyDoc = await db.collection("families").doc(targetId).get();
+  const targetFamilyData = targetFamilyDoc.exists ? targetFamilyDoc.data() : null;
+
+  const targetFamilyHostings = allFamilyHostings.filter(h => h.family_id === targetId);
+  const targetFamilyMatches = allActiveMatches.filter(m => m.family_id === targetId);
+  const targetFamilyNotifs = notifications.filter(n => n.user_id === targetId);
+
+  return {
+    targetId,
+    targetFamilyData,
+    targetFamilyHostings,
+    targetFamilyMatches,
+    targetFamilyNotifs,
+    allSearches,
+    allFamilyHostings,
+    allActiveMatches,
+    registeredFamilies,
+    timestamp: new Date().toISOString()
+  };
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -2628,163 +2734,137 @@ exports.generateRecipes = onCall(
   async (req) => {
     const { soldier, host, count = 2 } = req.data || {};
     
+    const normalizePrefs = (arr) => {
+      if (!arr || !Array.isArray(arr)) return [];
+      return arr.map(item => {
+        if (typeof item !== 'string') return item;
+        const normalized = item.toLowerCase().trim();
+        if (normalized === 'veg') return 'vegetarian';
+        return normalized;
+      });
+    };
+
+    const allergiesNormalized = normalizePrefs(soldier?.allergies);
+    const dietaryNormalized = normalizePrefs(soldier?.dietaryPreferences);
+
     const kosherRequired = host?.keepsKosher || soldier?.isKosher;
-    console.log(`Starting recipe generation. Kosher Required: ${kosherRequired}, count: ${count}`);
+    console.log(`Starting direct LLM recipe generation. Kosher Required: ${kosherRequired}, count: ${count}`);
 
-    // Step 2: Use LLM to analyze preferences and generate Spoonacular API search parameters
-    const systemPromptQuery = 
-      "You are a translation and culinary assistant. Your task is to analyze food preferences and restrictions " +
-      "and generate optimized English search parameters for the Spoonacular API to find matching recipes for an Israeli Shabbat dinner.\n" +
-      "Keep in mind:\n" +
-      "1. Shabbat dinners in Israel typically feature festive, hearty, warm family dishes (e.g., roast chicken, beef stews, fish, meatballs, couscous, tagines, rice, potatoes, roasted vegetables, Mediterranean salads).\n" +
-      "2. The search query should prioritize these traditional Shabbat-friendly dinner categories based on the user's favorite foods (translating them from Hebrew if needed).\n" +
-      "3. Avoid generating search queries for pork, shellfish, or non-kosher style foods if Kosher is required.\n" +
-      "4. The JSON must return ONLY a JSON object and nothing else.\n\n" +
-      "JSON structure:\n" +
+    const systemPrompt = 
+      "You are a master culinary chef specializing in authentic Israeli, Middle Eastern, Sephardic, and Ashkenazi home cooking, " +
+      "specifically family-style Shabbat dinners. Your task is to generate a recipe in Hebrew that is: \n" +
+      "1. A traditional, delicious, and common dish in the Israeli kitchen suitable for Shabbat dinner " +
+      "(e.g., Moroccan Chrayme/Fish, Shabbat slow-cooked Hamin/Cholent, Roast Chicken with Silan/potatoes, " +
+      "Mafrum, beef/chicken meatballs simmered in tomato sauce, Moroccan olives chicken, vegetarian/vegan Siniya, " +
+      "stuffed peppers/vegetables, rich vegetable soup with couscous, etc.).\n" +
+      "2. Tailored to the soldier's preferences (favorite foods) and safe from all allergies/disliked foods.\n" +
+      "   CRITICAL DIETARY CONSTRAINTS:\n" +
+      "   - If 'vegetarian' is in the dietary preferences or allergies: The recipe MUST contain absolutely NO meat, poultry, chicken, beef, lamb, or fish. It must be a plant-based, dairy, or egg dish (e.g. Vegetarian Siniya, Couscous with vegetable soup, Shakshuka, roasted vegetables, pasta, etc.).\n" +
+      "   - If 'vegan' is in the dietary preferences or allergies: The recipe MUST contain absolutely NO animal products (no meat, chicken, beef, fish, dairy, cheese, butter, cream, yogurt, eggs, honey, gelatin, etc.).\n" +
+      "   - If 'celiac' or 'gluten' or 'gluten-free' or 'gluten free' is in the dietary preferences or allergies: The recipe MUST contain absolutely NO wheat, barley, rye, flour, pasta, bread, couscous, semolina, or gluten-containing ingredients.\n" +
+      "3. Strictly Kosher if required: Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, crab, shrimp, etc.) " +
+      "and MUST NOT mix meat (beef, chicken, turkey, lamb) and dairy (milk, cheese, butter, cream, yogurt) in the same recipe.\n" +
+      "4. Distinct: It must be a completely different style/course of dish from any already selected recipes in this session.\n" +
+      "5. Output format: Return ONLY a valid JSON object matching the target schema and nothing else.\n" +
+      "   CRITICAL LANGUAGE RULE: All fields (title, description, ingredients, instructions, matching_preferences) MUST be written in Hebrew. However, the 'image_prompt' field MUST be written strictly in English describing the food scene (e.g. food photography of the dish, no people, no kitchen interiors, just the plate of food close up).\n\n" +
+      "Target JSON structure:\n" +
       "{\n" +
-      '  "query": "English search term like chicken, beef, fish, meatballs, couscous, salad, or empty string",\n' +
-      '  "includeIngredients": ["english ingredient 1", "english ingredient 2"],\n' +
-      '  "excludeIngredients": ["english allergen/disliked 1", "english allergen/disliked 2"],\n' +
-      '  "diet": "vegetarian or vegan or gluten free or empty string"\n' +
+      '  "title": "Hebrew recipe title",\n' +
+      '  "description": "Hebrew description explaining the dish and why it perfectly matches the soldier\'s preferences and constraints",\n' +
+      '  "ingredients": [\n' +
+      '    "Hebrew translated ingredient with quantities (e.g. 4 כרעי עוף, 3 כפות סילאן, 1 כפית מלח)",\n' +
+      '    "Hebrew translated ingredient with quantities"\n' +
+      '  ],\n' +
+      '  "instructions": [\n' +
+      '    "Hebrew translated instruction step 1",\n' +
+      '    "Hebrew translated instruction step 2"\n' +
+      '  ],\n' +
+      '  "matching_preferences": [\n' +
+      '    "Matched preferences in Hebrew (e.g., כשר, ללא גלוטן, צמחוני, אהוב)"\n' +
+      '  ],\n' +
+      '  "readyInMinutes": 45,\n' +
+      '  "servings": 4,\n' +
+      '  "image_prompt": "A detailed, professional English food photography prompt for this specific dish to generate a realistic cookbook-style photo (e.g. \'Moroccan fish chrayme in a red sauce, served in a traditional clay pot, cilantro garnish, close-up, rustic table, cookbook style, warm lighting, depth of field\')"\n' +
       "}";
 
-    const userPromptQuery = 
-      `Analyze these preferences:\n` +
-      `- Favorite Foods (often in Hebrew): ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
-      `- Disliked Foods (often in Hebrew): ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
-      `- Allergies (often in Hebrew): ${JSON.stringify(soldier?.allergies || [])}\n` +
-      `- Dietary Preferences (often in Hebrew): ${JSON.stringify(soldier?.dietaryPreferences || [])}\n` +
-      `- Kosher Required: ${kosherRequired ? "Yes" : "No"}`;
+    const generatedRecipes = [];
 
-    let queryParams = { query: "", includeIngredients: [], excludeIngredients: [], diet: "" };
-    try {
-      queryParams = await callGroq([
-        { role: "system", content: systemPromptQuery },
-        { role: "user", content: userPromptQuery }
-      ]);
-      console.log("Generated Spoonacular query parameters from Groq:", queryParams);
-    } catch (err) {
-      console.error("Error generating query parameters via Groq, using basic fallback:", err);
-      queryParams.excludeIngredients = [...(soldier?.allergies || []), ...(soldier?.dislikedFoods || [])];
-    }
+    for (let i = 0; i < count; i++) {
+      let userPrompt = 
+        `Generate recipe option ${i + 1} matching these constraints:\n` +
+        `- Favorite Foods (often in Hebrew): ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
+        `- Disliked Foods (often in Hebrew): ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
+        `- Allergies (often in Hebrew): ${JSON.stringify(allergiesNormalized)}\n` +
+        `- Dietary Preferences (often in Hebrew): ${JSON.stringify(dietaryNormalized)}\n` +
+        `- Kosher Required: ${kosherRequired ? "Yes" : "No"}\n\n`;
 
-    // Step 3: Query Spoonacular API for candidate recipes (using a random offset to prevent repetition)
-    let candidates = [];
-    try {
-      candidates = await searchSpoonacular(queryParams, true);
-      console.log(`Retrieved ${candidates.length} recipe candidates from Spoonacular.`);
-
-      // If no candidates, try relaxing the query parameters (e.g. drop query and includeIngredients) and turn off offset
-      if (!candidates || candidates.length === 0) {
-        console.log("No candidates returned from initial search. Relaxing search filters and disabling offset.");
-        candidates = await searchSpoonacular({
-          excludeIngredients: queryParams.excludeIngredients,
-          diet: queryParams.diet
-        }, false);
-        console.log(`Retrieved ${candidates.length} relaxed candidates.`);
+      if (generatedRecipes.length > 0) {
+        const selectedTitles = generatedRecipes.map(r => r.title);
+        userPrompt += 
+          `Already Selected Recipes in this session: ${JSON.stringify(selectedTitles)}\n` +
+          `CRITICAL: The new recipe must be a completely different type of dish/course from the already selected recipes. ` +
+          `For example, if you already generated a chicken/meat main course, generate a vegetarian side dish, salad, or fish option.\n\n`;
       }
-    } catch (err) {
-      console.error("Spoonacular search failed completely:", err);
-      throw new HttpsError("internal", "Failed to retrieve recipes from Spoonacular.");
-    }
-
-    // Step 4 & 5: Recipe Validation Loop by Groq
-    const validRecipes = [];
-    const maxAttempts = 15;
-    let attempts = 0;
-
-    const systemPromptValidate = 
-      "You are an expert culinary safety inspector. Your task is to validate if a recipe is completely safe, " +
-      "matches the soldier's and host family's requirements. You must return ONLY a JSON object and nothing else.\n\n" +
-      "JSON structure:\n" +
-      "{\n" +
-      '  "is_valid": true or false,\n' +
-      '  "reason": "brief explanation in English of your decision"\n' +
-      "}";
-
-    for (const candidate of candidates) {
-      if (validRecipes.length >= count) break;
-      if (attempts >= maxAttempts) {
-        console.warn("Reached maximum number of LLM validation attempts.");
-        break;
-      }
-
-      attempts++;
-      
-      // Enforce distinctiveness by checking titles (both English and Hebrew)
-      const selectedTitlesEng = validRecipes.map(r => r.titleEng);
-      
-      let userPromptValidate = 
-        `Soldier & Host Family Constraints:\n` +
-        `- Favorite Foods: ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
-        `- Disliked Foods: ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
-        `- Allergies: ${JSON.stringify(soldier?.allergies || [])}\n` +
-        `- Dietary Restrictions: ${JSON.stringify(soldier?.dietaryPreferences || [])}\n` +
-        `- Is Kosher Required: ${kosherRequired ? "Yes" : "No"}\n\n` +
-        `Recipe to Validate:\n` +
-        `- Title: ${candidate.title}\n` +
-        `- Ingredients: ${JSON.stringify((candidate.extendedIngredients || []).map(i => i.original))}\n` +
-        `- Instructions: ${candidate.instructions || ""}\n\n`;
-
-      if (selectedTitlesEng.length > 0) {
-        userPromptValidate += 
-          `Already Selected Recipes in this session: ${JSON.stringify(selectedTitlesEng)}\n` +
-          `CRITICAL: The new recipe must be a completely different type of dish and cannot be a minor variation or similar type of dish to the already selected recipes (e.g. no similar pasta types, no similar chicken dishes, etc.).\n\n`;
-      }
-
-      userPromptValidate += 
-        `Validate against these rules:\n` +
-        `1. Must NOT contain any allergens.\n` +
-        `2. Must NOT contain any disliked ingredients.\n` +
-        `3. If Kosher required: The recipe must be kosher. It must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.). Crucially, it MUST NOT mix meat (chicken, beef, turkey, lamb, etc.) with dairy (milk, butter, cheese, cream, yogurt, etc.) in the same recipe.\n` +
-        `4. Must match dietary restrictions (e.g. vegetarian, vegan).\n` +
-        `5. Must be a distinct type of dish from any already selected recipes.\n`;
 
       try {
-        const validationResult = await callGroq([
-          { role: "system", content: systemPromptValidate },
-          { role: "user", content: userPromptValidate }
-        ]);
+        console.log(`Calling Groq to generate recipe ${i + 1}...`);
+        const result = await callGroq([
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ], true, 0.7); // slightly higher temp for variety
 
-        if (validationResult.is_valid) {
-          console.log(`Recipe '${candidate.title}' is valid! Translating...`);
-          const translatedRecipe = await translateAndFormatRecipe(candidate, soldier);
-          translatedRecipe.titleEng = candidate.title;
-          validRecipes.push(translatedRecipe);
+        if (result && result.title && result.ingredients && result.instructions) {
+          const id = Math.floor(Math.random() * 1000000);
+          const encodedPrompt = encodeURIComponent(result.image_prompt || result.title);
+          const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=636&height=393&nologo=true&private=true`;
+
+          generatedRecipes.push({
+            id: id,
+            recipe_id: id,
+            title: result.title,
+            description: result.description || "",
+            ingredients: result.ingredients,
+            instructions: result.instructions,
+            matching_preferences: result.matching_preferences || [],
+            image_url: imageUrl,
+            readyInMinutes: result.readyInMinutes || 45,
+            servings: result.servings || 4
+          });
+          console.log(`Successfully generated recipe ${i + 1}: ${result.title}`);
         } else {
-          console.log(`Recipe '${candidate.title}' rejected. Reason: ${validationResult.reason}`);
+          throw new Error("Invalid structure returned from Groq recipe generation.");
         }
       } catch (err) {
-        console.error(`Error validating recipe '${candidate.title}':`, err);
+        console.error(`Error generating recipe option ${i + 1}:`, err);
+        
+        // Push a safe fallback recipe to prevent function failure
+        const fallbackId = Math.floor(Math.random() * 1000000);
+        const fallbackTitle = i === 0 ? "עוף בתנור בסילאן ותפוחי אדמה" : "סלט ים תיכוני רענן";
+        const fallbackImgPrompt = i === 0 
+          ? "Roasted chicken with golden potatoes and glazed silan syrup, on a serving platter, cookbook photography" 
+          : "Fresh Mediterranean salad with cucumber, tomato, red onion, olive oil, mint leaves, premium food photography";
+        const encodedFallback = encodeURIComponent(fallbackImgPrompt);
+        
+        generatedRecipes.push({
+          id: fallbackId,
+          recipe_id: fallbackId,
+          title: fallbackTitle,
+          description: "מתכון ישראלי קלאסי וטעים המתאים לכל המשפחה לארוחת השבת.",
+          ingredients: i === 0 
+            ? ["1 עוף שלם מחולק", "4 תפוחי אדמה קלופים וחתוכים", "4 כפות סילאן", "3 כפות שמן זית", "מלח ופלפל לפי הטעם"]
+            : ["3 מלפפונים חתוכים", "3 עגבניות חתוכות", "1 בצל סגול פרוס", "מיץ מחצי לימון", "3 כפות שמן זית", "חופן עלי נענע"],
+          instructions: i === 0
+            ? ["מחממים תנור ל-200 מעלות.", "מערבבים את הסילאן, שמן הזית, מלח ופלפל ומורחים על העוף ותפוחי האדמה.", "צולים בתנור במשך שעה עד להזהבה."]
+            : ["מניחים את כל הירקות החתוכים בקערה גדולה.", "מתבלים בשמן זית, לימון, מלח ופלפל.", "מפזרים עלי נענע רעננים ומגישים."],
+          matching_preferences: ["כשר", "ביתי"],
+          image_url: `https://image.pollinations.ai/prompt/${encodedFallback}?width=636&height=393&nologo=true&private=true`,
+          readyInMinutes: i === 0 ? 75 : 15,
+          servings: 4
+        });
       }
     }
 
-    // Step 6 fallback: if we couldn't find enough validated distinct recipes, fill list with remaining candidates
-    if (validRecipes.length < count) {
-      console.log(`Could only validate ${validRecipes.length} recipes. Finding next candidate to fill list without strict validation.`);
-      for (const candidate of candidates) {
-        if (validRecipes.length >= count) break;
-        const isAlreadySelected = validRecipes.some(r => r.id === candidate.id);
-        if (!isAlreadySelected) {
-          try {
-            const translatedRecipe = await translateAndFormatRecipe(candidate, soldier);
-            translatedRecipe.titleEng = candidate.title;
-            validRecipes.push(translatedRecipe);
-            console.log(`Added candidate '${candidate.title}' as fallback.`);
-          } catch (err) {
-            console.error("Error formatting fallback recipe:", err);
-          }
-        }
-      }
-    }
-
-    // Remove the temporary titleEng field before returning to frontend
-    const cleanedRecipes = validRecipes.map(r => {
-      const { titleEng, ...rest } = r;
-      return rest;
-    });
-
-    return { recipes: cleanedRecipes };
+    return { recipes: generatedRecipes };
   }
 );
 
@@ -2834,101 +2914,117 @@ exports.sendWednesdayHostingReminder = onSchedule(
 // ──────────────────────────────────────────────────────────────────
 
 async function runEmergencyMatchmaking() {
+  const now = new Date();
+  // Get today and tomorrow dates in YYYY-MM-DD
+  const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const todayStr = today.toISOString().split("T")[0];
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    const now = new Date();
-    // Get today and tomorrow dates in YYYY-MM-DD
-    const today = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const todayStr = today.toISOString().split("T")[0];
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  const searchesSnap = await db.collection("soldier_hosting_searches")
+    .where("is_match", "==", false)
+    .where("when", "in", [todayStr, tomorrowStr])
+    .get();
 
-    const searchesSnap = await db.collection("soldier_hosting_searches")
-      .where("is_match", "==", false)
-      .where("when", "in", [todayStr, tomorrowStr])
-      .get();
+  if (searchesSnap.empty) return;
 
-    if (searchesSnap.empty) return;
+  const familiesSnap = await db.collection("families").get();
+  if (familiesSnap.empty) return;
+  const families = familiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    const familiesSnap = await db.collection("families").get();
-    if (familiesSnap.empty) return;
-    const families = familiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const hostingsSnap = await db.collection("family_hostings")
+    .where("date", "in", [todayStr, tomorrowStr])
+    .get();
+  
+  const familyHostingDates = {};
+  hostingsSnap.docs.forEach(d => {
+    const h = d.data();
+    if (h.status !== "canceled") {
+      if (!familyHostingDates[h.family_id]) familyHostingDates[h.family_id] = [];
+      familyHostingDates[h.family_id].push(h.date);
+    }
+  });
 
-    const hostingsSnap = await db.collection("family_hostings")
-      .where("date", "in", [todayStr, tomorrowStr])
-      .get();
-    
-    const familyHostingDates = {};
-    hostingsSnap.docs.forEach(d => {
-      const h = d.data();
-      if (h.status !== "canceled" && (h.guests && h.guests.length > 0)) {
-        if (!familyHostingDates[h.family_id]) familyHostingDates[h.family_id] = [];
-        familyHostingDates[h.family_id].push(h.date);
-      }
-    });
+  for (const searchDoc of searchesSnap.docs) {
+    const request = searchDoc.data();
+    const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
+    if (!soldierSnap.exists) continue;
+    const soldier = soldierSnap.data();
 
-    for (const searchDoc of searchesSnap.docs) {
-      const request = searchDoc.data();
-      const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
-      if (!soldierSnap.exists) continue;
-      const soldier = soldierSnap.data();
+    const bannedIds = new Set([
+      ...(soldier.banned_families ?? []),
+      ...(request.temporarily_banned_families ?? []),
+    ]);
 
-      const bannedIds = new Set([
-        ...(soldier.banned_families ?? []),
-        ...(request.temporarily_banned_families ?? []),
-      ]);
+    const validFamilies = [];
 
-      const validFamilies = [];
-
-      for (const family of families) {
-        if (familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when)) {
-          continue;
-        }
-        const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
-        if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
-          validFamilies.push(family);
-        }
+    for (const family of families) {
+      // 1. SKIP family if they ALREADY accepted a 24-hour emergency soldier for this date!
+      const accepted24hDates = family.accepted_24h_dates || family.took_24h_dates || [];
+      if (accepted24hDates.includes(request.when)) {
+        console.log(`  ℹ️ [EMERGENCY SKIP] Family "${family.hostName || family.id}": Already accepted a 24h soldier for ${request.when}`);
+        continue;
       }
 
-      // We should ideally calculate distance here.
-      const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
-      let distances = validFamilies.map(() => null);
-      if (hasSoldierCoords) {
-        const refinable = validFamilies.map((f, i) => ({ i, lat: f.hostLat, lng: f.hostLng })).filter(f => isNum(f.lat) && isNum(f.lng));
-        if (refinable.length > 0) {
-          const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
-          const real = await fetchTravelDistancesKm(
-            { lat: request.lat, lng: request.lng },
-            refinable.map(f => ({ lat: f.lat, lng: f.lng })),
-            mode
-          );
-          refinable.forEach((f, k) => { if (isNum(real[k])) distances[f.i] = real[k]; });
-        }
-      }
-
-      for (let i = 0; i < validFamilies.length; i++) {
-        const family = validFamilies[i];
-        const dist = distances[i];
-        let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
-        if (isNum(dist) && dist > radius) continue; // exceed distance
-
-        await createNotification(
-          family.id,
-          "host",
-          `חייל זקוק לאירוח מחר! האם תוכלו לארח את ${soldier.name || 'החייל'}?`,
-          "emergency_host",
-          "חייל זקוק לאירוח דחוף!",
-          { 
-            search_id: searchDoc.id, 
-            soldier_id: soldierSnap.id, 
-            date: request.when, 
-            name: soldier.name,
-            distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null
-          }
-        );
+      const mockHosting = { family_id: family.id, soldiers: 99, sleepOvernight: request.needSleep, time: request.startTime };
+      if (passesHardFilters(soldier, request, family, mockHosting, bannedIds, COMPROMISE.NONE)) {
+        const hasHosting = Boolean(familyHostingDates[family.id] && familyHostingDates[family.id].includes(request.when));
+        validFamilies.push({ family, hasHosting });
       }
     }
+
+    console.log(`  📋 [EMERGENCY CANDIDATES] ${validFamilies.length} families passed hard filters for request ${searchDoc.id}`);
+
+    // We should ideally calculate distance here.
+    const hasSoldierCoords = isNum(request.lat) && isNum(request.lng);
+    let distances = validFamilies.map(() => null);
+    if (hasSoldierCoords) {
+      const refinable = validFamilies.map((item, i) => ({ i, lat: item.family.hostLat, lng: item.family.hostLng })).filter(f => isNum(f.lat) && isNum(f.lng));
+      if (refinable.length > 0) {
+        const mode = (soldier.walkDistance || request.walkDistance) ? "walking" : "driving";
+        const real = await fetchTravelDistancesKm(
+          { lat: request.lat, lng: request.lng },
+          refinable.map(f => ({ lat: f.lat, lng: f.lng })),
+          mode
+        );
+        refinable.forEach((f, k) => { if (isNum(real[k])) distances[f.i] = real[k]; });
+      }
+    }
+
+    for (let i = 0; i < validFamilies.length; i++) {
+      const { family, hasHosting } = validFamilies[i];
+      const dist = distances[i];
+      let radius = isNum(request.travelDistance) ? request.travelDistance : DEFAULT_RADIUS_KM;
+      if (isNum(dist) && dist > radius) {
+        console.log(`  ❌ [EMERGENCY DISTANCE REJECT] Family "${family.hostName || family.id}": Distance ${dist}km > Radius ${radius}km`);
+        continue;
+      }
+
+      const contentMessage = hasHosting
+        ? `חייל זקוק לאירוח מחר! האם תוכלו להוסיף מקום באירוח שלכם ולארח את ${soldier.name || 'החייל'}?`
+        : `חייל זקוק לאירוח מחר! האם תוכלו לפתוח אירוח ולארח את ${soldier.name || 'החייל'}?`;
+
+      console.log(`  🔔 [EMERGENCY NOTIFY] Notifying Family "${family.hostName || family.id}" (${family.id}) [hasHosting: ${hasHosting}] about Soldier Request ${searchDoc.id}`);
+
+      await createNotification(
+        family.id,
+        "host",
+        contentMessage,
+        "emergency_host",
+        "חייל זקוק לאירוח דחוף!",
+        { 
+          search_id: searchDoc.id, 
+          soldier_id: soldierSnap.id, 
+          date: request.when, 
+          name: soldier.name || "חייל",
+          distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null,
+          has_hosting: Boolean(hasHosting)
+        }
+      );
+    }
   }
+}
 
 exports.dailyEmergencyMatches = onSchedule(
   { schedule: "0 20 * * *", timeZone: "Asia/Jerusalem" },
@@ -2959,6 +3055,9 @@ exports.acceptEmergencyHost = onCall(async (req) => {
     }
 
     const date = request.when;
+    const familyRef = db.collection("families").doc(uid);
+    const familySnap = await transaction.get(familyRef);
+    const familyData = familySnap.exists ? familySnap.data() : {};
 
     const hostingsQuery = db.collection("family_hostings")
       .where("family_id", "==", uid)
@@ -2994,27 +3093,41 @@ exports.acceptEmergencyHost = onCall(async (req) => {
       hostingId = existingDoc.id;
       const existing = existingDoc.data();
       const currentGuests = existing.guests || [];
-      const newOccupied = (existing.occupied || 0) + (request.guestCount || 1);
-      const isFull = newOccupied >= (parseInt(existing.soldiers) || 0) ? true : false;
+      const addedGuests = request.guestCount || 1;
+      const currentSoldiersCapacity = parseInt(existing.soldiers) || 0;
+      const currentOccupied = existing.occupied || 0;
+      const newOccupied = currentOccupied + addedGuests;
+      const newSoldiersCapacity = Math.max(currentSoldiersCapacity + addedGuests, newOccupied);
       
       transaction.update(existingDoc.ref, {
+        soldiers: newSoldiersCapacity,
         guests: [...currentGuests, {
           id: request.soldier_id,
           name: request.soldierName || "Soldier",
-          groupSize: request.guestCount || 1
+          groupSize: addedGuests
         }],
         occupied: newOccupied,
-        is_fully_booked: isFull
+        is_fully_booked: true
       });
     }
 
     transaction.update(searchRef, { is_match: true });
+
+    // Set flag on family document so they don't get any more 24h messages for this date!
+    transaction.update(familyRef, {
+      accepted_24h_dates: FieldValue.arrayUnion(date),
+      took_24h_dates: FieldValue.arrayUnion(date)
+    });
 
     const activeMatchRef = db.collection("active_matches").doc();
     transaction.set(activeMatchRef, {
       id: activeMatchRef.id,
       soldier_request_id: search_id,
       host_offer_id: hostingId,
+      family_id: uid,
+      family_name: familyData.hostName ?? null,
+      family_city: familyData.hostCity ?? null,
+      hosting_date: date,
       status: "approved",
       created_at: FieldValue.serverTimestamp(),
       distance_km: null

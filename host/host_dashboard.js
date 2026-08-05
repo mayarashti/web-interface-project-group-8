@@ -372,7 +372,7 @@ function RecipeModal({ guest, host, onClose }) {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: guest.dislikedFoods || [],
           allergies: guest.allergies || [],
-          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          dietaryPreferences: (guest.dietaryPreferences && guest.dietaryPreferences.length > 0) ? guest.dietaryPreferences : (guest.allergies || []).filter(a => a === 'veg' || a === 'vegetarian' || a === 'vegan'),
           isKosher: guest.kosher && guest.kosher !== 'none'
         },
         host: {
@@ -407,7 +407,7 @@ function RecipeModal({ guest, host, onClose }) {
           favoriteFoods: guest.favoriteFoods || [],
           dislikedFoods: [...(guest.dislikedFoods || []), ...existingTitles],
           allergies: guest.allergies || [],
-          dietaryPreferences: guest.dietaryPreferences || (guest.allergies || []).filter(a => a === 'veg' || a === 'vegan'),
+          dietaryPreferences: (guest.dietaryPreferences && guest.dietaryPreferences.length > 0) ? guest.dietaryPreferences : (guest.allergies || []).filter(a => a === 'veg' || a === 'vegetarian' || a === 'vegan'),
           isKosher: guest.kosher && guest.kosher !== 'none'
         },
         host: {
@@ -1593,6 +1593,46 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
 
       <div className="max-w-md mx-auto px-5 pt-6 space-y-5">
 
+        {/* Profile Picture at the top (Circular Avatar with Edit overlay) */}
+        <div className="flex flex-col items-center justify-center pt-4">
+          <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+          <div onClick={() => fileInputRef.current?.click()} className="relative w-28 h-28 rounded-full cursor-pointer group shadow-md active:scale-95 transition-all">
+            {(form.hostPreview || data.profile_img_url) && !form.removePhoto ? (
+              <img src={form.hostPreview || data.profile_img_url} className="w-28 h-28 rounded-full object-cover border-2 border-white" alt="Avatar" />
+            ) : (
+              <div className="w-28 h-28 rounded-full bg-warm-100 flex items-center justify-center border border-dashed border-warm-300 group-hover:border-brand-200 transition-colors">
+                <span className="text-3xl text-warm-500 font-bold">{(form.hostName || '?')[0]}</span>
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 w-8 h-8 bg-brand-500 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </div>
+          </div>
+          {((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
+            <button 
+              onClick={() => setForm(prev => ({ ...prev, removePhoto: true, hostFile: null, hostPreview: null }))}
+              className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1 rounded-full border border-red-100 mt-3"
+            >
+              {t('remove_photo') || 'הסר תמונה'}
+            </button>
+          )}
+        </div>
+
+        {/* Family Description Block */}
+        <Card className="p-5 space-y-3">
+          <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_vibe_label')}</label>
+          <textarea
+            value={form.hostVibe}
+            onChange={e => setF('hostVibe')(e.target.value)}
+            placeholder={t('s16_vibe_ph')}
+            rows={5}
+            className="w-full px-4 py-3 rounded-xl border border-warm-200 text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
+          />
+        </Card>
+
         {/* Basic details */}
         <Card className="p-5 space-y-4">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
@@ -1667,50 +1707,6 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
               <Btn type="button" variant="secondary" onClick={handleAddLanguage} className="!w-auto !py-2.5">הוסף</Btn>
             </div>
           </div>
-        </Card>
-
-        {/* Vibe / bio */}
-        <Card className="p-5 space-y-3">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
-            {t('s16_3_title')}
-          </h2>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_photo_label')}</label>
-            <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border border-dashed border-warm-300 bg-warm-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 hover:border-brand-300 transition-colors overflow-hidden"
-              style={((form.hostPreview || data.profile_img_url) && !form.removePhoto) ? { backgroundImage: `url(${form.hostPreview || data.profile_img_url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderColor: 'transparent', height: '160px' } : {}}
-            >
-              {!((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
-                <>
-                  <CameraIcon className="w-8 h-8 text-warm-400 mb-2" />
-                  <p className="text-sm font-semibold text-gray-600">{t('s16_photo_btn')}</p>
-                  <p className="text-xs text-warm-400 mt-1">{t('s6_size')}</p>
-                </>
-              )}
-            </div>
-            {((form.hostPreview || data.profile_img_url) && !form.removePhoto) && (
-              <div className="mt-2 flex justify-end">
-                <button 
-                  onClick={() => setForm(prev => ({ ...prev, removePhoto: true, hostFile: null, hostPreview: null }))}
-                  className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors bg-red-50 px-3 py-1.5 rounded-lg border border-red-100"
-                >
-                  {t('remove_photo') || 'הסר תמונה'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <label className="block text-sm font-semibold text-gray-800 mb-2 mt-4">{t('s16_vibe_label')}</label>
-          <textarea
-            value={form.hostVibe}
-            onChange={e => setF('hostVibe')(e.target.value)}
-            placeholder={t('s16_vibe_ph')}
-            rows={5}
-            className="w-full px-4 py-3 rounded-xl border border-warm-200 text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
-          />
         </Card>
 
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>

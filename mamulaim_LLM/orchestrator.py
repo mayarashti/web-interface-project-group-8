@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from typing import Dict, Any, List, Optional
-from schemas import RecipeDetails, RecipeRecommendationRequest, SoldierPreferences, HostFamilyInfo, FinalResponse
+from schemas import RecipeDetails, RecipeRecommendationRequest, SoldierPreferences, HostFamilyInfo, FinalResponse, RecipeGenerationRequest
 from generator import RecipeGenerator
 from spoonacular_client import SpoonacularClient
 
@@ -206,3 +206,42 @@ class RecipeRecommendationOrchestrator:
                 break
 
         return selected_recipes
+
+    async def generate_k_recipes(self, request: RecipeGenerationRequest) -> FinalResponse:
+        """
+        Generate K recipes satisfying all target preferences using direct LLM generation.
+        """
+        from planner import RecipePlanner
+        
+        # 1. Normalize "veg" to "vegetarian"
+        normalized_people = {}
+        for name, prefs in request.people.items():
+            normalized_people[name] = [
+                "vegetarian" if p.lower().strip() == "veg" else p
+                for p in prefs
+            ]
+
+        # 2. Create a recipe plan detailing what preferences to cover per recipe
+        plans = RecipePlanner.create_plan(normalized_people, request.k)
+        
+        generated_recipes = []
+        selected_titles = []
+        
+        # 2. Generate each recipe based on target preferences of the plan
+        for plan in plans:
+            # We treat target_preferences as the favorite foods/preferences,
+            # and exclusion_constraints as allergy / forbidden foods.
+            # Groq will generate the recipe directly.
+            recipe = await self.generator.generate_recipe_directly(
+                target_preferences=plan.target_preferences,
+                exclusion_constraints=plan.exclusion_constraints,
+                previous_recipe_titles=selected_titles
+            )
+            recipe.recipe_id = plan.recipe_id
+            generated_recipes.append(recipe)
+            selected_titles.append(recipe.title)
+            
+        return FinalResponse(
+            status="ok",
+            recipes=generated_recipes
+        )
