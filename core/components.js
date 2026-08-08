@@ -1086,10 +1086,20 @@ function ConfirmDialog({ isOpen, title, message, confirmLabel, cancelLabel, onCo
   );
 }
 
-function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead, onMarkRead, onNotificationClick, uid, telegramConnected }) {
+/* A favorites offer for a hosting whose date has passed is dead. archivePastEvents
+   deletes them once a day; this hides them the moment the date rolls over, so the
+   soldier is never invited to a meal that already happened. Only
+   favorite_hosting_open notifications carry payload.hosting_date. */
+function visibleNotifications(notifications = []) {
+  const today = new Date().toISOString().split('T')[0];
+  return notifications.filter(n => !(n.payload?.hosting_date && n.payload.hosting_date < today));
+}
+
+function NotificationsPanel({ isOpen, onClose, notifications: allNotifications = [], onMarkAllRead, onMarkRead, onNotificationClick, uid, telegramConnected }) {
   const { lang } = useLang();
   const isRtl = lang === 'he';
   if (!isOpen) return null;
+  const notifications = visibleNotifications(allNotifications);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -1195,7 +1205,10 @@ function NotificationsPanel({ isOpen, onClose, notifications = [], onMarkAllRead
           ) : (
             notifications.map((n, i) => {
               const isEmergency = n.type === 'emergency_host';
-              const isActionable = onNotificationClick && (isEmergency || (n.payload && (n.payload.request_id || n.payload.hosting_id || n.payload.family_id)));
+              // A favorites offer the soldier already acted on is a statement,
+              // not a question — it must not reopen the join modal.
+              const isActionable = !n.resolved && onNotificationClick &&
+                (isEmergency || (n.payload && (n.payload.request_id || n.payload.hosting_id || n.payload.family_id)));
               return (
                 <div
                   key={n.id || i}
@@ -1514,6 +1527,7 @@ window.MultiCheck = MultiCheck;
 window.SectionTitle = SectionTitle;
 window.AppHeader = AppHeader;
 window.NotificationsPanel = NotificationsPanel;
+window.visibleNotifications = visibleNotifications;
 window.ConfirmDialog = ConfirmDialog;
 window.Modal = Modal;
 window.ScreenLayout = ScreenLayout;

@@ -611,9 +611,8 @@ exports.onNewFamilyHosting = onDocumentCreated(
 
     // ── Tell soldiers who favorited this family ─────────────────────
     // Favorites are private: the family is never told who favorited them.
-    // Soldiers who already have a request for this date are skipped — if they
-    // are matched there is nothing to offer, and if they are still searching
-    // the favorites bonus in scoreFamily already steers the engine here.
+    // Runs after the matching loop above, so a soldier who was just auto-placed
+    // into this hosting is already excluded by the date check inside.
     try {
       await notifyFavoritingSoldiers(event.params.hostingId, hosting);
     } catch (err) {
@@ -622,12 +621,49 @@ exports.onNewFamilyHosting = onDocumentCreated(
   }
 );
 
+// "YYYY-MM-DD" → "DD/MM" for message text; falls back to the raw value.
+function formatDayMonth(date) {
+  const [, month, day] = String(date ?? "").split("-");
+  return day && month ? `${day}/${month}` : (date ?? "");
+}
+
 // ──────────────────────────────────────────────────────────────────
 // Notify every soldier who has this family in favorite_families that a
 // new hosting just opened. Called from onNewFamilyHosting.
+//
+// Date policy: a soldier who already has a request for this exact date is
+// skipped — same-date placement is the matching engine's job (favorites get a
+// score bonus, a radius waiver and sort priority there). The notification only
+// covers dates the soldier has not asked about, and joining it never touches
+// their other open requests.
 // ──────────────────────────────────────────────────────────────────
 async function notifyFavoritingSoldiers(hostingId, hosting) {
   if (!hosting?.family_id || hosting.status === "canceled") return;
+
+  // Never offer something that cannot be accepted. joinFavoriteHostingFor
+  // refuses past dates with the same UTC-day comparison — keep them in step or
+  // the soldier gets an offer that always fails.
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (!hosting.date || hosting.date < todayStr) {
+    console.log(`   ⏭️ [FAVORITE] Hosting ${hostingId} is dated ${hosting.date ?? "(none)"} — not offering a past hosting`);
+    return;
+  }
+
+  // Read the live doc: `hosting` is the creation snapshot, and we need both the
+  // current occupancy and the dedup list (restoreHosting re-creates the document,
+  // which fires this trigger again for a hosting people were already offered).
+  const hostingRef = db.collection("family_hostings").doc(hostingId);
+  const liveSnap = await hostingRef.get();
+  const live = liveSnap.exists ? liveSnap.data() : hosting;
+
+  const capacity = parseInt(live.soldiers) || 0;
+  const taken = (live.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0);
+  if (live.is_fully_booked || (capacity > 0 && taken >= capacity)) {
+    console.log(`   ⏭️ [FAVORITE] Hosting ${hostingId} is already full — not offering it`);
+    return;
+  }
+
+  const alreadyNotified = new Set(live.notified_favorites ?? []);
 
   const favSnap = await db
     .collection("soldiers")
@@ -640,30 +676,38 @@ async function notifyFavoritingSoldiers(hostingId, hosting) {
   const family = familySnap.exists ? familySnap.data() : {};
   const familyName = family.hostName ?? "המשפחה";
 
-  const [, month, day] = String(hosting.date ?? "").split("-");
-  const dateLabel = day && month ? `${day}/${month}` : (hosting.date ?? "");
+  // The date leads the title. This notification always concerns a date the
+  // soldier did not search for (same-date cases go to the matching engine), so
+  // burying it mid-sentence in the small grey body is what made these offers
+  // read as if they were about the day the soldier was looking for.
+  const title = `משפחת ${familyName} מארחת ב-${formatDayMonth(hosting.date)}`;
 
-  let content = `משפחת ${familyName} פתחה אירוח חדש בתאריך ${dateLabel}`;
-  if (hosting.time) content += ` בשעה ${hosting.time}`;
-  if (family.hostCity) content += ` ב${family.hostCity}`;
-  content += ".";
+  const where = [];
+  if (hosting.time) where.push(`בשעה ${hosting.time}`);
+  if (family.hostCity) where.push(`ב${family.hostCity}`);
+  let content = where.length ? `אירוח ${where.join(" ")}.` : "אירוח חדש.";
   if (hosting.sleepOvernight) content += " יש אפשרות ללינה.";
   if (hosting.pickup) content += " יש אפשרות להסעה.";
   content += " רוצה להשתבץ?";
 
   for (const soldierDoc of favSnap.docs) {
-    // Only skip soldiers who are already placed for that date. A soldier who is
-    // still searching does get the notification: the matching engine may never
-    // reach this family (it can fail a hard filter), so staying silent would
-    // leave them with neither a match nor an offer.
+    if (alreadyNotified.has(soldierDoc.id)) {
+      console.log(`   ⏭️ [FAVORITE] Soldier ${soldierDoc.id} was already offered hosting ${hostingId} — skipping`);
+      continue;
+    }
+
+    // Any request for this exact date means the matching engine owns this case:
+    // either the soldier is already placed, or the engine is about to place them
+    // with the favorites advantages. Cross-date offers are what this notification
+    // is for, and they never disturb the soldier's other requests.
     const existingReq = await db
       .collection("soldier_hosting_searches")
       .where("soldier_id", "==", soldierDoc.id)
       .where("when", "==", hosting.date)
+      .limit(1)
       .get();
-    const alreadyPlaced = existingReq.docs.some((d) => d.data().is_match === true);
-    if (alreadyPlaced) {
-      console.log(`   ⏭️ [FAVORITE] Soldier ${soldierDoc.id} already placed on ${hosting.date} — skipping`);
+    if (!existingReq.empty) {
+      console.log(`   ⏭️ [FAVORITE] Soldier ${soldierDoc.id} already has a request for ${hosting.date} — matching engine handles it`);
       continue;
     }
 
@@ -672,10 +716,16 @@ async function notifyFavoritingSoldiers(hostingId, hosting) {
         soldierDoc.id, "soldier",
         content,
         "favorite_hosting_open",
-        "משפחה מועדפת פתחה אירוח!",
-        { hosting_id: hostingId, family_id: hosting.family_id, family_name: familyName },
+        title,
+        {
+          hosting_id: hostingId,
+          family_id: hosting.family_id,
+          family_name: familyName,
+          hosting_date: hosting.date,   // lets the client hide the offer once the date passes
+        },
         inlineKeyboard([[btn("✅ אני רוצה להשתבץ", `fav_join:${hostingId}`)]])
       );
+      await hostingRef.update({ notified_favorites: FieldValue.arrayUnion(soldierDoc.id) });
     } catch (e) { console.error("notification error (favorite_hosting_open):", e); }
   }
 }
@@ -1459,12 +1509,75 @@ async function joinFavoriteHostingFor(soldierId, hostingId) {
   });
   await matchRef.update({ status: "approved" });
 
+  // The offer has been taken up — turn the open question in the soldier's
+  // notification list into a statement so it stops asking. Declining is not an
+  // action: an offer the soldier ignores simply stays a question.
+  await resolveFavoriteOffer(soldierId, hostingId, {
+    title: "שובצת לאירוח!",
+    content: `שובצת לאירוח אצל משפחת ${family.hostName ?? "המשפחה"}${hosting.date ? ` בתאריך ${formatDayMonth(hosting.date)}` : ""}. ההגעה אושרה, נתראה!`,
+    resolved: "joined",
+  });
+
   return {
     success: true,
     request_id: requestRef.id,
     match_id: matchRef.id,
     family_name: family.hostName ?? null,
   };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Rewrite a soldier's open "favorite family opened a hosting" notification
+// once the offer is no longer answerable. Client rules only let a user flip
+// `read`, so this has to happen server-side — which also covers Telegram.
+// ──────────────────────────────────────────────────────────────────
+async function resolveFavoriteOffer(soldierId, hostingId, { title, content, resolved }) {
+  try {
+    const snap = await db.collection("notifications")
+      .where("user_id", "==", soldierId)
+      .where("type", "==", "favorite_hosting_open")
+      .get();
+
+    const open = snap.docs.filter(
+      (d) => d.data().payload?.hosting_id === hostingId && !d.data().resolved
+    );
+    if (open.length === 0) return;
+
+    const batch = db.batch();
+    open.forEach((d) => batch.update(d.ref, { title, content, resolved }));
+    await batch.commit();
+    console.log(`   ⭐ [FAVORITE] Resolved ${open.length} offer notification(s) for soldier ${soldierId} / hosting ${hostingId} as "${resolved}"`);
+  } catch (e) {
+    console.error("resolveFavoriteOffer error:", e);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Remove "favorite family opened a hosting" offers that can no longer be
+// accepted, so they drop out of the soldier's notification list instead of
+// sitting there as a question with no answer.
+//
+// Offers the soldier already acted on (resolved) are kept — that row is their
+// own confirmation, not an open question.
+// ──────────────────────────────────────────────────────────────────
+async function deleteFavoriteOffers(hostingId, why) {
+  try {
+    const snap = await db.collection("notifications")
+      .where("type", "==", "favorite_hosting_open")
+      .get();
+
+    const dead = snap.docs.filter(
+      (d) => d.data().payload?.hosting_id === hostingId && !d.data().resolved
+    );
+    if (dead.length === 0) return;
+
+    const batch = db.batch();
+    dead.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    console.log(`   ⭐ [FAVORITE] Removed ${dead.length} unanswerable offer(s) for hosting ${hostingId} (${why})`);
+  } catch (e) {
+    console.error("deleteFavoriteOffers error:", e);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -1621,6 +1734,12 @@ exports.onActiveMatchApproved = onDocumentUpdated(
 
       await tryAllCompromiseLevels(after.soldier_request_id);
       return;
+    }
+
+    // The hosting just filled up — pull any outstanding favorites offers for it,
+    // so nobody is left staring at an invitation they can no longer accept.
+    if (result.full) {
+      await deleteFavoriteOffers(after.host_offer_id, "hosting is now full");
     }
 
     // Notify family: a soldier confirmed arrival
@@ -1896,6 +2015,11 @@ exports.onHostingStatusChange = onDocumentUpdated(
     if (after.status === "canceled") {
       console.log("🔔 Hosting canceled:", hostingId);
 
+      // Withdraw any outstanding favorites offers for this hosting first —
+      // soldiers who were only invited get nothing else to tell them it is gone
+      // (the hosting_canceled notification below only goes to matched soldiers).
+      await deleteFavoriteOffers(hostingId, "hosting canceled");
+
       const matchesSnap = await db
         .collection("active_matches")
         .where("host_offer_id", "==", hostingId)
@@ -1984,13 +2108,16 @@ exports.restoreHosting = onCall(async (req) => {
 
   const { final_status, archived_at, ...hostingData } = archiveSnap.data();
 
-  // Restore to active collection with clean state
+  // Restore to active collection with clean state. notified_favorites is reset
+  // too: the hosting really did go away and come back, so favoriting soldiers
+  // should be offered it once more (the re-create fires onNewFamilyHosting).
   await db.collection("family_hostings").doc(hosting_id).set({
     ...hostingData,
     status: "open",
     guests: [],
     occupied: 0,
     is_fully_booked: false,
+    notified_favorites: [],
   });
 
   // Remove from archive
@@ -2068,6 +2195,21 @@ exports.archivePastEvents = onSchedule(
       await doc.ref.delete();
     }
     console.log(`📦 Archived ${matchesSnap.size} active match(es)`);
+
+    // ── 4. Drop favorites offers whose hosting date has passed ────
+    // payload.hosting_date only exists on favorite_hosting_open notifications,
+    // so this single-field range query needs no composite index and cannot
+    // touch any other notification type. The client hides these immediately;
+    // this is the sweep that actually clears them out.
+    const staleOffersSnap = await db
+      .collection("notifications")
+      .where("payload.hosting_date", "<", today)
+      .get();
+
+    for (const doc of staleOffersSnap.docs) {
+      await doc.ref.delete();
+    }
+    console.log(`📦 Removed ${staleOffersSnap.size} expired favorites offer(s)`);
   }
 );
 

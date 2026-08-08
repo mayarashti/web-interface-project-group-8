@@ -364,7 +364,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
           </button>
         )}
         onNotifications={() => setShowNotifications(true)}
-        notificationsCount={notifications.filter(n => !n.read).length}
+        notificationsCount={window.visibleNotifications(notifications).filter(n => !n.read).length}
         onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
@@ -1505,7 +1505,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
           </button>
         )}
         onNotifications={() => setShowNotifications(true)}
-        notificationsCount={notifications.filter(n => !n.read).length}
+        notificationsCount={window.visibleNotifications(notifications).filter(n => !n.read).length}
         onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
