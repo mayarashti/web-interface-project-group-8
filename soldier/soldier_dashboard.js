@@ -128,10 +128,10 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
      own requested date is the last resort. City only — never the address. */
   const city = family.hostCity || match?.family_city || null;
   const dateLabel = window.formatHostingDate(hosting?.date || match?.hosting_date || req.when, lang);
+  const timeLabel = window.formatHostingTimeLabel(hosting, t);
   /* A known offer with a blank time says the time is still coming; an offer we
      could not read stays silent rather than promising an update. */
-  const timeLabel = window.formatHostingTimeLabel(hosting, t)
-    || (hosting ? t('hosting_time_tbd') : '');
+  const timePending = !timeLabel && !!hosting;
 
   let titleText = '';
   let subtitleText = '';
@@ -194,12 +194,12 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
           </h3>
 
           {matchState !== 'pending' && (
-            <HostingWhenWhereStrip
-              className="my-2"
+            <HostingWhenWhereLines
+              className="my-1.5"
               dateLabel={dateLabel}
               timeLabel={timeLabel}
+              timePending={timePending}
               city={city}
-              tone={hostingCanceled ? 'amber' : matchState === 'confirmed' ? 'green' : 'brand'}
               ariaLabel={dateLabel && timeLabel && city
                 ? t('card_confirmed_invite', dateLabel, timeLabel, city)
                 : undefined}
@@ -2123,10 +2123,10 @@ function SearchStatusSheet({ request, seed, onClose, onEdit, onCancel, onRematch
 
   // When and where — city only, never the address.
   const dateLabel = window.formatHostingDate(hosting?.date || realMatch?.hosting_date, lang);
+  const timeLabel = window.formatHostingTimeLabel(hosting, t);
   /* Same rule as the card: a readable offer with no time set says so in the
-     strip, which is also why the time row stays excluded below. */
-  const timeLabel = window.formatHostingTimeLabel(hosting, t)
-    || (hosting ? t('hosting_time_tbd') : '');
+     lines below, which is also why the time row stays excluded from the rows. */
+  const timePending = !timeLabel && !!hosting;
   const city = matchedFamily?.city || realMatch?.family_city || null;
   const hostingCanceled = !!hosting && hosting.status === 'canceled';
   const hostingMissing = !!realMatch?.host_offer_id && !hosting;
@@ -2155,12 +2155,12 @@ function SearchStatusSheet({ request, seed, onClose, onEdit, onCancel, onRematch
 
   /* The pieces both sub-states share, in one place so the two orderings below
      stay honestly identical in content and differ only in sequence. */
-  const whenWhereStrip = (
-    <HostingWhenWhereStrip
+  const whenWhereLines = (
+    <HostingWhenWhereLines
       dateLabel={dateLabel}
       timeLabel={timeLabel}
+      timePending={timePending}
       city={city}
-      tone={hostingCanceled ? 'amber' : isApproved ? 'green' : 'brand'}
       ariaLabel={dateLabel && timeLabel && city
         ? t('card_confirmed_invite', dateLabel, timeLabel, city)
         : undefined}
@@ -2237,7 +2237,7 @@ function SearchStatusSheet({ request, seed, onClose, onEdit, onCancel, onRematch
                   </div>
                 )}
 
-                {whenWhereStrip}
+                {whenWhereLines}
 
                 {/* A caveat about this particular match is a decision input
                     before approval, and only background information after. */}
