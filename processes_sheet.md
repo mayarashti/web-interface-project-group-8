@@ -43,6 +43,16 @@ The soldier flow focuses on a quick 3-step registration and an LLM-powered smart
   - **Matched State Actions:** Tapping a matched search opens a bottom-up sheet with the family's full details, a link to their map location, a WhatsApp message link, and a **"Rematch" button**. Clicking "Rematch" opens a prompt/box for the soldier to fill in a reason for canceling the current match before initiating a new search.
   - **Management:** Options to edit or cancel the search entirely.
 
+### Favorite Families (Soldier only)
+
+Lets a soldier "come back" to a family they enjoyed. **Entirely private — the family is never told it was favorited and never sees the list.**
+
+- **Star button** in the header, next to the notifications bell. Opens a panel listing the favorite families (photo + name + city). Tapping a row opens the family's full details — the same `FamilyInfoCard` shown after an approved match. A filled star on each row removes the family, behind a yes/no confirmation dialog.
+- **Day after a hosting:** the hourly `checkPendingRequests` job finds matches whose `hosting_date` was yesterday and sends the soldier "How was the hosting at the X family?" with a yes/no question — do you want to be notified when they open a new hosting? "Yes" adds the family to `soldiers.favorite_families`. Sent once per hosting (deduped via `reminders_sent`), and skipped if the family is already a favorite.
+- **When a favorite family opens a hosting:** `onNewFamilyHosting` notifies every soldier who favorited that family, with the hosting details (date, time, city, sleep/pickup). Only soldiers who are **already placed** for that date (`is_match == true`) are skipped. A soldier who is still searching *does* get the offer — the matching engine may never reach this family, so staying silent would leave them with neither a match nor an offer.
+- **One-tap join:** the notification opens the family card plus the hosting details and an "I want to join" button. It calls the `joinFavoriteHosting` callable, which **reuses the soldier's existing open request for that date** if there is one (no duplicate request, and the existing `guestCount` drives the group size), or creates a fresh one otherwise. Either way the request is flagged `is_match` before the match is created, and the match is immediately approved — so the soldier is assigned and confirmed instantly, with no manual approval step. Refusals are surfaced as messages: hosting full, already placed for that date, or hosting no longer available.
+- **Telegram:** both notifications are mirrored to Telegram with inline buttons (⭐ yes / no, and "I want to join"), so the whole flow can be completed without opening the web app.
+
 ---
 
 ## 🏡 Host Family Process

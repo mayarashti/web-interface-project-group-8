@@ -12,69 +12,81 @@ function familyInRange(req, fam) {
   return d <= radius;
 }
 
+/* The family profile and the hosting offer behind one match, read in parallel.
+   Neither read is fatal — the match doc carries a denormalized family name,
+   city and date to fall back on — so a failure degrades the card instead of
+   emptying it. */
+async function fetchMatchBundle(match) {
+  const get = (collection, id) => id
+    ? window.db.collection(collection).doc(id).get()
+        .catch(e => { console.error(`${collection} fetch error:`, e); return null; })
+    : Promise.resolve(null);
+
+  const [familyDoc, hostingDoc] = await Promise.all([
+    get('families', match.family_id),
+    get('family_hostings', match.host_offer_id),
+  ]);
+
+  return {
+    match,
+    familyId: match.family_id,
+    family: familyDoc?.exists ? familyDoc.data() : null,
+    hosting: hostingDoc?.exists ? hostingDoc.data() : null,
+  };
+}
+
 function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
   const [matchState, setMatchState] = React.useState('pending'); // 'pending', 'match_found', 'confirmed'
   const [matchDetails, setMatchDetails] = React.useState(null);
+  /* A match's family_id and host_offer_id never change, so the pair of reads
+     happens once per match no matter how often the status snapshot fires. */
+  const bundleCache = React.useRef({});
 
   React.useEffect(() => {
     if (!req.is_match) {
       setMatchState('pending');
+      setMatchDetails(null);
       return;
     }
 
     if (!window.db) {
-      // demo fallback
+      // No Firestore (static demo): show the match_found layout with no family
+      // attached rather than inventing one that looks real.
       setMatchState('match_found');
-      setMatchDetails({
-        familyName: 'כהן',
-        city: 'אור יהודה',
-        date: req.when
-      });
+      setMatchDetails(null);
       return;
     }
 
-    // Subscribe to active_matches
+    let canceled = false;
+
+    // Subscribe to active_matches — this listener is the pending →
+    // match_found → confirmed state machine.
     const unsubscribe = window.db.collection('active_matches')
       .where('soldier_request_id', '==', req.id)
       .where('status', 'in', ['pending_soldier_approval', 'approved'])
       .limit(1)
       .onSnapshot(async (snap) => {
+        if (canceled) return;
         if (snap.empty) {
           setMatchState('pending');
+          setMatchDetails(null);
           return;
         }
 
-        const match = snap.docs[0].data();
-        const state = match.status === 'approved' ? 'confirmed' : 'match_found';
-        setMatchState(state);
+        const match = { id: snap.docs[0].id, ...snap.docs[0].data() };
+        setMatchState(match.status === 'approved' ? 'confirmed' : 'match_found');
 
-        // Fetch family details
-        try {
-          const famDoc = await window.db.collection('families').doc(match.family_id).get();
-          if (famDoc.exists) {
-            const famData = famDoc.data();
-            setMatchDetails({
-              familyName: famData.hostName,
-              city: famData.hostCity,
-              date: req.when
-            });
-          } else {
-            setMatchDetails({
-              familyName: match.family_name || 'כהן',
-              city: match.family_city || 'אור יהודה',
-              date: req.when
-            });
-          }
-        } catch (e) {
-          setMatchDetails({
-            familyName: match.family_name || 'כהן',
-            city: match.family_city || 'אור יהודה',
-            date: req.when
-          });
+        const key = `${match.family_id}|${match.host_offer_id || ''}`;
+        let bundle = bundleCache.current[key];
+        if (!bundle) {
+          bundle = await fetchMatchBundle(match);
+          if (canceled) return;
+          bundleCache.current[key] = bundle;
         }
-      });
+        setMatchDetails({ ...bundle, match });
+      }, e => console.error('Match listener error:', e));
 
-    return () => unsubscribe();
+    return () => { canceled = true; unsubscribe(); };
   }, [req.id, req.is_match]);
 
   let cardStyle = {
@@ -89,36 +101,51 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
     border: '1px solid #E5E7EB'
   };
 
+  const family = matchDetails?.family || {};
+  const match = matchDetails?.match || null;
+  const hosting = matchDetails?.hosting || null;
+  const hostingCanceled = !!hosting && hosting.status === 'canceled';
+
   if (matchState === 'pending') {
     cardStyle.border = '1px solid #E5E7EB';
+  } else if (hostingCanceled) {
+    cardStyle.border = '1px solid #D97706';
   } else if (matchState === 'match_found') {
     cardStyle.border = '1px solid #E67E22';
   } else if (matchState === 'confirmed') {
     cardStyle.border = '1px solid #27AE60';
   }
 
+  /* One label for the family across every state, so a profile with no
+     hostName degrades to a generic noun phrase instead of a blank. */
+  const familyName = family.hostName || match?.family_name || null;
+  const famLabel = familyName
+    ? t('family_display_name', familyName)
+    : t('generic_family_name');
+
+  /* When and where the meal actually is. The hosting offer is the truth; the
+     match doc's denormalized date covers a missing offer, and the soldier's
+     own requested date is the last resort. City only — never the address. */
+  const city = family.hostCity || match?.family_city || null;
+  const dateLabel = window.formatHostingDate(hosting?.date || match?.hosting_date || req.when, lang);
+  /* A known offer with a blank time says the time is still coming; an offer we
+     could not read stays silent rather than promising an update. */
+  const timeLabel = window.formatHostingTimeLabel(hosting, t)
+    || (hosting ? t('hosting_time_tbd') : '');
+
   let titleText = '';
   let subtitleText = '';
 
   if (matchState === 'pending') {
-    titleText = lang === 'he' ? 'מחפשים לך אירוח לשבת...' : 'Searching for Your Shabbat Match';
-    subtitleText = lang === 'he'
-      ? `מחפשים מארחים עבור ${req.when} ב-${req.location}. אנחנו בודקים הצעות כדי למצוא לך את המשפחה המארחת המושלמת.`
-      : `Looking for hosts for ${req.when} in ${req.location}. We are reviewing requests to find the perfect host family for you.`;
+    titleText = t('card_search_title');
+    // req.when is a raw 'YYYY-MM-DD'; show it the way the rest of the app does.
+    subtitleText = t('card_search_sub', window.formatHostingDate(req.when, lang) || req.when, req.location);
   } else if (matchState === 'match_found') {
-    titleText = lang === 'he' ? 'נמצאה משפחה מארחת!' : 'Host Family Found!';
-    const famName = matchDetails?.familyName || (lang === 'he' ? 'כהן' : 'Cohen');
-    const city = matchDetails?.city || (lang === 'he' ? 'אור יהודה' : 'Or Yehuda');
-    subtitleText = lang === 'he'
-      ? `משפחת ${famName} מ${city} תשמח לארח אותך בשישי הקרוב (${req.when}).`
-      : `The ${famName} family from ${city} would love to host you this Friday (${req.when}).`;
+    titleText = t('card_match_title');
+    subtitleText = t('card_match_sub', famLabel);
   } else if (matchState === 'confirmed') {
-    titleText = lang === 'he' ? 'האירוח אושר!' : 'Hosting Confirmed!';
-    const famName = matchDetails?.familyName || (lang === 'he' ? 'כהן' : 'Cohen');
-    const city = matchDetails?.city || (lang === 'he' ? 'אור יהודה' : 'Or Yehuda');
-    subtitleText = lang === 'he'
-      ? `הכול מוכן! האירוח שלך אצל משפחת ${famName} ב${city} מאושר.`
-      : `You're all set for Shabbat with the ${famName} family in ${city}.`;
+    titleText = t('card_confirmed_title', famLabel);
+    subtitleText = t('card_confirmed_sub');
   }
 
   return (
@@ -129,7 +156,7 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
           className="absolute -top-3 left-4 md:left-6 px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm"
           style={{ backgroundColor: '#E67E22' }}
         >
-          {lang === 'he' ? 'נמצאה התאמה!' : 'Match Found!'}
+          {t('card_match_badge')}
         </span>
       )}
 
@@ -160,14 +187,34 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
           )}
         </div>
 
-        {/* Title and Subtitle */}
+        {/* Title, when/where at a glance, then subtitle */}
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold tracking-tight text-gray-900 mb-1">
             {titleText}
           </h3>
+
+          {matchState !== 'pending' && (
+            <HostingWhenWhereStrip
+              className="my-2"
+              dateLabel={dateLabel}
+              timeLabel={timeLabel}
+              city={city}
+              tone={hostingCanceled ? 'amber' : matchState === 'confirmed' ? 'green' : 'brand'}
+              ariaLabel={dateLabel && timeLabel && city
+                ? t('card_confirmed_invite', dateLabel, timeLabel, city)
+                : undefined}
+            />
+          )}
+
           <p className="text-[13px] font-normal leading-relaxed text-warm-500">
             {subtitleText}
           </p>
+
+          {hostingCanceled && (
+            <p className="mt-2 text-[12px] font-bold leading-relaxed text-amber-800">
+              {t('hosting_canceled_note')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -179,34 +226,34 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
               onClick={() => onEdit(req)}
               className="flex-1 text-center py-2.5 text-xs font-bold text-gray-600 hover:text-brand-600 transition-colors rounded-xl bg-warm-50 border border-warm-100 hover:border-warm-200 hover:bg-warm-100 shadow-sm"
             >
-              {lang === 'he' ? 'ערוך בקשה' : 'Edit Request'}
+              {t('edit_request')}
             </button>
             <button
               onClick={() => onCancel(req.id)}
               className="flex-1 text-center py-2.5 text-xs font-bold text-red-600 hover:text-red-700 transition-colors rounded-xl bg-red-50 border border-red-100 hover:border-red-200 hover:bg-red-100 shadow-sm"
             >
-              {lang === 'he' ? 'בטל בקשה' : 'Cancel Request'}
+              {t('cancel_request')}
             </button>
           </>
         )}
 
         {matchState === 'match_found' && (
           <button
-            onClick={onOpen}
+            onClick={() => onOpen(matchDetails)}
             className="w-full text-center px-4 py-2.5 rounded-xl font-bold text-white transition-all shadow-sm hover:shadow active:scale-[0.98]"
             style={{ backgroundColor: '#2D5A27' }}
           >
-            {lang === 'he' ? 'פרטי האירוח ואישור הגעה' : 'View Details & Confirm Hosting'}
+            {t('card_open_match_cta')}
           </button>
         )}
 
         {matchState === 'confirmed' && (
           <button
-            onClick={onOpen}
+            onClick={() => onOpen(matchDetails)}
             className="w-full text-center px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm hover:shadow active:scale-[0.98] bg-white border"
             style={{ borderColor: '#3D2B1F', color: '#3D2B1F' }}
           >
-            {lang === 'he' ? 'צפייה בפרטי הגעה ויצירת קשר' : 'View Arrival & Contact Details'}
+            {t('card_open_confirmed_cta')}
           </button>
         )}
       </div>
@@ -217,10 +264,18 @@ function ActiveRequestCard({ req, onOpen, onEdit, onCancel, lang, t }) {
 function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onFillPreferences, onLogout, data, setData }) {
   const { t, lang } = useLang();
   const [activeRequest, setActiveRequest] = useState(null);
+  /* The match/family/hosting bundle the card already fetched, handed to the
+     sheet so it opens populated instead of empty while it re-reads. */
+  const [activeMatchBundle, setActiveMatchBundle] = useState(null);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const hasRequests = data.requests && data.requests.length > 0;
   const [showPrefModal, setShowPrefModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favoritePrompt, setFavoritePrompt] = useState(null); // payload of a favorite_prompt notification
+  const [favoriteHosting, setFavoriteHosting] = useState(null); // payload of a favorite_hosting_open notification
+  const [favoriteToast, setFavoriteToast] = useState(null);
+  const [joiningHosting, setJoiningHosting] = useState(false);
   const notifications = data.notifications || [];
 
   const handleNewRequestClick = () => {
@@ -231,8 +286,83 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
     }
   };
 
+  const handleNotificationClick = (notif) => {
+    // "How was the hosting?" — offer to add the family to favorites.
+    if (notif.type === 'favorite_prompt' && notif.payload?.family_id) {
+      setFavoritePrompt(notif.payload);
+      return;
+    }
+    // A favorite family opened a new hosting.
+    if (notif.type === 'favorite_hosting_open' && notif.payload?.hosting_id) {
+      setFavoriteHosting(notif.payload);
+      return;
+    }
+    const reqId = notif.payload?.request_id;
+    const req = reqId
+      ? (data.requests || []).find(r => r.id === reqId)
+      : (data.requests || []).find(r => r.is_match);
+    if (req) setActiveRequest(req);
+  };
+
+  // A favorites notification tapped on S15Home is handed over here.
+  useEffect(() => {
+    const pending = data.pendingFavoriteNotif;
+    if (!pending) return;
+    setData(prev => ({ ...prev, pendingFavoriteNotif: null }));
+    handleNotificationClick(pending);
+  }, [data.pendingFavoriteNotif]);
+
+  const showToast = (msg) => {
+    setFavoriteToast(msg);
+    setTimeout(() => setFavoriteToast(null), 3000);
+  };
+
+  const handleAddFavorite = async () => {
+    const payload = favoritePrompt;
+    setFavoritePrompt(null);
+    if (!payload?.family_id || !window.DB) return;
+    const ok = await window.DB.addFavoriteFamily(data.uid, payload.family_id);
+    if (ok) showToast(t('fav_added'));
+  };
+
+  // One-tap join: the callable creates the request and approves the match, and
+  // the soldier_hosting_searches listener drops the new card into the list.
+  const handleJoinHosting = async () => {
+    const hostingId = favoriteHosting?.hosting_id;
+    if (!hostingId || joiningHosting) return;
+    setJoiningHosting(true);
+    try {
+      const fn = firebase.functions().httpsCallable('joinFavoriteHosting');
+      const res = await fn({ hosting_id: hostingId });
+      const d = res.data || {};
+      setFavoriteHosting(null);
+      if (d.success) {
+        showToast(t('fav_join_success'));
+      } else {
+        showToast(
+          d.reason === 'full' ? t('fav_join_full')
+          : d.reason === 'has_request' ? t('fav_join_has_request')
+          : d.reason === 'gone' ? t('fav_hosting_gone')
+          : t('fav_join_error')
+        );
+      }
+    } catch (e) {
+      console.error('Join favorite hosting error:', e);
+      setFavoriteHosting(null);
+      showToast(t('fav_join_error'));
+    } finally {
+      setJoiningHosting(false);
+    }
+  };
+
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-10">
+      <FavoritesPanel
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        favoriteIds={data.favorite_families || []}
+        uid={data.uid}
+      />
       <NotificationsPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -241,14 +371,38 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
         onMarkRead={(id) => window.DB && window.DB.markNotificationRead(id)}
         uid={data.uid}
         telegramConnected={!!data.telegram_chat_id}
-        onNotificationClick={(notif) => {
-          const reqId = notif.payload?.request_id;
-          const req = reqId
-            ? (data.requests || []).find(r => r.id === reqId)
-            : (data.requests || []).find(r => r.is_match);
-          if (req) setActiveRequest(req);
-        }}
+        onNotificationClick={handleNotificationClick}
       />
+
+      <FavoriteHostingModal
+        payload={favoriteHosting}
+        onClose={() => setFavoriteHosting(null)}
+        onJoin={handleJoinHosting}
+        joining={joiningHosting}
+      />
+
+      <ConfirmDialog
+        isOpen={!!favoritePrompt}
+        title={t('fav_prompt_title')}
+        message={favoritePrompt ? t('fav_prompt_sub', favoritePrompt.family_name || '') : ''}
+        confirmLabel={t('fav_yes')}
+        cancelLabel={t('fav_no')}
+        onConfirm={handleAddFavorite}
+        onCancel={() => setFavoritePrompt(null)}
+        icon={(
+          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-400">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+        )}
+      />
+
+      {favoriteToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-semibold shadow-lg animate-fade-in text-center max-w-[90vw]" style={{ zIndex: 9998 }}>
+          {favoriteToast}
+        </div>
+      )}
       <AppHeader
         eyebrow={t('s15_hi')}
         title={soldierName}
@@ -260,7 +414,8 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
           </button>
         )}
         onNotifications={() => setShowNotifications(true)}
-        notificationsCount={notifications.filter(n => !n.read).length}
+        notificationsCount={window.visibleNotifications(notifications).filter(n => !n.read).length}
+        onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
 
@@ -305,7 +460,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
                 <ActiveRequestCard
                   key={req.id}
                   req={req}
-                  onOpen={() => setActiveRequest(req)}
+                  onOpen={(bundle) => { setActiveMatchBundle(bundle); setActiveRequest(req); }}
                   onEdit={(r) => onEditRequest(r)}
                   onCancel={async (id) => {
                     setData(prev => ({
@@ -331,12 +486,14 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
 
         <SearchStatusSheet
           request={activeRequest}
+          seed={activeMatchBundle}
           soldierName={soldierName}
           soldierData={data}
-          onClose={() => setActiveRequest(null)}
+          onClose={() => { setActiveRequest(null); setActiveMatchBundle(null); }}
           onEdit={() => { setActiveRequest(null); onEditRequest(activeRequest); }}
           onCancel={async (id) => {
             setActiveRequest(null);
+            setActiveMatchBundle(null);
             setData(prev => ({ ...prev, requests: (prev.requests || []).filter(r => r.id !== id) }));
             if (window.db) {
               try {
@@ -361,7 +518,7 @@ function S15Landing({ onNewRequest, onViewMatches, onEditRequest, onProfile, onF
               }
             }
           }}
-          onViewMap={(family) => { setActiveRequest(null); onViewMatches(activeRequest.id, family); }}
+          onViewMap={(family) => { setActiveRequest(null); setActiveMatchBundle(null); onViewMatches(activeRequest.id, family); }}
         />
         
         <PreferencesPromptModal
@@ -700,6 +857,46 @@ function StoryViewer({ family, onClose, onSeeHostings }) {
 /* ———————————————————————————————————————————
    FamilyInfoCard — compact details beside the map
 ————————————————————————————————————————————— */
+/* mapFamilyToInfoCard — turns a raw `families` document (host* field names) into
+   the shape FamilyInfoCard expects. Pass the matching `family_hostings` document
+   to fill in capacity/occupancy; `extra` merges on top (e.g. compromise_notes). */
+function mapFamilyToInfoCard(familyId, d, hosting = {}, extra = {}) {
+  const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
+  const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
+  const capacity = parseInt(hosting.soldiers) || null;
+  const occupied = (hosting.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0) || hosting.occupied || 0;
+  return {
+    id: familyId,
+    name: d.hostName,
+    city: d.hostCity,
+    shabbat: d.hostShabbat,
+    kosher: d.hostKosher,
+    hasPets: d.hasPets,
+    vibe: d.hostVibe,
+    shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
+    phoneDisplay: d.hostPhone,
+    waDigits,
+    lat: d.hostLat,
+    lng: d.hostLng,
+    capacity,
+    occupied,
+    profile_img_url: d.profile_img_url,
+    img_urls: d.img_urls,
+    stories: d.stories,
+    storiesCount: d.storiesCount,
+    storiesUpdatedAt: d.storiesUpdatedAt,
+    numKids: d.hostNumKids,
+    kidsAgeRange: d.hostKidsAgeRange,
+    kidsAgeRangeOther: d.hostKidsAgeRangeOther,
+    fridayDish: d.hostFridayDish,
+    afterMeal: d.hostAfterMeal,
+    afterMealOther: d.hostAfterMealOther,
+    fridayTradition: d.hostFridayTradition,
+    moreInfo: d.hostMoreInfo,
+    ...extra,
+  };
+}
+
 function FamilyInfoCard({ family, onClose, className = '' }) {
   const { t, lang } = useLang();
   const [showViewer, setShowViewer] = useState(false);
@@ -901,6 +1098,245 @@ function FamilyStrip({ families, selectedId, onSelect, onHover }) {
   );
 }
 
+/* ———————————————————————————————————————————
+   FavoritesPanel — the soldier's private favorite families.
+   Opens from the star button in AppHeader, styled like NotificationsPanel.
+————————————————————————————————————————————— */
+function FavoritesPanel({ isOpen, onClose, favoriteIds = [], uid }) {
+  const { t, lang } = useLang();
+  const isRtl = lang === 'he';
+  const [families, setFamilies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);   // family shown in the details modal
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const cacheRef = useRef({});
+
+  useEffect(() => {
+    if (!isOpen || !window.db) return;
+    let canceled = false;
+    const ids = favoriteIds || [];
+    const missing = ids.filter(id => !cacheRef.current[id]);
+
+    const load = async () => {
+      if (missing.length > 0) setLoading(true);
+      await Promise.all(missing.map(async (id) => {
+        try {
+          const doc = await window.db.collection('families').doc(id).get();
+          if (doc.exists) cacheRef.current[id] = mapFamilyToInfoCard(doc.id, doc.data());
+        } catch (e) {
+          console.error('Error loading favorite family:', e);
+        }
+      }));
+      if (canceled) return;
+      setFamilies(ids.map(id => cacheRef.current[id]).filter(Boolean));
+      setLoading(false);
+    };
+    load();
+    return () => { canceled = true; };
+  }, [isOpen, (favoriteIds || []).join(',')]);
+
+  const handleRemove = async () => {
+    const family = pendingRemove;
+    setPendingRemove(null);
+    if (!family || !window.DB) return;
+    setSelected(null);
+    // The soldier-doc listener in core/app.js pushes the new list back down,
+    // which re-runs the effect above and drops the row.
+    await window.DB.removeFavoriteFamily(uid, family.id);
+  };
+
+  return (
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 z-40" dir={isRtl ? 'rtl' : 'ltr'} onClick={onClose}>
+          <div
+            className="absolute bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{
+              top: '80px',
+              left: '8px',
+              width: 'min(340px, calc(100vw - 16px))',
+              maxHeight: '480px',
+              border: '1px solid #e8e0d8',
+              animation: 'notif-drop 0.18s cubic-bezier(0.16,1,0.3,1) both',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Small caret pointing up toward the star icon */}
+            <div style={{ position: 'absolute', top: '-7px', left: '22px', width: '14px', height: '7px', overflow: 'visible' }}>
+              <svg width="14" height="7" viewBox="0 0 14 7" fill="none">
+                <path d="M0 7 L7 0 L14 7" fill="white" stroke="#e8e0d8" strokeWidth="1" strokeLinejoin="round"/>
+                <path d="M1 7 L7 1 L13 7" fill="white" stroke="white" strokeWidth="1"/>
+              </svg>
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-warm-100 flex-shrink-0">
+              <h3 className="text-base font-bold text-gray-900">{t('fav_title')}</h3>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-warm-100 text-warm-500 hover:bg-warm-200 transition-colors text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto overscroll-contain flex-1">
+              {loading && families.length === 0 ? (
+                <div className="flex justify-center gap-1.5 py-14">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+              ) : families.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center space-y-3 px-6">
+                  <div className="w-12 h-12 rounded-full bg-warm-100 flex items-center justify-center text-warm-400">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                  </div>
+                  <p className="text-warm-500 text-sm font-medium">{t('fav_empty')}</p>
+                  <p className="text-warm-400 text-xs leading-relaxed">{t('fav_empty_sub')}</p>
+                </div>
+              ) : (
+                families.map(fam => (
+                  <div
+                    key={fam.id}
+                    className="px-4 py-3 border-b border-warm-50 flex items-center gap-3 bg-white hover:bg-warm-50 transition-colors cursor-pointer"
+                    onClick={() => setSelected(fam)}
+                  >
+                    <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border border-warm-200">
+                      <img
+                        src={fam.profile_img_url || (fam.img_urls && fam.img_urls[0]) || familyAvatarUrl(fam.imageColor, fam.id)}
+                        alt={fam.name}
+                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">{fam.name}</p>
+                      {fam.city && <p className="text-xs text-warm-500 truncate">{fam.city}</p>}
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setPendingRemove(fam); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-full text-amber-400 hover:bg-amber-50 transition-colors flex-shrink-0"
+                      aria-label={t('fav_remove_tooltip')}
+                      title={t('fav_remove_tooltip')}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Family details — same card the soldier sees after a match is approved */}
+      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.name || ''} className="max-w-md max-h-[93vh]">
+        {selected && (
+          <div className="space-y-3">
+            <FamilyInfoCard family={selected} onClose={null} />
+            <button
+              onClick={() => setPendingRemove(selected)}
+              className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors"
+            >
+              {t('fav_remove_title')}
+            </button>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!pendingRemove}
+        danger
+        title={t('fav_remove_confirm_title')}
+        message={pendingRemove ? t('fav_remove_confirm_sub', pendingRemove.name) : ''}
+        confirmLabel={t('fav_yes')}
+        cancelLabel={t('fav_no')}
+        onConfirm={handleRemove}
+        onCancel={() => setPendingRemove(null)}
+      />
+    </>
+  );
+}
+
+/* ———————————————————————————————————————————
+   FavoriteHostingModal — opened from a `favorite_hosting_open` notification.
+   Shows the family exactly as after an approved match, plus this hosting's
+   details. `onJoin` is optional — without it the modal is view-only.
+————————————————————————————————————————————— */
+function FavoriteHostingModal({ payload, onClose, onJoin, joining = false }) {
+  const { t } = useLang();
+  const [family, setFamily] = useState(null);
+  const [hosting, setHosting] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!payload?.hosting_id || !window.db) return;
+    let canceled = false;
+    setLoading(true);
+    setFamily(null);
+    setHosting(null);
+    Promise.all([
+      window.db.collection('family_hostings').doc(payload.hosting_id).get(),
+      payload.family_id
+        ? window.db.collection('families').doc(payload.family_id).get()
+        : Promise.resolve(null),
+    ]).then(([hostingDoc, familyDoc]) => {
+      if (canceled) return;
+      const h = hostingDoc.exists ? hostingDoc.data() : null;
+      setHosting(h);
+      if (familyDoc?.exists) setFamily(mapFamilyToInfoCard(familyDoc.id, familyDoc.data(), h || {}));
+      setLoading(false);
+    }).catch(e => {
+      console.error('Error loading favorite hosting:', e);
+      if (!canceled) setLoading(false);
+    });
+    return () => { canceled = true; };
+  }, [payload?.hosting_id, payload?.family_id]);
+
+  if (!payload) return null;
+
+  const { isFull } = hostingOccupancy(hosting);
+  const gone = !loading && (!hosting || hosting.status === 'canceled');
+  const full = !gone && hosting && (hosting.is_fully_booked || isFull);
+
+  return (
+    <Modal isOpen={!!payload} onClose={onClose} title={t('fav_hosting_title')} className="max-w-md max-h-[93vh]">
+      {loading ? (
+        <div className="flex justify-center gap-1.5 py-10">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+      ) : gone ? (
+        <p className="py-8 text-center text-sm text-warm-500">{t('fav_hosting_gone')}</p>
+      ) : (
+        <div className="space-y-3">
+          {family && <FamilyInfoCard family={family} onClose={null} />}
+
+          <HostingDetailRows hosting={hosting} />
+
+          {full && (
+            <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 text-center">
+              {t('fav_hosting_full')}
+            </div>
+          )}
+
+          {onJoin && !full && (
+            <Btn onClick={() => onJoin(hosting)} loading={joining}>
+              {t('fav_join_btn')}
+            </Btn>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function MapView({ families, onSelect, selectedId, hoveredId }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
@@ -994,6 +1430,7 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
   const [hovered, setHovered] = useState(null);
   const [showPrefModal, setShowPrefModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const soldierName = data.fullName || [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
   const notifications = data.notifications || [];
 
@@ -1054,6 +1491,12 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-24 relative">
+      <FavoritesPanel
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        favoriteIds={data.favorite_families || []}
+        uid={data.uid}
+      />
       <NotificationsPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -1063,6 +1506,12 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
         uid={data.uid}
         telegramConnected={!!data.telegram_chat_id}
         onNotificationClick={(notif) => {
+          // Favorites prompts are handled on S15Landing — hand the notification over.
+          if (notif.type === 'favorite_prompt' || notif.type === 'favorite_hosting_open') {
+            setData(prev => ({ ...prev, pendingFavoriteNotif: notif }));
+            onBack();
+            return;
+          }
           const reqId = notif.payload?.request_id;
           const req = reqId
             ? (data.requests || []).find(r => r.id === reqId)
@@ -1082,7 +1531,8 @@ function S15Home({ data, setData, onNewRequest, onProfile, onFillPreferences, on
           </button>
         )}
         onNotifications={() => setShowNotifications(true)}
-        notificationsCount={notifications.filter(n => !n.read).length}
+        notificationsCount={window.visibleNotifications(notifications).filter(n => !n.read).length}
+        onFavorites={() => setShowFavorites(true)}
         onLogout={onLogout}
       />
 
@@ -1602,85 +2052,84 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
 }
 
 
-function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName, soldierData }) {
+function SearchStatusSheet({ request, seed, onClose, onEdit, onCancel, onRematch, onViewMap, soldierName, soldierData }) {
   const { t, lang } = useLang();
   const [view, setView] = useState('status'); // 'status' or 'rematch'
   const [rematchReason, setRematchReason] = useState('');
   const [realMatch, setRealMatch] = useState(null);
   const [fullFamily, setFullFamily] = useState(null);
-  const [confirming, setConfirming] = useState(false);
+  const [hosting, setHosting] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    if (!request?.id || !request.is_match) { setRealMatch(null); setFullFamily(null); return; }
+    if (!request?.id || !request.is_match) {
+      setRealMatch(null); setFullFamily(null); setHosting(null); setConfirmed(false);
+      return;
+    }
+
+    /* `seed` is whatever the card already read for this match. Applying it first
+       means the sheet opens populated instead of blank while it re-reads for
+       fresh capacity. Read here rather than in the dep list: the effect already
+       re-runs on every open, which is exactly when a new seed arrives. */
+    if (seed?.match) applyMatchBundle(seed);
+
     if (!window.db) return;
+    let canceled = false;
     window.db.collection('active_matches')
       .where('soldier_request_id', '==', request.id)
       .where('status', 'in', ['pending_soldier_approval', 'approved'])
       .limit(1)
       .get()
-      .then(snap => {
-        if (snap.empty) return;
-        const match = snap.docs[0].data();
-        match.id = snap.docs[0].id; // Ensure we have the ID for confirmation
+      .then(async snap => {
+        if (canceled || snap.empty) return;
+        const match = { id: snap.docs[0].id, ...snap.docs[0].data() };
         setRealMatch(match);
-        // Fetch family profile + hosting capacity in parallel
-        if (match.family_id) {
-          Promise.all([
-            window.db.collection('families').doc(match.family_id).get(),
-            match.host_offer_id
-              ? window.db.collection('family_hostings').doc(match.host_offer_id).get()
-              : Promise.resolve(null),
-          ]).then(([familyDoc, hostingDoc]) => {
-            if (!familyDoc.exists) return;
-            const d = familyDoc.data();
-            const h = hostingDoc?.exists ? hostingDoc.data() : {};
-            const rawPhone = (d.hostPhone || '').replace(/\D/g, '');
-            const waDigits = rawPhone.startsWith('0') ? '972' + rawPhone.slice(1) : rawPhone;
-            const capacity = parseInt(h.soldiers) || null;
-            const occupied = (h.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0) || h.occupied || 0;
-            setFullFamily({
-              id: familyDoc.id,
-              name: d.hostName,
-              city: d.hostCity,
-              shabbat: d.hostShabbat,
-              kosher: d.hostKosher,
-              hasPets: d.hasPets,
-              vibe: d.hostVibe,
-              shortDescription: d.hostVibe ? d.hostVibe.slice(0, 100) : null,
-              phoneDisplay: d.hostPhone,
-              waDigits,
-              lat: d.hostLat,
-              lng: d.hostLng,
-              capacity,
-              occupied,
-              compromise_notes: match.compromise_notes,
-              profile_img_url: d.profile_img_url,
-              img_urls: d.img_urls,
-              stories: d.stories,
-              storiesCount: d.storiesCount,
-              storiesUpdatedAt: d.storiesUpdatedAt,
-              numKids: d.hostNumKids,
-              kidsAgeRange: d.hostKidsAgeRange,
-              kidsAgeRangeOther: d.hostKidsAgeRangeOther,
-              fridayDish: d.hostFridayDish,
-              afterMeal: d.hostAfterMeal,
-              afterMealOther: d.hostAfterMealOther,
-              fridayTradition: d.hostFridayTradition,
-              moreInfo: d.hostMoreInfo,
-            });
-          });
-        }
-      });
+        const bundle = await fetchMatchBundle(match);
+        if (!canceled) applyMatchBundle(bundle);
+      })
+      .catch(e => console.error('Match fetch error:', e));
+
+    return () => { canceled = true; };
   }, [request?.id, request?.is_match]);
+
+  function applyMatchBundle(bundle) {
+    if (bundle.match) setRealMatch(bundle.match);
+    setHosting(bundle.hosting || null);
+    if (bundle.familyId && bundle.family) {
+      setFullFamily(mapFamilyToInfoCard(bundle.familyId, bundle.family, bundle.hosting || {}, {
+        compromise_notes: bundle.match?.compromise_notes,
+      }));
+    }
+  }
 
   if (!request) return null;
 
-  const statusKey = request.status ? ('search_status_' + request.status) : 'search_status_searching';
   // Real match: use fetched family data. Demo mode: fall back to mock families.
   const matchedFamily = fullFamily
     || (realMatch ? { name: realMatch.family_name, city: realMatch.family_city, compromise_notes: realMatch.compromise_notes } : null)
     || (request?.status === 'matched' ? window.MAP_FAMILIES?.[0] : null);
+
+  /* request.status stays 'matched' after approval, so the match doc is the only
+     thing that tells "needs your confirmation" apart from "confirmed".
+     `confirmed` is the optimistic flag, reset on no_spot_left below. */
+  const isApproved = realMatch?.status === 'approved' || confirmed;
+  const subState = !realMatch ? 'loading' : isApproved ? 'confirmed' : 'awaiting_confirm';
+
+  const statusKey = request.status !== 'matched'
+    ? (request.status ? 'search_status_' + request.status : 'search_status_searching')
+    : subState === 'confirmed' ? 'search_status_confirmed'
+      : subState === 'awaiting_confirm' ? 'search_status_match_found'
+        : 'search_status_matched';
+
+  // When and where — city only, never the address.
+  const dateLabel = window.formatHostingDate(hosting?.date || realMatch?.hosting_date, lang);
+  /* Same rule as the card: a readable offer with no time set says so in the
+     strip, which is also why the time row stays excluded below. */
+  const timeLabel = window.formatHostingTimeLabel(hosting, t)
+    || (hosting ? t('hosting_time_tbd') : '');
+  const city = matchedFamily?.city || realMatch?.family_city || null;
+  const hostingCanceled = !!hosting && hosting.status === 'canceled';
+  const hostingMissing = !!realMatch?.host_offer_id && !hosting;
 
   const handleRematchSubmit = () => {
     onRematch(request, rematchReason, realMatch?.id);
@@ -1691,7 +2140,7 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
 
   const handleConfirmArrival = async () => {
     if (!realMatch?.id || confirmed || realMatch.status === 'approved') return;
-    setConfirmed(true); // optimistic — green immediately
+    setConfirmed(true); // optimistic — the sheet flips to "confirmed" immediately
     try {
       const fn = firebase.functions().httpsCallable('confirmMatch');
       const result = await fn({ match_id: realMatch.id });
@@ -1704,6 +2153,52 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
     }
   };
 
+  /* The pieces both sub-states share, in one place so the two orderings below
+     stay honestly identical in content and differ only in sequence. */
+  const whenWhereStrip = (
+    <HostingWhenWhereStrip
+      dateLabel={dateLabel}
+      timeLabel={timeLabel}
+      city={city}
+      tone={hostingCanceled ? 'amber' : isApproved ? 'green' : 'brand'}
+      ariaLabel={dateLabel && timeLabel && city
+        ? t('card_confirmed_invite', dateLabel, timeLabel, city)
+        : undefined}
+    />
+  );
+
+  const compromiseNotes = matchedFamily?.compromise_notes?.length > 0 ? (
+    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 space-y-1">
+      {matchedFamily.compromise_notes.map((note, i) => (
+        <p key={i} className="text-xs text-amber-800">{note}</p>
+      ))}
+    </div>
+  ) : null;
+
+  /* A canceled or vanished offer replaces the detail rows with an explanation —
+     the family card and every action stay, so the soldier can still rematch. */
+  const hostingBlock = hostingCanceled || hostingMissing ? (
+    <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+      {hostingCanceled ? t('hosting_canceled_note') : t('fav_hosting_gone')}
+    </div>
+  ) : (
+    /* Date and time live in the strip above — repeating them here reads as a bug. */
+    <HostingDetailRows hosting={hosting} exclude={['date', 'time']} />
+  );
+
+  const otherActions = (
+    <div className="flex flex-col gap-1.5 pt-3 border-t border-warm-100">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-warm-400">{t('sheet_other_actions')}</p>
+      <Btn onClick={() => { onViewMap(matchedFamily); onClose(); }} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        {t('view_map')}
+      </Btn>
+      {/* Promoted when the offer fell through — styling only, never gated. */}
+      <Btn onClick={() => setView('rematch')} variant={hostingCanceled || hostingMissing ? 'primary' : 'outline'} className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
+      <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
+      <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
+    </div>
+  );
 
   return (
     <Modal isOpen={!!request} onClose={onClose} title={t(statusKey)} className="max-w-md max-h-[93vh]">
@@ -1727,54 +2222,46 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
               </div>
             )}
 
-            {/* Matched state — reuse FamilyInfoCard for consistent look */}
+            {/* Matched state. Before approval the order is decision-first: when
+                and where, then any caveat, then the offer, then the family, then
+                the CTA. After approval it becomes an invitation: the confirmed
+                banner, then contact, then the details needed on the day. */}
             {request.status === 'matched' && matchedFamily && (
-              <div className="space-y-2 animate-enter">
-                <FamilyInfoCard family={matchedFamily} onClose={null} />
-
-                {/* Compromise notes */}
-                {matchedFamily.compromise_notes?.length > 0 && (
-                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 space-y-1">
-                    {matchedFamily.compromise_notes.map((note, i) => (
-                      <p key={i} className="text-xs text-amber-800">{note}</p>
-                    ))}
+              <div className="space-y-3 animate-enter">
+                {isApproved && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-bold">
+                    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>{t('sheet_confirmed_pill')}</span>
                   </div>
                 )}
 
-                {/* Confirm arrival button — transitions to green on click */}
-                {realMatch && (
-                  <button
-                    onClick={handleConfirmArrival}
-                    disabled={confirmed || realMatch.status === 'approved'}
-                    className={`w-full py-3.5 rounded-2xl text-base font-bold transition-all duration-300 ${
-                      confirmed || realMatch.status === 'approved'
-                        ? 'bg-green-500 text-white cursor-default shadow-sm'
-                        : 'bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-md'
-                    }`}
-                  >
-                    {confirmed || realMatch.status === 'approved' ? (
-                      <span className="flex items-center justify-center gap-1.5">
-                        <svg className="w-4 h-4 text-white flex-shrink-0 animate-scale-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span>{lang === 'he' ? 'הגעה אושרה' : 'Arrival Approved'}</span>
-                      </span>
-                    ) : (
-                      lang === 'he' ? 'אישור הגעה' : 'Confirm Arrival'
-                    )}
-                  </button>
+                {whenWhereStrip}
+
+                {/* A caveat about this particular match is a decision input
+                    before approval, and only background information after. */}
+                {!isApproved && compromiseNotes}
+                {!isApproved && hostingBlock}
+
+                <FamilyInfoCard family={matchedFamily} onClose={null} />
+
+                {isApproved && hostingBlock}
+                {isApproved && compromiseNotes}
+
+                {!isApproved && realMatch && (
+                  <div className="sticky bottom-0 -mx-5 -mb-4 px-5 pt-3 pb-4 bg-white/95 backdrop-blur border-t border-warm-100">
+                    <p className="text-[12px] text-warm-500 mb-2 text-center">{t('sheet_confirm_hint')}</p>
+                    <button
+                      onClick={handleConfirmArrival}
+                      className="w-full py-3.5 rounded-2xl text-base font-bold transition-all duration-300 bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-md"
+                    >
+                      {t('sheet_confirm_cta')}
+                    </button>
+                  </div>
                 )}
 
-                {/* Extra actions */}
-                <div className="flex flex-col gap-1.5 pt-1 border-t border-warm-100">
-                  <Btn onClick={() => { onViewMap(matchedFamily); onClose(); }} variant="outline" className="!py-2.5 flex items-center justify-center gap-1.5 text-sm">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    {t('view_map')}
-                  </Btn>
-                  <Btn onClick={() => setView('rematch')} variant="outline" className="!py-2.5 text-sm">{t('request_rematch')}</Btn>
-                  <Btn onClick={onEdit} variant="outline" className="!py-2.5 text-sm">{t('edit_request')}</Btn>
-                  <button onClick={() => onCancel(request.id)} className="w-full py-2 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors">{t('cancel_request')}</button>
-                </div>
+                {otherActions}
               </div>
             )}
 
@@ -1810,6 +2297,9 @@ function SearchStatusSheet({ request, onClose, onEdit, onCancel, onRematch, onVi
   );
 }
 
+window.FavoritesPanel = FavoritesPanel;
+window.FavoriteHostingModal = FavoriteHostingModal;
+window.mapFamilyToInfoCard = mapFamilyToInfoCard;
 window.S15Landing = S15Landing;
 window.S15Home = S15Home;
 window.S15NewRequest = S15NewRequest;

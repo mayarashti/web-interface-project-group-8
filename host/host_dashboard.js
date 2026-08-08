@@ -821,7 +821,7 @@ function S19HostHome({ data, setData, onProfile, onFillPreferences, onLogout }) 
         title={data.hostFullName || data.hostName}
         onProfile={onProfile}
         onNotifications={() => setShowNotifications(true)}
-        notificationsCount={notifications.filter(n => !n.read).length}
+        notificationsCount={window.visibleNotifications(notifications).filter(n => !n.read).length}
         onLogout={onLogout}
       />
 

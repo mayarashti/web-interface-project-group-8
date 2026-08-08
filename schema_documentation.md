@@ -22,6 +22,7 @@ Stores the profile, preferences, and permanent restrictions of soldiers.
 | `allergies_and_diet` | `list` | Elements: `gluten_free`, `vegan`, `vegetarian`, etc. |
 | `languages` | `list` | Elements: `hebrew`, `english`, `russian`, etc. |
 | `banned_families` | `list` / `uuid[]` | Global blocklist: Family IDs this soldier permanently refuses to stay with |
+| `favorite_families` | `list` / `uuid[]` | Family IDs the soldier asked to hear from again. **Private to the soldier** — families are never shown who favorited them. Written by the soldier (web) or by the Telegram bot. |
 
 ---
 
@@ -112,6 +113,21 @@ Maintains historical or state logs for entities requiring re-evaluation by the p
 When querying potential matches for a given `soldier_hosting_searches` record, the engine must drop hosts whose `family_id` is found within:
 1. `soldiers.banned_families` (Permanent account-level exclusion)
 2. `soldier_hosting_searches.temporarily_banned_families` (Per-request exclusion)
+
+**Favorite families:** a candidate whose `family_id` appears in
+`soldiers.favorite_families` gets three advantages, all applied *after* the hard
+filters — so none of them override kosher, Shabbat, allergy, capacity, sleep or
+ban rules:
+
+1. a **+50 score bonus** in `scoreFamily`;
+2. **exemption from the `travelDistance` radius cap** — the soldier explicitly
+   asked to be hosted by this family again, so the distance is their call;
+3. **priority in the final sort** — an eligible favorite is chosen ahead of any
+   non-favorite. Without this the radius exemption would be pointless, since a
+   closer family would simply outscore the favorite we just let through.
+
+A soldier who does not want the favorite this time can still use
+`requestRematch`, which temporarily bans the family and re-runs matching.
 
 **Location matching:** after the hard filters run, the engine measures the
 distance from the request's `lat`/`lng` to each candidate family's

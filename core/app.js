@@ -6,10 +6,11 @@ function App() {
   const [lang,     setLang]     = useState('he');
   const [showInfo, setShowInfo] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [formData, setFormData] = useState({ 
-    languages:['he'], 
+  const [formData, setFormData] = useState({
+    languages:['he'],
     hostings: [],
     requests: [],
+    favorite_families: [],
     editingRequest: null,
     selectedRequestId: null,
     editingHostingId: null,
@@ -21,11 +22,13 @@ function App() {
   window.setScreen = go;
 
   const notificationsUnsubRef = React.useRef(null);
+  const favoritesUnsubRef = React.useRef(null);
 
   const handleLogout = async () => {
     if (notificationsUnsubRef.current) { notificationsUnsubRef.current(); notificationsUnsubRef.current = null; }
+    if (favoritesUnsubRef.current) { favoritesUnsubRef.current(); favoritesUnsubRef.current = null; }
     try { if (window.auth) await window.auth.signOut(); } catch (e) {}
-    setFormData({ languages: ['he'], hostings: [], requests: [], editingRequest: null, selectedRequestId: null, editingHostingId: null });
+    setFormData({ languages: ['he'], hostings: [], requests: [], favorite_families: [], editingRequest: null, selectedRequestId: null, editingHostingId: null });
     go(1);
   };
 
@@ -109,6 +112,14 @@ function App() {
             notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
               console.log('[notif] soldier got', notifications.length, 'notifications');
               setFormData(prev => ({ ...prev, notifications }));
+            });
+          }
+
+          // Real-time listener for favorite families (kept in sync with the Telegram bot)
+          if (window.DB.subscribeToFavorites) {
+            if (favoritesUnsubRef.current) favoritesUnsubRef.current();
+            favoritesUnsubRef.current = window.DB.subscribeToFavorites(user.uid, (favorites) => {
+              setFormData(prev => ({ ...prev, favorite_families: favorites }));
             });
           }
 

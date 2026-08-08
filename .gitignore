@@ -9,6 +9,9 @@ functions/.secret.local
 *.local
 
 # Local dev / emulator artifacts
+# .firebase/ holds per-machine deploy caches. Tracking them means every
+# teammate's deploy rewrites the same file and collides with everyone else's.
+.firebase/
 .static-server.cjs
 maps-key-test.html
 firebase-debug.log
