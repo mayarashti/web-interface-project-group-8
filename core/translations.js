@@ -30,6 +30,13 @@ function formatHostingTimeLabel(hosting, t) {
   return hosting.customTime || hosting.time || '';
 }
 
+/* True for a clock reading like '19:30'. A hosting's time can also be a slot
+   label ('ערב שישי') or free text from customTime, which read wrongly after
+   "at" / "בשעה" and take a comma instead. */
+function isClockTime(value) {
+  return /^\d{1,2}:\d{2}$/.test(String(value || '').trim());
+}
+
 function useLang() {
   const { lang, setLang } = React.useContext(LangContext);
   const t = (key, ...args) => {
@@ -78,6 +85,7 @@ window.useLang = useLang;
 window.LangToggle = LangToggle;
 window.formatHostingDate = formatHostingDate;
 window.formatHostingTimeLabel = formatHostingTimeLabel;
+window.isClockTime = isClockTime;
 
 const T = {
   /* ══════════════════════════════════════════
@@ -351,6 +359,9 @@ const T = {
     hosting_attendees_row: 'מי יהיה בשולחן',
     hosting_city_label: 'עיר האירוח',
     hosting_time_tbd: 'השעה תעודכן',
+    hosting_when_line: (date, time) => `${date} בשעה ${time}`,
+    hosting_when_line_slot: (date, slot) => `${date}, ${slot}`,
+    hosting_when_line_tbd: (date) => `${date} — השעה תעודכן`,
     hosting_canceled_note: 'המשפחה ביטלה את האירוח הזה. אנחנו מחפשים לך שיבוץ חדש.',
 
     /* Favorite families (soldier only) */
@@ -981,6 +992,9 @@ const T = {
     hosting_attendees_row: "Who'll be at the table",
     hosting_city_label: 'Hosting city',
     hosting_time_tbd: 'Time to be confirmed',
+    hosting_when_line: (date, time) => `${date} at ${time}`,
+    hosting_when_line_slot: (date, slot) => `${date}, ${slot}`,
+    hosting_when_line_tbd: (date) => `${date} — time to be confirmed`,
     hosting_canceled_note: "The family canceled this hosting. We're looking for a new match for you.",
 
     /* Favorite families (soldier only) */

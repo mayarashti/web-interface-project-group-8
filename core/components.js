@@ -1541,7 +1541,7 @@ const HOSTING_ATTENDEE_KEYS = {
    mealSize/attendees existed) simply render fewer rows. Renders nothing at all
    when there is nothing to say. `include` restricts the rows to a whitelist;
    `exclude` drops rows a nearby element already shows (the sheet puts date and
-   time in a HostingWhenWhereStrip, so it excludes them here). */
+   time in HostingWhenWhereLines, so it excludes them here). */
 function HostingDetailRows({ hosting, title, className = '', include, exclude }) {
   const { t, lang } = useLang();
   if (!hosting) return null;
@@ -1583,34 +1583,38 @@ function HostingDetailRows({ hosting, title, className = '', include, exclude })
   );
 }
 
-/* When / where at a glance — up to three chips. Each chip is dropped
-   individually when its value is missing, which is why this beats joining the
-   three values with a separator: no dangling '·' when the time is unknown.
-   `ariaLabel` carries the same information as one sentence for screen readers. */
-function HostingWhenWhereStrip({ dateLabel, timeLabel, city, tone = 'brand', ariaLabel, className = '' }) {
-  const tones = {
-    brand: 'bg-brand-50 border-brand-100 text-brand-700',
-    green: 'bg-green-50 border-green-100 text-green-700',
-    amber: 'bg-amber-50 border-amber-100 text-amber-800',
-  };
-  const chips = [
-    dateLabel && { id: 'date', icon: '📅', text: dateLabel },
-    timeLabel && { id: 'time', icon: '🕰️', text: timeLabel },
-    city && { id: 'city', icon: '📍', text: city },
+/* When / where at a glance — two emphasised lines in the same voice as the
+   heading above them, one step smaller. Date and time share a line because they
+   answer one question; the city gets its own. A line is dropped entirely when it
+   has nothing to say, so there is never a stray connector or a lone icon.
+   `timePending` distinguishes "no time recorded" from "we could not read the
+   offer": only the former promises an update. `ariaLabel` carries the whole
+   thing as one sentence for screen readers. */
+function HostingWhenWhereLines({ dateLabel, timeLabel, timePending, city, ariaLabel, className = '' }) {
+  const { t } = useLang();
+
+  const whenLine = dateLabel
+    ? (timeLabel
+      ? t(isClockTime(timeLabel) ? 'hosting_when_line' : 'hosting_when_line_slot', dateLabel, timeLabel)
+      : timePending ? t('hosting_when_line_tbd', dateLabel)
+        : dateLabel)
+    : (timeLabel || '');
+
+  const lines = [
+    // A time with no date behind it is a clock reading, not a calendar entry.
+    whenLine && { id: 'when', icon: dateLabel ? '📅' : '🕰️', text: whenLine },
+    city && { id: 'where', icon: '📍', text: city },
   ].filter(Boolean);
 
-  if (chips.length === 0) return null;
+  if (lines.length === 0) return null;
 
   return (
-    <div className={`flex flex-wrap gap-2 text-start ${className}`} aria-label={ariaLabel} role="group">
-      {chips.map(c => (
-        <span
-          key={c.id}
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[12px] font-bold ${tones[tone] || tones.brand}`}
-        >
-          <span aria-hidden="true">{c.icon}</span>
-          <span>{c.text}</span>
-        </span>
+    <div className={`text-start ${className}`} aria-label={ariaLabel} role="group">
+      {lines.map(l => (
+        <p key={l.id} className="text-sm font-bold tracking-tight text-gray-900">
+          <span aria-hidden="true" className="me-1">{l.icon}</span>
+          {l.text}
+        </p>
       ))}
     </div>
   );
@@ -1641,7 +1645,7 @@ window.HostProfileCard = HostProfileCard;
 window.PreferencesPromptModal = PreferencesPromptModal;
 window.hostingOccupancy = hostingOccupancy;
 window.HostingDetailRows = HostingDetailRows;
-window.HostingWhenWhereStrip = HostingWhenWhereStrip;
+window.HostingWhenWhereLines = HostingWhenWhereLines;
 
 window.HomeIcon = HomeIcon;
 window.SummaryIcon = SummaryIcon;
