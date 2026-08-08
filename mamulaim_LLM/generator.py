@@ -77,6 +77,7 @@ class RecipeGenerator:
         system_prompt = (
             "You are an expert culinary safety inspector. Your task is to validate if a recipe is completely safe "
             "and compatible with a soldier's preferences and restrictions. "
+            "the food must be kosher"
             "You must return ONLY a JSON object and nothing else.\n\n"
             "JSON structure:\n"
             "{\n"
@@ -109,9 +110,10 @@ class RecipeGenerator:
             "Validate against these rules:\n"
             "1. Must NOT contain any allergens.\n"
             "2. Must NOT contain any disliked ingredients.\n"
-            "3. If Kosher required: Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.) and MUST NOT mix meat and dairy.\n"
+            "3. Must NOT contain non-kosher ingredients (pork, bacon, ham, shellfish, shrimp, crab, lobster, etc.) and MUST NOT mix meat and dairy.\n"
             "4. Must match dietary preferences (e.g. vegetarian, vegan).\n"
             "5. (If previous recipe is provided) Must be a distinct type of dish.\n"
+            "6. if there is a prefered food it should return only the food"
         )
 
         logger.info(f"LLM validating recipe: '{recipe.get('title')}'")
@@ -147,12 +149,12 @@ class RecipeGenerator:
         """
         system_prompt = (
             "You are a professional chef and translation expert.\n"
-            "Your task is to translate an English recipe into high-quality, warm, and natural Hebrew (עברית).\n"
+            "Your task is to translate an English recipe into high-quality, warm, and in natural Hebrew.\n"
             "You must return ONLY a valid JSON object matching the target schema.\n\n"
             "Target JSON structure:\n"
             "{\n"
             '  "title": "Hebrew recipe title",\n'
-            '  "description": "Short explanation in Hebrew of the recipe and why it fits preferences",\n'
+            '  "description": "Short explanation in Hebrew of the recipe/ dish",\n'
             '  "ingredients": [\n'
             '    "Hebrew translated ingredient with quantities",\n'
             '    "Hebrew translated ingredient with quantities"\n'
