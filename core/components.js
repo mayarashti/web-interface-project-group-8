@@ -1515,6 +1515,107 @@ function HostProfileCard({ host, lang }) {
   );
 }
 
+/* ———————————————————————————————————————————
+   Hosting presentation — shared by the soldier's match views and the
+   family's own hosting screens. `family_hostings` stores capacity as the
+   string field `soldiers`, and occupancy either as a `guests` array (each
+   guest carrying a `groupSize`) or as a plain `occupied` counter.
+————————————————————————————————————————————— */
+function hostingOccupancy(hosting) {
+  const capacity = parseInt(hosting?.soldiers) || 0;
+  const taken = (hosting?.guests || []).reduce((s, g) => s + (g.groupSize || 1), 0)
+    || hosting?.occupied || 0;
+  const free = Math.max(capacity - taken, 0);
+  return { capacity, taken, free, isFull: capacity > 0 && free === 0 };
+}
+
+const HOSTING_ATTENDEE_KEYS = {
+  immediate_family: 's20_att_immediate',
+  extended_family: 's20_att_extended',
+  family_friends: 's20_att_friends',
+  more_soldiers: 's20_att_soldiers',
+};
+
+/* The details of one hosting offer as icon + label + value rows. Every row is
+   skipped when its field is missing, so older hostings (created before
+   mealSize/attendees existed) simply render fewer rows. Renders nothing at all
+   when there is nothing to say. `include` restricts the rows to a whitelist;
+   `exclude` drops rows a nearby element already shows (the sheet puts date and
+   time in a HostingWhenWhereStrip, so it excludes them here). */
+function HostingDetailRows({ hosting, title, className = '', include, exclude }) {
+  const { t, lang } = useLang();
+  if (!hosting) return null;
+
+  const { capacity, taken, free } = hostingOccupancy(hosting);
+  const dateLabel = formatHostingDate(hosting.date, lang);
+  const timeLabel = formatHostingTimeLabel(hosting, t);
+  const attendeeLabels = (hosting.attendees || [])
+    .map(id => (HOSTING_ATTENDEE_KEYS[id] ? t(HOSTING_ATTENDEE_KEYS[id]) : id));
+
+  const rows = [
+    dateLabel && { id: 'date', icon: '📅', label: t('s20_prev_date'), value: dateLabel },
+    /* A dated hosting whose time is still blank says so; an offer with neither
+       a date nor a time has nothing worth a row. */
+    (timeLabel || dateLabel) && { id: 'time', icon: '🕰️', label: t('s20_prev_time'), value: timeLabel || t('hosting_time_tbd') },
+    capacity > 0 && { id: 'capacity', icon: '🪑', label: t('s15_capacity'), value: `${free} ${t('s15_spots_free')} · ${taken} ${t('s15_spots_taken')}` },
+    hosting.sleepOvernight && { id: 'sleep', icon: '🛏️', label: t('s12_sleep'), value: t('s15_sleep_available') },
+    hosting.pickup && { id: 'pickup', icon: '🚗', label: t('hosting_pickup_row'), value: t('fav_hosting_pickup') },
+    hosting.mealSize && { id: 'mealSize', icon: '🍽️', label: t('hosting_meal_size_row'), value: `${hosting.mealSize} ${t('hosting_people_unit')}` },
+    attendeeLabels.length > 0 && { id: 'attendees', icon: '👨‍👩‍👧', label: t('hosting_attendees_row'), value: attendeeLabels.join(', ') },
+    hosting.note && { id: 'note', icon: '💬', label: t('fav_hosting_note'), value: hosting.note },
+  ].filter(Boolean)
+    .filter(r => !include || include.includes(r.id))
+    .filter(r => !exclude || !exclude.includes(r.id));
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className={`p-3 bg-brand-50/50 border border-brand-100 rounded-xl space-y-1.5 ${className}`}>
+      <p className="text-xs font-bold text-brand-700 mb-1">{title || t('fav_hosting_details')}</p>
+      {rows.map(r => (
+        <p key={r.id} className="text-xs text-warm-600 leading-relaxed">
+          <span className="me-1">{r.icon}</span>
+          <span className="font-bold text-warm-700">{r.label}: </span>
+          <span>{r.value}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/* When / where at a glance — up to three chips. Each chip is dropped
+   individually when its value is missing, which is why this beats joining the
+   three values with a separator: no dangling '·' when the time is unknown.
+   `ariaLabel` carries the same information as one sentence for screen readers. */
+function HostingWhenWhereStrip({ dateLabel, timeLabel, city, tone = 'brand', ariaLabel, className = '' }) {
+  const tones = {
+    brand: 'bg-brand-50 border-brand-100 text-brand-700',
+    green: 'bg-green-50 border-green-100 text-green-700',
+    amber: 'bg-amber-50 border-amber-100 text-amber-800',
+  };
+  const chips = [
+    dateLabel && { id: 'date', icon: '📅', text: dateLabel },
+    timeLabel && { id: 'time', icon: '🕰️', text: timeLabel },
+    city && { id: 'city', icon: '📍', text: city },
+  ].filter(Boolean);
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className={`flex flex-wrap gap-2 text-start ${className}`} aria-label={ariaLabel} role="group">
+      {chips.map(c => (
+        <span
+          key={c.id}
+          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[12px] font-bold ${tones[tone] || tones.brand}`}
+        >
+          <span aria-hidden="true">{c.icon}</span>
+          <span>{c.text}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 window.ProgressBar = ProgressBar;
 window.Btn = Btn;
 window.Input = Input;
@@ -1538,6 +1639,9 @@ window.RadiusMapModal = RadiusMapModal;
 window.GuestProfileCard = GuestProfileCard;
 window.HostProfileCard = HostProfileCard;
 window.PreferencesPromptModal = PreferencesPromptModal;
+window.hostingOccupancy = hostingOccupancy;
+window.HostingDetailRows = HostingDetailRows;
+window.HostingWhenWhereStrip = HostingWhenWhereStrip;
 
 window.HomeIcon = HomeIcon;
 window.SummaryIcon = SummaryIcon;

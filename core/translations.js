@@ -7,13 +7,41 @@
 const LangContext = React.createContext({ lang:'he', setLang: () => {} });
 window.LangContext = LangContext;
 
+/* A hosting's `date` ('YYYY-MM-DD') as a readable label, e.g. 'יום שישי, 26 ביוני'.
+   The `T00:00:00` suffix makes the browser parse the string as local time —
+   without it it reads as UTC midnight, which lands on the previous day in
+   negative-offset timezones. Returns '' for missing or unparseable dates so
+   callers can `&&` the whole row/chip away. */
+function formatHostingDate(dateStr, lang, opts) {
+  if (!dateStr) return '';
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US',
+    opts || { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+/* A hosting's time as a label. Hostings created before the half-hour picker
+   stored a slot id instead of a clock time, and `customTime` is a legacy
+   display fallback. Returns '' when the hosting has no time at all. */
+function formatHostingTimeLabel(hosting, t) {
+  if (!hosting) return '';
+  if (hosting.time === 'friday_evening') return t('s20_fri_eve');
+  if (hosting.time === 'saturday_lunch') return t('s20_sat_lun');
+  return hosting.customTime || hosting.time || '';
+}
+
 function useLang() {
   const { lang, setLang } = React.useContext(LangContext);
   const t = (key, ...args) => {
     const val = T[lang]?.[key] ?? T['he']?.[key] ?? key;
     return typeof val ==='function'? val(...args) : val;
   };
-  return { lang, setLang, t, isRTL: lang ==='he', formatDate: (date) => date.toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'long' }) };
+  return {
+    lang, setLang, t, isRTL: lang ==='he',
+    formatDate: (date) => date.toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'long' }),
+    formatHostingDate: (dateStr, opts) => formatHostingDate(dateStr, lang, opts),
+    formatHostingTimeLabel: (hosting) => formatHostingTimeLabel(hosting, t),
+  };
 }
 
 function LangToggle({ variant ='fixed', onInfo } = {}) {
@@ -48,6 +76,8 @@ function LangToggle({ variant ='fixed', onInfo } = {}) {
 
 window.useLang = useLang;
 window.LangToggle = LangToggle;
+window.formatHostingDate = formatHostingDate;
+window.formatHostingTimeLabel = formatHostingTimeLabel;
 
 const T = {
   /* ══════════════════════════════════════════
@@ -289,6 +319,39 @@ const T = {
     s15_match_success: 'מצאנו לך משפחה מתאימה',
     s15_searching_sub: 'אנחנו מחפשים עבורך משפחה מתאימה...',
     notif_no_spot_left: 'מצאנו לך התאמה, אך המקום התמלא לפני שאישרת. אנחנו מחפשים לך משפחה אחרת.',
+
+    /* Soldier's active-request card + match sheet.
+       Kept here, outside the duplicated s20_* blocks further down. */
+    card_search_title: 'מחפשים לך אירוח לשבת',
+    card_search_sub: (date, city) => `מחפשים משפחות ל${date} באזור ${city}. נעדכן אותך ברגע שתהיה התאמה.`,
+    card_match_badge: 'נמצאה התאמה!',
+    card_match_title: 'נמצאה לך משפחה מארחת!',
+    card_match_sub: (famLabel) => `${famLabel} תשמח לארח אותך. אשרו הגעה כדי לסגור את השיבוץ.`,
+    card_confirmed_badge: 'מאושר',
+    card_confirmed_title: (famLabel) => `${famLabel} מזמינה אותך לארוחה`,
+    card_confirmed_sub: 'האירוח מאושר. כל הפרטים ודרכי יצירת הקשר כאן בפנים.',
+    card_confirmed_invite: (date, time, city) => `הנך מוזמן/ת לארוחה בתאריך ${date} בשעה ${time} ב${city}.`,
+    card_open_match_cta: 'פרטי האירוח ואישור הגעה',
+    card_open_confirmed_cta: 'פרטי האירוח ויצירת קשר',
+    /* famLabel — always built through one of these two, so a family whose
+       profile has no hostName still reads grammatically. */
+    family_display_name: (name) => `משפחת ${name}`,
+    generic_family_name: 'המשפחה המארחת',
+    search_status_match_found: 'נמצאה משפחה — נדרש אישורך',
+    search_status_confirmed: 'האירוח שלך מאושר',
+    sheet_confirm_hint: 'בדקו את התאריך והשעה לפני אישור ההגעה',
+    sheet_confirm_cta: 'אישור הגעה',
+    sheet_confirmed_pill: 'הגעה אושרה',
+    sheet_other_actions: 'אפשרויות נוספות',
+
+    /* Shared hosting detail rows */
+    hosting_meal_size_row: 'בערך בארוחה',
+    hosting_people_unit: 'אנשים',
+    hosting_pickup_row: 'הסעה',
+    hosting_attendees_row: 'מי יהיה בשולחן',
+    hosting_city_label: 'עיר האירוח',
+    hosting_time_tbd: 'השעה תעודכן',
+    hosting_canceled_note: 'המשפחה ביטלה את האירוח הזה. אנחנו מחפשים לך שיבוץ חדש.',
 
     /* Favorite families (soldier only) */
     fav_btn_title: 'משפחות מועדפות',
@@ -889,6 +952,36 @@ const T = {
     request_rematch: 'Request Rematch',
     s15_searching_sub: 'We are looking for a suitable family for you...',
     notif_no_spot_left: 'We found you a match, but the spot was taken before you confirmed. We are searching for another family.',
+
+    /* Soldier's active-request card + match sheet */
+    card_search_title: 'Finding your Shabbat host',
+    card_search_sub: (date, city) => `Searching for families for ${date} near ${city}. We'll update you the moment there's a match.`,
+    card_match_badge: 'Match found!',
+    card_match_title: 'We found you a host family!',
+    card_match_sub: (famLabel) => `${famLabel} would love to host you. Confirm your arrival to lock it in.`,
+    card_confirmed_badge: 'Confirmed',
+    card_confirmed_title: (famLabel) => `${famLabel} invited you over`,
+    card_confirmed_sub: 'Your hosting is confirmed. All the details and contact info are inside.',
+    card_confirmed_invite: (date, time, city) => `You're invited to a meal on ${date} at ${time} in ${city}.`,
+    card_open_match_cta: 'View details & confirm arrival',
+    card_open_confirmed_cta: 'Hosting details & contact',
+    family_display_name: (name) => `The ${name} family`,
+    generic_family_name: 'Your host family',
+    search_status_match_found: 'Match found — confirm your arrival',
+    search_status_confirmed: 'Your hosting is confirmed',
+    sheet_confirm_hint: 'Check the date and time before confirming',
+    sheet_confirm_cta: 'Confirm arrival',
+    sheet_confirmed_pill: 'Arrival confirmed',
+    sheet_other_actions: 'More options',
+
+    /* Shared hosting detail rows */
+    hosting_meal_size_row: 'People at the meal',
+    hosting_people_unit: 'people',
+    hosting_pickup_row: 'Transportation',
+    hosting_attendees_row: "Who'll be at the table",
+    hosting_city_label: 'Hosting city',
+    hosting_time_tbd: 'Time to be confirmed',
+    hosting_canceled_note: "The family canceled this hosting. We're looking for a new match for you.",
 
     /* Favorite families (soldier only) */
     fav_btn_title: 'Favorite families',
