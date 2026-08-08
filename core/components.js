@@ -795,16 +795,8 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
       <div className="app-header-outer sticky top-0 z-20 w-full shadow-sm" style={{ backgroundColor: 'var(--brand-500)' }}>
         <div dir="ltr" className="relative w-full px-2 py-1 flex items-center" style={{ minHeight: '72px' }}>
 
-          {/* Left — Language toggle + info + profile / extra actions */}
-          <div className="relative flex items-center gap-1 z-10 flex-shrink-0">
-            <button
-              onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
-              className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-bold transition-all hover:bg-warm-100 active:scale-95 flex-shrink-0"
-              style={{ color: 'var(--warm-600)' }}
-              aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
-            >
-              {lang === 'he' ? 'EN' : 'עב'}
-            </button>
+          {/* Left — Info + profile / extra actions */}
+          <div className="relative flex items-center gap-3 z-10 flex-shrink-0">
             {onInfo && (
               <button
                 onClick={onInfo}
@@ -897,22 +889,33 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
         </div>
       </div>
 
-      {onLogout && (
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 items-end" style={{ direction: 'ltr' }}>
         <button
-          onClick={onLogout}
-          className="fixed bottom-6 right-6 z-40 flex items-center justify-center gap-2 w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full bg-white text-red-600 shadow-lg border border-red-100 transition-all hover:bg-red-50 hover:text-red-700 active:scale-95 hover:scale-105"
-          style={{ direction: lang === 'he' ? 'rtl' : 'ltr' }}
-          aria-label={t('logout')}
-          title={t('logout')}
+          onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+          className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-sm font-bold shadow-lg border border-warm-200 transition-all hover:bg-warm-50 active:scale-95 hover:scale-105 flex-shrink-0"
+          style={{ color: 'var(--warm-600)' }}
+          aria-label={lang === 'he' ? 'Switch to English' : 'עבור לעברית'}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          <span className="hidden md:inline text-sm font-semibold tracking-wide">{t('logout')}</span>
+          {lang === 'he' ? 'EN' : 'עב'}
         </button>
-      )}
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="flex items-center justify-center gap-2 w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full bg-white text-red-600 shadow-lg border border-red-100 transition-all hover:bg-red-50 hover:text-red-700 active:scale-95 hover:scale-105"
+            style={{ direction: lang === 'he' ? 'rtl' : 'ltr' }}
+            aria-label={t('logout')}
+            title={t('logout')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span className="hidden md:inline text-sm font-semibold tracking-wide">{t('logout')}</span>
+          </button>
+        )}
+      </div>
     </>
   );
 }
