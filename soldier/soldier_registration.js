@@ -121,6 +121,13 @@ function S4Profile({ data, setData, onNext, onBack }) {
     { value: 'other', label: t('s11_am_other') },
   ];
 
+  const offDutyOpts = [
+    { value: 'regular', label: t('s11_offduty_regular') },
+    { value: 'student', label: t('s11_offduty_student') },
+    { value: 'worker',  label: t('s11_offduty_worker')  },
+    { value: 'between', label: t('s11_offduty_between') },
+  ];
+
   return (
     <ScreenLayout
       onBack={onBack}
@@ -173,11 +180,15 @@ function S4Profile({ data, setData, onNext, onBack }) {
             value={data.qOrigin || ''}
             onChange={set('qOrigin')}
           />
-          <Input
-            label={t('s11_q_offduty')}
-            value={data.qOffDuty || ''}
-            onChange={set('qOffDuty')}
-          />
+          <div>
+            <MultiCheck
+              label={t('s11_q_offduty')}
+              options={offDutyOpts}
+              values={data.qOffDuty || []}
+              onChange={set('qOffDuty')}
+            />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_offduty_sub')}</p>
+          </div>
           <Input
             label={t('s11_q_tradition')}
             value={data.qFridayTradition || ''}
@@ -404,6 +415,13 @@ function S12Summary({ data, setData, onSubmit, onBack }) {
     { value: 'other', label: t('s11_am_other') },
   ];
 
+  const offDutyOpts = [
+    { value: 'regular', label: t('s11_offduty_regular') },
+    { value: 'student', label: t('s11_offduty_student') },
+    { value: 'worker',  label: t('s11_offduty_worker')  },
+    { value: 'between', label: t('s11_offduty_between') },
+  ];
+
   return (
     <ScreenLayout
       onBack={onBack}
@@ -570,7 +588,15 @@ function S12Summary({ data, setData, onSubmit, onBack }) {
         <p className="section-label mb-4">💬 {t('s12_about_title')}</p>
         <div className="space-y-4">
           <Input label={t('s11_q_origin')}   value={data.qOrigin || ''}          onChange={set('qOrigin')} />
-          <Input label={t('s11_q_offduty')}  value={data.qOffDuty || ''}         onChange={set('qOffDuty')} />
+          <div>
+            <MultiCheck
+              label={t('s11_q_offduty')}
+              options={offDutyOpts}
+              values={data.qOffDuty || []}
+              onChange={set('qOffDuty')}
+            />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_offduty_sub')}</p>
+          </div>
           <Input label={t('s11_q_tradition')} value={data.qFridayTradition || ''} onChange={set('qFridayTradition')} />
           <Input label={t('s11_q_dish')}     value={data.qFavoriteDish || ''}    onChange={set('qFavoriteDish')} />
           <Input label={t('s11_q_dislike')}  value={data.qDislikedFood || ''}    onChange={set('qDislikedFood')} />

@@ -1238,9 +1238,19 @@ function GuestProfileCard({ guest, lang }) {
     talk:  lang === 'he' ? 'שיחה ארוכה סביב השולחן' : 'A long chat around the table',
     tv:    lang === 'he' ? 'סדרה מול הטלוויזיה' : 'Watching a show',
   };
+  const offDutyLabels = {
+    regular: lang === 'he' ? 'חייל בסדיר' : 'Regular service soldier',
+    student: lang === 'he' ? 'סטודנט' : 'Student',
+    worker:  lang === 'he' ? 'עובד' : 'Employed',
+    between: lang === 'he' ? 'עדיין בין לבין' : 'Still figuring it out',
+  };
   const aboutLines = [
     guest.qOrigin          && { icon: '🌍', label: lang === 'he' ? 'מאיפה במקור' : 'Originally from', value: guest.qOrigin },
-    guest.qOffDuty         && { icon: '🎒', label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty', value: guest.qOffDuty },
+    (Array.isArray(guest.qOffDuty) ? guest.qOffDuty : []).length > 0 && {
+      icon: '🎒',
+      label: lang === 'he' ? 'כשלא במילואים' : 'When not on duty',
+      value: guest.qOffDuty.map(v => offDutyLabels[v] || v).join(', '),
+    },
     guest.qFridayTradition && { icon: '🕯️', label: lang === 'he' ? 'מסורת שישי' : 'Friday tradition', value: guest.qFridayTradition },
     guest.qFavoriteDish    && { icon: '🍲', label: lang === 'he' ? 'מנה אהובה על השולחן' : 'Favorite dish', value: guest.qFavoriteDish },
     guest.qDislikedFood    && { icon: '🚫', label: lang === 'he' ? 'ממש לא אוהב לאכול' : "Really doesn't like", value: guest.qDislikedFood },

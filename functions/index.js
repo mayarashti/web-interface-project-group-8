@@ -1264,7 +1264,7 @@ exports.onActiveMatchApproved = onDocumentUpdated(
       allergies:      soldier.allergies ?? [],
       bio:            soldier.bio ?? null,
       qOrigin:          soldier.qOrigin ?? null,
-      qOffDuty:         soldier.qOffDuty ?? null,
+      qOffDuty:         soldier.qOffDuty ?? [],
       qFridayTradition: soldier.qFridayTradition ?? null,
       qFavoriteDish:    soldier.qFavoriteDish ?? null,
       qDislikedFood:    soldier.qDislikedFood ?? null,
