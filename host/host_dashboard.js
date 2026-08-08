@@ -1536,6 +1536,19 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
     hostCooking:  data.hostCooking  || [],
     hostLanguages: data.hostLanguages || ['he'],
     hostVibe:     data.hostVibe     || '',
+    hostAlbumStaged: (data.stories || []).map(s => ({
+      id: s.id,
+      file: null, fullBlob: null, thumbBlob: null,
+      previewUrl: s.url,
+      existingUrl: s.url,
+      existingThumbUrl: s.thumbUrl,
+      width: s.width, height: s.height,
+      caption: s.caption || '',
+      order: s.order,
+      status: 'ready',
+      errorMessage: null,
+      createdAt: s.createdAt,
+    })),
   });
   const [saved, setSaved] = useState(false);
   const [newLanguageText, setNewLanguageText] = useState('');
@@ -1585,7 +1598,7 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
       profileUrl = await window.DB.uploadProfileImage(data.uid, form.hostFile, 'families');
     }
 
-    const { hostFile, hostPreview, removePhoto, ...restForm } = form;
+    const { hostFile, hostPreview, removePhoto, hostAlbumStaged, ...restForm } = form;
     const updatedData = {
       ...restForm,
       ...(profileUrl ? { profile_img_url: profileUrl, img_urls: [profileUrl] } : {}),
@@ -1601,6 +1614,21 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
     }
 
     if (window.DB && data.uid) {
+      const keptIds = new Set(hostAlbumStaged.map(p => p.id));
+      const removedStories = (data.stories || []).filter(s => !keptIds.has(s.id));
+      if (removedStories.length) {
+        await Promise.allSettled(removedStories.flatMap(s => [
+          window.DB.deleteProfileImage(s.url),
+          s.thumbUrl && s.thumbUrl !== s.url ? window.DB.deleteProfileImage(s.thumbUrl) : null,
+        ].filter(Boolean)));
+      }
+
+      const albumTouched = (data.stories && data.stories.length > 0) || hostAlbumStaged.length > 0;
+      if (albumTouched) {
+        const albumResult = await window.DB.uploadStagedAlbum(data.uid, hostAlbumStaged);
+        Object.assign(updatedData, albumResult || { stories: [], storiesCount: 0, storiesUpdatedAt: Date.now() });
+      }
+
       try {
         await window.DB.saveFamilyProfile(data.uid, updatedData);
       } catch (e) {
@@ -1755,6 +1783,11 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
               <Btn type="button" variant="secondary" onClick={handleAddLanguage} className="!w-auto !py-2.5">הוסף</Btn>
             </div>
           </div>
+        </Card>
+
+        {/* Photo album — the Stories Album soldiers see on the family's card */}
+        <Card className="p-5">
+          <StoriesAlbumEditor data={form} setData={setForm} />
         </Card>
 
         <Btn onClick={handleSave} variant={saved ? 'secondary' : 'primary'}>

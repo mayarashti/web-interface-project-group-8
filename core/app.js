@@ -285,40 +285,6 @@ function App() {
     handleNewRequest();
   };
 
-  // Uploads any staged (processed, EXIF-stripped) album photos to Storage
-  // and builds the `stories` array to save on the family doc. A single
-  // photo's upload failure is logged and skipped, not surfaced to the user —
-  // registration must not feel broken over one of up to 12 photos.
-  const uploadStagedAlbum = async (uid, staged) => {
-    const readyPhotos = (staged || []).filter(p => p.status === 'ready' && p.fullBlob && p.thumbBlob);
-    if (!readyPhotos.length) return null;
-
-    const results = await Promise.allSettled(readyPhotos.map(async (photo) => {
-      const [url, thumbUrl] = await Promise.all([
-        window.DB.uploadStoryImage(uid, photo.id, photo.fullBlob, 'full'),
-        window.DB.uploadStoryImage(uid, photo.id, photo.thumbBlob, 'thumb'),
-      ]);
-      return {
-        id: photo.id, url, thumbUrl,
-        caption: photo.caption || '',
-        alt: photo.caption || 'תמונה מהבית המארח',
-        width: photo.width, height: photo.height,
-        order: photo.order, createdAt: Date.now(),
-      };
-    }));
-
-    results.forEach(r => { if (r.status === 'rejected') console.error('Story upload failed:', r.reason); });
-
-    const stories = results
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value)
-      .sort((a, b) => a.order - b.order)
-      .map((s, i) => ({ ...s, order: i }));
-
-    if (!stories.length) return null;
-    return { stories, storiesCount: stories.length, storiesUpdatedAt: Date.now() };
-  };
-
   const registerHost = async (nextScreen, skipped = false) => {
     if (window.DB) {
       let uid = formData.uid;
@@ -345,7 +311,7 @@ function App() {
             toSave.profile_img_url = profileUrl;
             toSave.img_urls = [profileUrl];
           }
-          const albumResult = await uploadStagedAlbum(uid, hostAlbumStaged);
+          const albumResult = await window.DB.uploadStagedAlbum(uid, hostAlbumStaged);
           if (albumResult) Object.assign(toSave, albumResult);
 
           await window.DB.saveFamilyProfile(uid, toSave);
@@ -378,7 +344,7 @@ function App() {
           toSave.profile_img_url = profileUrl;
           toSave.img_urls = [profileUrl];
         }
-        const albumResult = await uploadStagedAlbum(formData.uid, hostAlbumStaged);
+        const albumResult = await window.DB.uploadStagedAlbum(formData.uid, hostAlbumStaged);
         if (albumResult) Object.assign(toSave, albumResult);
 
         await window.DB.saveFamilyProfile(formData.uid, toSave);

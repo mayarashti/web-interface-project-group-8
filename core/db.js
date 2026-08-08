@@ -27,6 +27,51 @@ window.DB = {
     return await storageRef.getDownloadURL();
   },
 
+  // Builds the `stories` array to save on the family doc from a staged album
+  // (as edited by StoriesAlbumEditor). Entries carrying `existingUrl` are
+  // already-uploaded photos being kept/reordered/recaptioned — they're passed
+  // through as-is. Entries with a `fullBlob`/`thumbBlob` are newly picked
+  // photos that still need uploading. A single photo's upload failure is
+  // logged and skipped, not surfaced to the user.
+  async uploadStagedAlbum(uid, staged) {
+    const list = (staged || []).filter(p => p.status === 'ready');
+    if (!list.length) return null;
+
+    const results = await Promise.allSettled(list.map(async (photo) => {
+      if (photo.existingUrl) {
+        return {
+          id: photo.id, url: photo.existingUrl, thumbUrl: photo.existingThumbUrl || photo.existingUrl,
+          caption: photo.caption || '',
+          alt: photo.caption || 'תמונה מהבית המארח',
+          width: photo.width, height: photo.height,
+          order: photo.order, createdAt: photo.createdAt || Date.now(),
+        };
+      }
+      if (!photo.fullBlob || !photo.thumbBlob) return null;
+      const [url, thumbUrl] = await Promise.all([
+        window.DB.uploadStoryImage(uid, photo.id, photo.fullBlob, 'full'),
+        window.DB.uploadStoryImage(uid, photo.id, photo.thumbBlob, 'thumb'),
+      ]);
+      return {
+        id: photo.id, url, thumbUrl,
+        caption: photo.caption || '',
+        alt: photo.caption || 'תמונה מהבית המארח',
+        width: photo.width, height: photo.height,
+        order: photo.order, createdAt: Date.now(),
+      };
+    }));
+
+    results.forEach(r => { if (r.status === 'rejected') console.error('Story upload failed:', r.reason); });
+
+    const stories = results
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => r.value)
+      .sort((a, b) => a.order - b.order)
+      .map((s, i) => ({ ...s, order: i }));
+
+    return { stories, storiesCount: stories.length, storiesUpdatedAt: Date.now() };
+  },
+
   async deleteProfileImage(url) {
     if (!url) return false;
     try {

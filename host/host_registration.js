@@ -856,6 +856,10 @@ function S17HostSummary({ data, setData, onSubmit, onBack }) {
         </div>
         <p className="text-center text-[11px] text-warm-400 mt-2">{t('s16_photo_note')}</p>
 
+        <div className="mt-6">
+          <StoriesAlbumEditor data={data} setData={setData} />
+        </div>
+
         <div className="mt-6 space-y-5">
           <RadioGroup
             label={t('s16_q_kids')}
