@@ -16,10 +16,23 @@ function App() {
     editingHostingId: null,
   });
 
-  const go = (n) => { setScreen(n); window.scrollTo(0,0); };
+  const go = (n) => {
+    // Close the mobile keyboard first so its closing animation can't shift the scroll
+    // position after we reset it below.
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    setScreen(n);
+  };
 
   // Make `go` available globally for components that use `window.setScreen`
   window.setScreen = go;
+
+  // Scroll to the top on every screen change. Runs after React commits the new
+  // screen's DOM, so it isn't undone by the keyboard/layout settling afterward.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [screen]);
 
   const notificationsUnsubRef = React.useRef(null);
   const favoritesUnsubRef = React.useRef(null);
@@ -40,41 +53,6 @@ function App() {
   const handleViewMatches = (requestId, focusFamily = null) => {
     setFormData(prev => ({ ...prev, selectedRequestId: requestId, focusFamilyForMap: focusFamily }));
     go(15);
-  };
-
-  const demoSoldierData = {
-    firstName: 'יונתן',
-    lastName: 'כהן',
-    fullName: 'יונתן כהן',
-    phone: '052-1234567',
-    email: 'soldier@example.com',
-    unit: 'גולני',
-    serviceType: 'regular',
-    languages: ['he'],
-    kosher: 'separated',
-    shabbat: 'traditional',
-    needsSleep: false,
-    walkDistance: true,
-    allergies: ['none'],
-    preferWithSoldiers: true,
-    requests: [
-      { id: 10, when: '2026-06-22', kosher: 'separated', shabbat: 'traditional', needSleep: false, location: 'חיפה' },
-      { id: 11, when: '2026-06-29', kosher: 'separated', shabbat: 'keeps',       needSleep: true,  location: 'חיפה' },
-    ],
-  };
-
-  const demoHostData = {
-    hostFullName: 'משפחת כהן',
-    hostPhone: '052-7654321',
-    hostEmail: 'family@example.com',
-    hostCity: 'חיפה',
-    hostKosher: 'separated',
-    hostShabbat: 'traditional',
-    hostLanguages: ['he'],
-    hostCanSleep: true,
-    hostCanTransport: false,
-    hostCapacity: 4,
-    hostVibeTags: ['kids', 'shabbat_atm'],
   };
 
   useEffect(() => {
@@ -188,7 +166,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleDemoLogin = (role, data) => {
+  const handleLoginRoute = (role, data) => {
     if (role === 'soldier') {
       setFormData(prev => ({ ...prev, ...data, role: 'soldier' }));
       go(24);
@@ -198,15 +176,6 @@ function App() {
     } else if (role === 'new_user') {
       setFormData(prev => ({ ...prev, ...data }));
       go(1); // go to welcome screen where they pick soldier/host
-    } else {
-      // old demo fallback
-      if (role === 'host') {
-        setFormData(prev => ({ ...prev, ...demoHostData, role: 'host' }));
-        go(19);
-        return;
-      }
-      setFormData(prev => ({ ...prev, ...demoSoldierData, role: 'soldier' }));
-      go(24);
     }
   };
 
@@ -368,15 +337,14 @@ function App() {
 
   const screens = {
     /* login */
-    0:  <S0Login      onBack={() => go(1)} onLogin={handleDemoLogin} />,
+    0:  <S0Login      onBack={() => go(1)} onLogin={handleLoginRoute} />,
     /* soldier flow */
     1:  <S1Welcome    onSoldier={() => go(3)} onHost={() => go(16)} onLogin={() => go(0)} />,
     2:  <S2Explain    onNext={() => go(3)}  onBack={() => go(1)} />,
-    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(4)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(13, true)} onInfo={() => setShowInfo(true)} />,
+    3:  <S3PersonalDetails data={formData} setData={setFormData} onNext={() => go(4)}  onBack={() => go(1)} onSkipPreferences={() => registerSoldier(14, true)} onInfo={() => setShowInfo(true)} />,
     4:  <S4Profile          data={formData} setData={setFormData} onNext={() => go(7)} onBack={() => go(formData.pendingNewRequest ? 24 : 3)} />,
     7:  <S7Preferences      data={formData} setData={setFormData} onNext={() => go(12)} onBack={() => go(4)} />,
-    12: <S12Summary   data={formData} setData={setFormData} onSubmit={() => formData.pendingNewRequest ? completeSoldierPreferences() : registerSoldier(13)} onBack={() => go(7)} />,
-    13: <S13Pending   onHome={() => go(24)} autoApprove={() => go(14)} />,
+    12: <S12Summary   data={formData} setData={setFormData} onSubmit={() => formData.pendingNewRequest ? completeSoldierPreferences() : registerSoldier(14)} onBack={() => go(7)} />,
     14: <S14Success   onHome={() => go(24)} name={formData.fullName} />,
     15: <S15Home      data={formData} setData={setFormData} onNewRequest={() => handleNewRequest()} onProfile={() => go(21)} onFillPreferences={() => go(4)} onBack={() => go(24)} onLogout={handleLogout} />,
     23: <S15NewRequest 

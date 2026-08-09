@@ -120,7 +120,7 @@ const T = {
     s0_password:'סיסמה', s0_password_placeholder:'הזן סיסמה',
     s0_remember:'זכור אותי', s0_forgot:'שכחתי סיסמה',
     s0_login_button:'התחבר', s0_back_to_register:'חזרה להרשמה',
-    s0_login_demo_error:'הפרטים שגויים. לדמו: הכנס "חייל" או "משפחה" בשדה הטלפון.',
+    s0_login_demo_error:'הפרטים שגויים. נסה שוב.',
 
     /* S2 Explain (soldier) */
     s2_title:'איך זה עובד?', s2_sub:'כל מה שצריך לדעת לפני שמתחילים',
@@ -246,14 +246,8 @@ const T = {
     guest_needs_transport:'צריך הסעה',
     guest_walk_dist:'מרחק הליכה מהבסיס',
 
-    /* S13 Pending */
-    s13_title:'הפרופיל שלך בבדיקה',
-    s13_sub:'לאחר אישור, תוכל/י ליצור בקשת אירוח ולהתחבר למשפחות מארחות בכל הארץ',
-    s13_eta:'בדרך כלל לוקח פחות מדקה',
-    s13_done:'האימות הושלם בהצלחה!', s13_redir:'מעביר אותך לדף הבית...',
-
     /* S14 Success */
-    s14_hi:'ברוך הבא!', s14_ok:'האימות הושלם בהצלחה',
+    s14_hi:'ברוך הבא!', s14_ok:'הפרופיל נוצר בהצלחה',
     s14_desc:'אתה עכשיו חלק מקהילת מארחי שבת.\nאפשר להתחיל לחפש ארוחת שישי חמה!',
     s14_home:'לעמוד הבית',
 
@@ -431,7 +425,6 @@ const T = {
     lifestyle_label: 'אורח חיים',
     kashrut_label: 'כשרות',
     no_new_alerts: 'אין התראות חדשות',
-    demo_hint: 'כניסת דמו: הקלד "חייל" לחייל או "משפחה" למשפחה מארחת',
     status_matched: '✓ שויך',
     status_searching: '⟳ מחפש',
     status_canceled: '✕ בוטל',
@@ -755,7 +748,7 @@ const T = {
     s0_password:'Password', s0_password_placeholder:'Enter password',
     s0_remember:'Remember me', s0_forgot:'Forgot password?',
     s0_login_button:'Log in', s0_back_to_register:'Back to registration',
-    s0_login_demo_error:'Wrong credentials. Demo: enter "חייל" (soldier) or "משפחה" (host) in the phone field.',
+    s0_login_demo_error:'Wrong credentials. Please try again.',
     info_btn_title:'How does it work?',
 
     /* S2 Explain */
@@ -882,14 +875,8 @@ const T = {
     guest_needs_transport:'Needs transportation',
     guest_walk_dist:'Walking distance from base',
 
-    /* S13 Pending */
-    s13_title:'Your Profile is Under Review',
-    s13_sub:'Once approved, you can create hosting requests and connect with host families across the country',
-    s13_eta:'Usually takes less than a minute',
-    s13_done:'Verification complete!', s13_redir:'Taking you to the home page...',
-
     /* S14 Success */
-    s14_hi:'Welcome!', s14_ok:'Verification complete',
+    s14_hi:'Welcome!', s14_ok:'Profile created successfully',
     s14_desc:'You are now part of the Shabbat Hosts community.\nYou can start looking for a warm Friday dinner!',
     s14_home:'Go to Home',
 
@@ -1086,7 +1073,6 @@ const T = {
     lifestyle_label: 'Lifestyle',
     kashrut_label: 'Kashrut',
     no_new_alerts: 'No new alerts',
-    demo_hint: 'Demo login: enter "חייל" for soldier or "משפחה" for host family',
     status_matched: '✓ Matched',
     status_searching: '⟳ Searching',
     status_canceled: '✕ Canceled',

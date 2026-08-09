@@ -14,17 +14,6 @@ function S0Login({ onBack, onLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // For now, if they type the mock codes, we can still use them to test without Firebase if needed
-    const loginKey = phone.trim();
-    if (loginKey === 'חייל') {
-      onLogin('soldier');
-      return;
-    }
-    if (loginKey === 'משפחה') {
-      onLogin('host');
-      return;
-    }
 
     try {
       // Normal Login (Mapping phone to a mock email for Firebase Auth)
@@ -32,17 +21,6 @@ function S0Login({ onBack, onLogin }) {
       await checkUserAndRoute(userCredential.user);
     } catch (err) {
       setError(t('s0_login_demo_error') + " - " + err.message);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      setError('');
-      const result = await window.auth.signInWithPopup(window.googleProvider);
-      await checkUserAndRoute(result.user);
-    } catch (err) {
-      console.error(err);
-      setError("Google Login Error: " + err.message);
     }
   };
 
@@ -163,28 +141,7 @@ function S0Login({ onBack, onLogin }) {
           <Btn type="submit" className="mt-6">
             {t('s0_login_button')}
           </Btn>
-
-          {/* Google Login Button */}
-          <div className="relative mt-4 flex items-center justify-center">
-            <span className="bg-white px-2 text-xs text-warm-400 z-10">או</span>
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-warm-200"></div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full mt-4 min-h-12 flex items-center justify-center gap-3 bg-white border border-warm-300 rounded-xl text-warm-700 font-semibold text-base hover:bg-warm-50 transition-all active:scale-95 shadow-sm"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" className="w-5 h-5" />
-            התחברות עם Google
-          </button>
         </form>
-
-        <p className="mt-5 text-xs text-center text-warm-400 leading-relaxed">
-          {t('demo_hint')}
-        </p>
 
       </div>
       </div>
