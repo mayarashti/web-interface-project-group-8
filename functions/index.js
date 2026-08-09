@@ -446,7 +446,14 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   prelim.forEach((c, i) => {
     const distanceKm = distances[i];
     const isFavorite = favoriteIds.includes(c.family.id);
-    if (hasSoldierCoords && isNum(distanceKm) && distanceKm > radius) {
+    
+    if (distanceKm === null) {
+      if (!isFavorite) {
+        console.log(`   ❌ [DISTANCE REJECT] Missing location coordinates for Soldier (${request.soldier_id}) or Family "${c.family.hostName}" (${c.family.id})`);
+        return;
+      }
+      console.log(`   ⭐ [FAVORITE — RADIUS WAIVED] Missing location coordinates but family "${c.family.hostName}" (${c.family.id}) is a favorite`);
+    } else if (distanceKm > radius) {
       if (!isFavorite) {
         console.log(`   ❌ [DISTANCE REJECT] Family "${c.family.hostName}" (${c.family.id}): distance ${distanceKm}km exceeds radius ${radius}km`);
         return;
@@ -2593,12 +2600,21 @@ async function srConfirm(token, chatId, temp) {
 async function srSubmit(token, chatId, session) {
   const { user_id, temp_data: t } = session;
   try {
+    const soldierSnap = await db.collection("soldiers").doc(user_id).get();
+    const soldier = soldierSnap.exists ? soldierSnap.data() : null;
+
+    if (!soldier || typeof soldier.lat !== 'number' || typeof soldier.lng !== 'number') {
+      await sendTelegramMessage(token, chatId, "❌ חסר מיקום בפרופיל שלך. אנא התחבר לאפליקציה ועדכן את עיר הבסיס או המגורים שלך כדי שנוכל למצוא לך התאמה.", inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
+      return;
+    }
+
     const ref = db.collection("soldier_hosting_searches").doc();
     await ref.set({
       id: ref.id, soldier_id: user_id, when: t.when,
       kosher: t.kosher, shabbat: t.shabbat,
       guestCount: parseInt(t.guestCount), needSleep: t.needSleep,
       transport: false, walkDistance: false, is_match: false,
+      location: soldier.city || "", lat: soldier.lat, lng: soldier.lng,
       source: "telegram", created_at: FieldValue.serverTimestamp(),
     });
     await resetSession(chatId);

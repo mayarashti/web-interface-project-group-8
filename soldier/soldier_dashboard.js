@@ -1670,6 +1670,10 @@ function S15NewRequest({ onBack, onSubmit, onCancel, data, setData }) {
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    if (typeof request.lat !== 'number' || typeof request.lng !== 'number') {
+      alert(lang === 'he' ? "נא לבחור מיקום תקין מהרשימה" : "Please select a valid location from the dropdown");
+      return;
+    }
     if (onSubmit) onSubmit(request);
   };
 

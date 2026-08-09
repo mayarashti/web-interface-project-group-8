@@ -25,7 +25,10 @@ service cloud.firestore {
     // reset is_match and update temporarily_banned_families — nothing else.
     match /soldier_hosting_searches/{searchId} {
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.soldier_id;
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.soldier_id
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number;
       allow delete: if request.auth != null && request.auth.uid == resource.data.soldier_id;
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.soldier_id
