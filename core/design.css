@@ -72,6 +72,12 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
+  /* Height of the opaque brand header (.app-header-outer): its 72px minHeight
+     plus py-1. The decorative background pepper is nudged down by half of this
+     on desktop so the header does not cover its stem. Tune here if the header
+     ever changes height. */
+  --app-header-h: 80px;
+
   /* Shape */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -159,52 +165,60 @@ button:disabled {
   isolation: isolate;
   /* creates a local stacking context */
   overflow: hidden;
-  /* clips the rotated image cleanly at screen edges */
+  /* keeps page content from spilling sideways; it does NOT clip the decorative
+     ::before below, which is position: fixed and sized to fit the viewport */
   animation: fadeSlideIn var(--transition-slow) ease forwards;
 }
 
 /* Decorative background image — appears on every screen that uses .screen-enter.
-   z-index: -1 places it BEHIND all page content but ABOVE the screen's own background. */
+   z-index: -1 places it BEHIND all page content but ABOVE the screen's own background.
+
+   Centering, one rule for every screen size:
+   - position: fixed anchors to the viewport, so the pepper stays centered on
+     screen no matter how tall the page is or how far it is scrolled.
+   - translate(-50%, -50%) runs BEFORE rotate() and the origin is the box's own
+     centre, so the rotation spins the pepper in place without dragging its
+     centre off the viewport centre. That is what removes the need for the old
+     hand-tuned `left: calc(50% - 135px)` offsets and their per-breakpoint fixes.
+   - aspect-ratio matches the asset's natural 162x170, so `contain` leaves no
+     slack inside the box and the box centre IS the pepper's centre.
+   - min() keeps it inside narrow phones and short landscape windows alike. */
 .screen-enter::before {
   content: '';
-  position: absolute;
+  position: fixed;
   z-index: -1;
-  left: calc(50% - 135px);
-  bottom: 2.2rem;
-  width: 450px;
-  height: 555px;
-  background: url('../Designe- image/1memula.png') no-repeat center bottom / contain;
-  transform: rotate(-25deg);
-  transform-origin: center bottom;
-  opacity: 0.15;
+  left: 50%;
+  top: 50%;
+  width: min(80vw, 70vh, 460px);
+  aspect-ratio: 162 / 170;
+  background: url('../Designe- image/1memula.png') no-repeat center / contain;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  transform-origin: center center;
+  opacity: 0.14;
   pointer-events: none;
-  transition: all 0.4s ease;
 }
 
-/* Mobile viewport (widths up to 640px) — larger, higher, offset right */
-@media (max-width: 640px) {
+/* Desktop only (mobile is deliberately left centred on the full viewport — it
+   already reads correctly there). The brand header is opaque and sits above
+   this z-index: -1 layer, so a pepper centred on the whole viewport loses its
+   stem behind it. Shifting down by half the header height re-centres it within
+   the visible area BELOW the header, which is what the eye reads as centred. */
+@media (min-width: 769px) {
   .screen-enter::before {
-    /* The -15deg rotation swings the pepper's visual mass left of its
-       untransformed box, so the box itself is offset right to compensate —
-       this is what actually reads as centered once rotated. */
-    left: calc(50% - 140px);
-    width: 460px;
-    height: 570px;
-    bottom: 6rem;           /* positioned higher up on the screen */
-    transform: rotate(-15deg);
-    opacity: 0.12;
+    top: calc(50% + var(--app-header-h) / 2);
   }
 }
 
+/* Opacity-only on purpose: a lingering `transform` on .screen-enter (the
+   animation uses `forwards`) would make it the containing block for its
+   position: fixed ::before, which must resolve against the viewport instead. */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
