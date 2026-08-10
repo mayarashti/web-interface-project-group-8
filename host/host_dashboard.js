@@ -1536,6 +1536,14 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
     hostCooking:  data.hostCooking  || [],
     hostLanguages: data.hostLanguages || ['he'],
     hostVibe:     data.hostVibe     || '',
+    hostNumKids:  data.hostNumKids  || '',
+    hostKidsAgeRange: data.hostKidsAgeRange || '',
+    hostKidsAgeRangeOther: data.hostKidsAgeRangeOther || '',
+    hostFridayDish: data.hostFridayDish || '',
+    hostAfterMeal: data.hostAfterMeal || [],
+    hostAfterMealOther: data.hostAfterMealOther || '',
+    hostFridayTradition: data.hostFridayTradition || '',
+    hostMoreInfo: data.hostMoreInfo || '',
     hostAlbumStaged: (data.stories || []).map(s => ({
       id: s.id,
       file: null, fullBlob: null, thumbBlob: null,
@@ -1662,6 +1670,23 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
     { id: 'lactose', label: t('alg_lactose')},
     { id: 'nuts',    label: t('alg_nuts')   },
   ];
+  const kidsCountOptions = [
+    { id: '0', label: '0' }, { id: '1', label: '1' }, { id: '2', label: '2' },
+    { id: '3', label: '3' }, { id: '4+', label: '4+' },
+  ];
+  const kidsAgeOptions = [
+    { id: '0-5',   label: '0-5' },
+    { id: '5-10',  label: '5-10' },
+    { id: '10-15', label: '10-15' },
+    { id: '16+',   label: '16+' },
+    { id: 'other', label: t('s11_am_other') },
+  ];
+  const afterMealOptions = [
+    { id: 'board', label: t('s11_am_board') },
+    { id: 'talk',  label: t('s11_am_talk')  },
+    { id: 'tv',    label: t('s11_am_tv')    },
+    { id: 'other', label: t('s11_am_other') },
+  ];
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-12">
@@ -1732,6 +1757,84 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
               hostLng: addr.coordinates?.lng,
             }))}
           />
+        </Card>
+
+        {/* Get to know you — identical to registration step 2's light questions */}
+        <Card className="p-5 space-y-5">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">
+            {t('s16_3_title')}
+          </h2>
+
+          <RadioGroup
+            label={t('s16_q_kids')}
+            vertical={false}
+            options={kidsCountOptions}
+            value={form.hostNumKids}
+            onChange={setF('hostNumKids')}
+          />
+
+          <div>
+            <RadioGroup
+              label={t('s16_q_kids_age')}
+              vertical={false}
+              options={kidsAgeOptions}
+              value={form.hostKidsAgeRange}
+              onChange={setF('hostKidsAgeRange')}
+            />
+            {form.hostKidsAgeRange === 'other' && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={form.hostKidsAgeRangeOther}
+                  onChange={(e) => setF('hostKidsAgeRangeOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <Input
+            label={t('s16_q_friday_dish')}
+            value={form.hostFridayDish}
+            onChange={setF('hostFridayDish')}
+          />
+
+          <div>
+            <MultiCheck
+              label={t('s16_q_aftermeal')}
+              options={afterMealOptions}
+              values={form.hostAfterMeal}
+              onChange={setF('hostAfterMeal')}
+            />
+            {form.hostAfterMeal.includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={form.hostAfterMealOther}
+                  onChange={(e) => setF('hostAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+
+          <Input
+            label={t('s16_q_tradition')}
+            value={form.hostFridayTradition}
+            onChange={setF('hostFridayTradition')}
+          />
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">{t('s16_q_more')}</label>
+            <textarea
+              value={form.hostMoreInfo}
+              onChange={e => setF('hostMoreInfo')(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-[15px] text-gray-900 bg-white resize-none transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300"
+            />
+          </div>
         </Card>
 
         {/* Lifestyle & preferences — identical to registration steps 2+3 */}

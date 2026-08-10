@@ -1872,10 +1872,22 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
   const [form, setForm] = useState({
     fullName: data.fullName || '',
     phone: data.phone || '',
+    age: data.age || '',
     bio: data.bio || '',
     kosher: data.kosher || 'separated',
-    shabbat: data.shabbat || data.shabbatKeeps || 'none',
+    shabbatKeeps: data.shabbatKeeps || data.shabbat || 'none',
     allergies: data.allergies || [],
+    allergyNote: data.allergyNote || '',
+    languages: data.languages || ['he'],
+    pets: data.pets || '',
+    qOrigin: data.qOrigin || '',
+    qOffDuty: data.qOffDuty || [],
+    qFridayTradition: data.qFridayTradition || '',
+    qFavoriteDish: data.qFavoriteDish || '',
+    qDislikedFood: data.qDislikedFood || '',
+    qAfterMeal: data.qAfterMeal || [],
+    qAfterMealOther: data.qAfterMealOther || '',
+    qMoreInfo: data.qMoreInfo || '',
   });
 
   const [saved, setSaved] = useState(false);
@@ -1943,6 +1955,29 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
     { value:'veg',     label:t('a_veg') },
     { value:'vegan',   label:t('a_vegan') },
     { value:'fish',    label:t('a_fish') },
+    { value:'other',   label:t('a_other') },
+  ];
+
+  const langOpts = [
+    { value: 'he',    label: t('lang_he')    },
+    { value: 'en',    label: t('lang_en')    },
+    { value: 'ru',    label: t('lang_ru')    },
+    { value: 'ar',    label: t('lang_ar')    },
+    { value: 'other', label: t('lang_other') },
+  ];
+
+  const offDutyOpts = [
+    { value: 'regular', label: t('s11_offduty_regular') },
+    { value: 'student', label: t('s11_offduty_student') },
+    { value: 'worker',  label: t('s11_offduty_worker')  },
+    { value: 'between', label: t('s11_offduty_between') },
+  ];
+
+  const afterMealOpts = [
+    { value: 'board', label: t('s11_am_board') },
+    { value: 'talk',  label: t('s11_am_talk')  },
+    { value: 'tv',    label: t('s11_am_tv')    },
+    { value: 'other', label: t('s11_am_other') },
   ];
 
   // Logic to calculate matches for each request
@@ -2006,14 +2041,15 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
           <h2 className="section-label">{t('s12_personal')}</h2>
           <Input label={t('s3_first')} value={form.fullName} onChange={setF('fullName')} />
           <Input label={t('s3_phone')} value={form.phone} onChange={setF('phone')} />
+          <Input label={t('s3_age')} type="number" value={form.age} onChange={setF('age')} placeholder={t('s3_age_ph')} />
         </Card>
 
         {/* Preferences Section */}
         <Card className="p-5 space-y-4">
           <h2 className="section-label">{t('s12_prefs')}</h2>
-          <RadioGroup 
-            label={t('s7_kosh')} 
-            value={form.kosher} 
+          <RadioGroup
+            label={t('s7_kosh')}
+            value={form.kosher}
             onChange={setF('kosher')}
             options={[
               { value:'mehadrin',  label:t('s7_meh'),    sub:t('s7_meh_s')    },
@@ -2021,17 +2057,79 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
               { value:'none',      label:t('s7_none'),   sub:t('s7_none_s')   },
             ]}
           />
-          <RadioGroup 
-            label={t('s7_shab')} 
-            value={form.shabbat} 
-            onChange={setF('shabbat')}
+          <RadioGroup
+            label={t('s7_shab')}
+            value={form.shabbatKeeps}
+            onChange={setF('shabbatKeeps')}
             options={[
               { value:'keeps',       label:t('s7_yes'),        sub:t('s7_yes_s')   },
               { value:'traditional', label:t('s16_shab_trad'), sub:t('s7_trad_s') },
               { value:'none',        label:t('s7_no'),         sub:t('s7_no_s')    },
             ]}
           />
-          <MultiCheck label={t('s9_title')} options={allergyOpts} values={form.allergies} onChange={setF('allergies')} />
+          <div>
+            <MultiCheck label={t('s9_title')} options={allergyOpts} values={form.allergies} onChange={setF('allergies')} />
+            {form.allergies.includes('other') && (
+              <div className="mt-3">
+                <textarea
+                  value={form.allergyNote}
+                  onChange={e => setF('allergyNote')(e.target.value)}
+                  placeholder={t('s9_note_ph')}
+                  className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none"
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <MultiCheck label={t('s10_lang')} options={langOpts} values={form.languages} onChange={setF('languages')} />
+          <RadioGroup
+            label={t('s10_pets')}
+            value={form.pets}
+            onChange={setF('pets')}
+            options={[
+              { value: 'ok',      label: t('s10_pets_ok') },
+              { value: 'notok',   label: t('s10_pets_no') },
+              { value: 'allergy', label: t('s10_pets_al') },
+            ]}
+          />
+        </Card>
+
+        {/* About You Section */}
+        <Card className="p-5 space-y-5">
+          <h2 className="section-label">{t('s11_title')}</h2>
+          <Input label={t('s11_q_origin')} value={form.qOrigin} onChange={setF('qOrigin')} />
+          <div>
+            <MultiCheck label={t('s11_q_offduty')} options={offDutyOpts} values={form.qOffDuty} onChange={setF('qOffDuty')} />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_offduty_sub')}</p>
+          </div>
+          <Input label={t('s11_q_tradition')} value={form.qFridayTradition} onChange={setF('qFridayTradition')} />
+          <Input label={t('s11_q_dish')} value={form.qFavoriteDish} onChange={setF('qFavoriteDish')} />
+          <Input label={t('s11_q_dislike')} value={form.qDislikedFood} onChange={setF('qDislikedFood')} />
+          <div>
+            <MultiCheck label={t('s11_q_aftermeal')} options={afterMealOpts} values={form.qAfterMeal} onChange={setF('qAfterMeal')} />
+            <p className="text-[11px] text-warm-400 mt-2">{t('s11_q_aftermeal_sub')}</p>
+            {form.qAfterMeal.includes('other') && (
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={form.qAfterMealOther}
+                  onChange={e => setF('qAfterMealOther')(e.target.value)}
+                  placeholder={t('s11_am_other_ph')}
+                  className="w-full min-h-[48px] py-3 px-4 rounded-xl border border-warm-200 text-[15px] bg-white focus:outline-none focus:ring-4 focus:ring-brand-50 focus:border-brand-400 transition-all"
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">{t('s11_q_more')}</label>
+            <textarea
+              value={form.qMoreInfo}
+              onChange={e => setF('qMoreInfo')(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-warm-200 text-sm bg-white focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-300 resize-none transition-all"
+              rows={3}
+              maxLength={300}
+            />
+          </div>
         </Card>
 
         {/* Bio Section */}
