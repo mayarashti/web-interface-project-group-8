@@ -251,9 +251,18 @@ function S16HostRegistration({ data, setData, onNext, onBack, onSkipPreferences,
   // Persist the current step on `data` so navigating back from the summary
   // screen (a separate top-level screen) resumes here instead of restarting.
   const goToStep = (n) => {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     setStep(n);
     setData(prev => ({ ...prev, hostRegStep: n }));
   };
+
+  // Scroll to the top on every step change. Runs after React commits the new
+  // step's DOM, so it isn't undone by the keyboard/layout settling afterward.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [step]);
 
   const [customLanguages, setCustomLanguages] = useState([]);
   const [newLanguageText, setNewLanguageText] = useState('');
