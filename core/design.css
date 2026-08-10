@@ -184,7 +184,10 @@ button:disabled {
 /* Mobile viewport (widths up to 640px) — larger, higher, offset right */
 @media (max-width: 640px) {
   .screen-enter::before {
-    left: calc(50% - 230px); /* dead center */
+    /* The -15deg rotation swings the pepper's visual mass left of its
+       untransformed box, so the box itself is offset right to compensate —
+       this is what actually reads as centered once rotated. */
+    left: calc(50% - 140px);
     width: 460px;
     height: 570px;
     bottom: 6rem;           /* positioned higher up on the screen */
