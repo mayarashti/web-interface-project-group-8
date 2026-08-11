@@ -78,10 +78,10 @@ async function createNotification(userId, role, content, type = 'general', title
 
 // ─── Compromise levels (applied in order after 24h) ───────────────
 const COMPROMISE = {
-  NONE:   0,  // strict matching only
+  NONE: 0,  // strict matching only
   RADIUS: 1,  // expand travelDistance by 20%
-  PETS:   2,  // allow hasPets:true even if petsComfort:"no"
-  TIME:   3,  // allow ±2h flexibility in arrival time
+  PETS: 2,  // allow hasPets:true even if petsComfort:"no"
+  TIME: 3,  // allow ±2h flexibility in arrival time
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -140,8 +140,8 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -294,41 +294,41 @@ function passesHardFilters(soldier, request, family, hosting, bannedIds, comprom
 // ──────────────────────────────────────────────────────────────────
 // SCORING — higher = better match (soft preferences)
 // ──────────────────────────────────────────────────────────────────
-  function scoreFamily(soldier, request, family, hosting) {
-    let score = 0;
+function scoreFamily(soldier, request, family, hosting) {
+  let score = 0;
 
-    // Shared languages — both sides now use the same codes: "he" | "en" | "ru" | "es" | "ar" | "other"
-    const soldierLangs = soldier.languages ?? [];
-    const familyLangs = family.hostLanguages ?? [];
-    const sharedLangs = soldierLangs.filter((l) => familyLangs.includes(l));
-    score += sharedLangs.length * 10;
+  // Shared languages — both sides now use the same codes: "he" | "en" | "ru" | "es" | "ar" | "other"
+  const soldierLangs = soldier.languages ?? [];
+  const familyLangs = family.hostLanguages ?? [];
+  const sharedLangs = soldierLangs.filter((l) => familyLangs.includes(l));
+  score += sharedLangs.length * 10;
 
-    // Transportation — soldier needs pickup and family offers it
-    if (request.transport === true && hosting.pickup === true) score += 15;
+  // Transportation — soldier needs pickup and family offers it
+  if (request.transport === true && hosting.pickup === true) score += 15;
 
-    // Pets — soldier is ok with pets and family has pets (positive vibe match)
-    if (request.petsComfort === "ok" && family.hasPets === true) score += 5;
+  // Pets — soldier is ok with pets and family has pets (positive vibe match)
+  if (request.petsComfort === "ok" && family.hasPets === true) score += 5;
 
-    // No pets and soldier prefers no pets
-    if (request.petsComfort === "no" && family.hasPets === false) score += 10;
+  // No pets and soldier prefers no pets
+  if (request.petsComfort === "no" && family.hasPets === false) score += 10;
 
-    // Exact kosher level match bonus
-    if (request.kosher && request.kosher !== "none" && request.kosher === family.hostKosher) score += 10;
-    if (request.kosher === "separated" && family.hostKosher === "mehadrin") score += 5;
+  // Exact kosher level match bonus
+  if (request.kosher && request.kosher !== "none" && request.kosher === family.hostKosher) score += 10;
+  if (request.kosher === "separated" && family.hostKosher === "mehadrin") score += 5;
 
-    // Shabbat bonus — traditional family is a bonus when soldier didn't require shabbat
-    if ((!request.shabbat || request.shabbat === "none") && family.hostShabbat === "traditional") score += 5;
+  // Shabbat bonus — traditional family is a bonus when soldier didn't require shabbat
+  if ((!request.shabbat || request.shabbat === "none") && family.hostShabbat === "traditional") score += 5;
 
-        // Exact Shabbat level match bonus
-    if (request.shabbat && request.shabbat !== "none" && request.shabbat === family.hostShabbat) score += 10;
+  // Exact Shabbat level match bonus
+  if (request.shabbat && request.shabbat !== "none" && request.shabbat === family.hostShabbat) score += 10;
 
-    // Favorite family — the soldier already hosted here and asked to hear from
-    // them again. Large enough to beat any combination of soft preferences, but
-    // it never bypasses passesHardFilters.
-    if ((soldier.favorite_families ?? []).includes(family.id)) score += 50;
+  // Favorite family — the soldier already hosted here and asked to hear from
+  // them again. Large enough to beat any combination of soft preferences, but
+  // it never bypasses passesHardFilters.
+  if ((soldier.favorite_families ?? []).includes(family.id)) score += 50;
 
-    return score;
-  }
+  return score;
+}
 
 // ──────────────────────────────────────────────────────────────────
 // BUILD COMPROMISE NOTIFICATIONS for the soldier
@@ -446,7 +446,7 @@ async function runMatchingForRequest(requestId, compromiseLevel = COMPROMISE.NON
   prelim.forEach((c, i) => {
     const distanceKm = distances[i];
     const isFavorite = favoriteIds.includes(c.family.id);
-    
+
     if (distanceKm === null) {
       if (!isFavorite) {
         console.log(`   ❌ [DISTANCE REJECT] Missing location coordinates for Soldier (${request.soldier_id}) or Family "${c.family.hostName}" (${c.family.id})`);
@@ -574,7 +574,7 @@ exports.onNewSoldierRequest = onDocumentCreated(
   async (event) => {
     const requestId = event.params.requestId;
     const requestDate = event.data.data().when;
-    const today    = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     const isUrgent = requestDate === today || requestDate === tomorrow;
     console.log("🔔 onNewSoldierRequest triggered for:", requestId, "urgent:", isUrgent);
@@ -604,7 +604,7 @@ exports.onNewFamilyHosting = onDocumentCreated(
       .where("is_match", "==", false)
       .get();
 
-    const today    = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     const isUrgent = hosting.date === today || hosting.date === tomorrow;
 
@@ -964,7 +964,7 @@ async function runCheckPendingRequests() {
   // ── REMINDER G: day after the hosting → offer to favorite the family ──
   // Asks the soldier whether they want to hear about this family's future
   // hostings. Only the soldier ever sees this — the family is never told.
-  const yesterdayStr  = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const twoDaysAgoStr = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString().split("T")[0];
   const pastDates = [...new Set([yesterdayStr, twoDaysAgoStr])];
 
@@ -1320,7 +1320,7 @@ exports.migrateValues = onCall(async (req) => {
   // Only allow signed-in users (add uid check here if you want admin-only)
   if (!req.auth) throw new HttpsError("unauthenticated", "Must be signed in");
 
-  const KOSHER_REMAP  = { kosher: "separated", kitchen: "mehadrin" };
+  const KOSHER_REMAP = { kosher: "separated", kitchen: "mehadrin" };
   const SHABBAT_REMAP = { yes: "keeps", no: "none", observant: "keeps", secular: "none" };
 
   const stats = { soldiers: 0, families: 0, requests: 0 };
@@ -1333,14 +1333,14 @@ exports.migrateValues = onCall(async (req) => {
     const d = doc.data();
     const patch = {};
 
-    const newKosher  = KOSHER_REMAP[d.kosher]       ?? d.kosher;
+    const newKosher = KOSHER_REMAP[d.kosher] ?? d.kosher;
     const newShabbat = SHABBAT_REMAP[d.shabbatKeeps] ?? d.shabbatKeeps;
 
-    if (newKosher  !== d.kosher)       patch.kosher       = newKosher;
+    if (newKosher !== d.kosher) patch.kosher = newKosher;
     if (newShabbat !== d.shabbatKeeps) patch.shabbatKeeps = newShabbat;
 
     soldierLevels[doc.id] = {
-      kosher:      newKosher  || "none",
+      kosher: newKosher || "none",
       shabbatKeeps: newShabbat || "none",
     };
 
@@ -1646,7 +1646,7 @@ exports.onActiveMatchApproved = onDocumentUpdated(
   { document: "active_matches/{matchId}", region: "me-west1" },
   async (event) => {
     const before = event.data.before.data();
-    const after  = event.data.after.data();
+    const after = event.data.after.data();
 
     if (before.status !== "pending_soldier_approval" || after.status !== "approved") return;
 
@@ -1659,29 +1659,29 @@ exports.onActiveMatchApproved = onDocumentUpdated(
     const soldierSnap = await db.collection("soldiers").doc(request.soldier_id).get();
     const soldier = soldierSnap.exists ? soldierSnap.data() : {};
     const guestObj = {
-      match_id:       matchId,
-      soldier_id:     request.soldier_id ?? null,
-      name:           soldier.fullName ?? soldier.name ?? "חייל",
-      phone:          soldier.phone ?? null,
-      unit:           soldier.unit ?? null,
-      age:            soldier.age ?? null,
-      avatarColor:    soldier.avatarPreview ?? "#6f8f72",
+      match_id: matchId,
+      soldier_id: request.soldier_id ?? null,
+      name: soldier.fullName ?? soldier.name ?? "חייל",
+      phone: soldier.phone ?? null,
+      unit: soldier.unit ?? null,
+      age: soldier.age ?? null,
+      avatarColor: soldier.avatarPreview ?? "#6f8f72",
       profile_img_url: soldier.profile_img_url ?? null,
-      kosher:         request.kosher ?? "none",
-      allergies:      soldier.allergies ?? [],
-      bio:            soldier.bio ?? null,
-      qOrigin:          soldier.qOrigin ?? null,
-      qOffDuty:         soldier.qOffDuty ?? [],
+      kosher: request.kosher ?? "none",
+      allergies: soldier.allergies ?? [],
+      bio: soldier.bio ?? null,
+      qOrigin: soldier.qOrigin ?? null,
+      qOffDuty: soldier.qOffDuty ?? [],
       qFridayTradition: soldier.qFridayTradition ?? null,
-      qFavoriteDish:    soldier.qFavoriteDish ?? null,
-      qDislikedFood:    soldier.qDislikedFood ?? null,
-      qAfterMeal:       soldier.qAfterMeal ?? [],
-      qAfterMealOther:  soldier.qAfterMealOther ?? null,
-      qMoreInfo:        soldier.qMoreInfo ?? null,
-      needSleep:      request.needSleep ?? false,
+      qFavoriteDish: soldier.qFavoriteDish ?? null,
+      qDislikedFood: soldier.qDislikedFood ?? null,
+      qAfterMeal: soldier.qAfterMeal ?? [],
+      qAfterMealOther: soldier.qAfterMealOther ?? null,
+      qMoreInfo: soldier.qMoreInfo ?? null,
+      needSleep: request.needSleep ?? false,
       needsTransport: request.transport ?? false,
-      walkDistance:   request.walkDistance ?? false,
-      groupSize:      after.group_size ?? request.guestCount ?? 1,
+      walkDistance: request.walkDistance ?? false,
+      groupSize: after.group_size ?? request.guestCount ?? 1,
     };
 
     // 1. Add guest transactionally with a capacity check
@@ -2012,7 +2012,7 @@ exports.onHostingStatusChange = onDocumentUpdated(
   { document: "family_hostings/{hostingId}", region: "me-west1" },
   async (event) => {
     const before = event.data.before.data();
-    const after  = event.data.after.data();
+    const after = event.data.after.data();
 
     if (before.status === after.status) return;
 
@@ -2439,7 +2439,7 @@ async function resetSession(chatId) {
 // ── UI helpers ────────────────────────────────────────────────────
 
 function inlineKeyboard(rows) { return { inline_keyboard: rows }; }
-function btn(text, data)      { return { text, callback_data: data }; }
+function btn(text, data) { return { text, callback_data: data }; }
 
 function getNextFridays(n = 4) {
   const fridays = [];
@@ -2462,15 +2462,15 @@ async function showMainMenu(token, chatId, role, name) {
   const greeting = name ? `שלום ${name}! 👋` : "שלום! 👋";
   const keyboard = role === "soldier"
     ? inlineKeyboard([
-        [btn("📋 הסטטוס שלי", "menu:status")],
-        [btn("🍽️ פתח בקשת אירוח", "menu:new_request")],
-        [btn("❓ עזרה", "menu:help")],
-      ])
+      [btn("📋 הסטטוס שלי", "menu:status")],
+      [btn("🍽️ פתח בקשת אירוח", "menu:new_request")],
+      [btn("❓ עזרה", "menu:help")],
+    ])
     : inlineKeyboard([
-        [btn("👥 מי מגיע אליי?", "menu:guests")],
-        [btn("🏠 פתח אירוח חדש", "menu:new_hosting")],
-        [btn("❓ עזרה", "menu:help")],
-      ]);
+      [btn("👥 מי מגיע אליי?", "menu:guests")],
+      [btn("🏠 פתח אירוח חדש", "menu:new_hosting")],
+      [btn("❓ עזרה", "menu:help")],
+    ]);
   await sendTelegramMessage(token, chatId, `${greeting}\n\nמה תרצה לעשות?`, keyboard);
 }
 
@@ -2740,9 +2740,9 @@ exports.telegramWebhook = onRequest(
       if (!session?.user_id) return;
 
       // Navigation
-      if (data === "menu:main")    { await resetSession(chatId); return showMainMenu(token, chatId, session.role, session.name); }
-      if (data === "menu:status")  return handleStatus(token, chatId, session);
-      if (data === "menu:guests")  return handleGuests(token, chatId, session);
+      if (data === "menu:main") { await resetSession(chatId); return showMainMenu(token, chatId, session.role, session.name); }
+      if (data === "menu:status") return handleStatus(token, chatId, session);
+      if (data === "menu:guests") return handleGuests(token, chatId, session);
       if (data === "menu:new_request") return srStart(token, chatId);
       if (data === "menu:new_hosting") return nhStart(token, chatId);
       if (data === "menu:help")
@@ -2840,10 +2840,10 @@ exports.telegramWebhook = onRequest(
           const result = await joinFavoriteHostingFor(session.user_id, hostingId);
           const message = result.success
             ? `✅ שובצת לאירוח אצל משפחת ${result.family_name ?? "המשפחה"}! ההגעה אושרה, נתראה 🍽️`
-            : result.reason === "full"        ? "האירוח כבר מלא. נמשיך לחפש לך משפחה אחרת."
-            : result.reason === "has_request" ? "אתה כבר משובץ לתאריך הזה. כדי להתארח כאן, בטל קודם את השיבוץ הקיים."
-            : result.reason === "not_favorite" ? "המשפחה הזו כבר לא במועדפים שלך."
-            : "האירוח הזה כבר לא זמין.";
+            : result.reason === "full" ? "האירוח כבר מלא. נמשיך לחפש לך משפחה אחרת."
+              : result.reason === "has_request" ? "אתה כבר משובץ לתאריך הזה. כדי להתארח כאן, בטל קודם את השיבוץ הקיים."
+                : result.reason === "not_favorite" ? "המשפחה הזו כבר לא במועדפים שלך."
+                  : "האירוח הזה כבר לא זמין.";
           await sendTelegramMessage(token, chatId, message,
             inlineKeyboard([[btn("🔙 תפריט", "menu:main")]]));
         } catch (e) {
@@ -2854,7 +2854,7 @@ exports.telegramWebhook = onRequest(
       }
 
       // Soldier new-request flow
-      if (data.startsWith("sr_date:"))   return srKosher(token, chatId, data.slice(8));
+      if (data.startsWith("sr_date:")) return srKosher(token, chatId, data.slice(8));
       if (data.startsWith("sr_kosher:")) {
         const s = await getSession(chatId);
         return srShabbat(token, chatId, { ...s.temp_data, kosher: data.slice(9) });
@@ -2874,7 +2874,7 @@ exports.telegramWebhook = onRequest(
       if (data === "sr_submit") return srSubmit(token, chatId, session);
 
       // Host new-hosting flow
-      if (data.startsWith("nh_date:"))     return nhSoldiers(token, chatId, data.slice(8));
+      if (data.startsWith("nh_date:")) return nhSoldiers(token, chatId, data.slice(8));
       if (data.startsWith("nh_soldiers:")) {
         const s = await getSession(chatId);
         return nhKosher(token, chatId, { ...s.temp_data, soldiers: data.slice(12) });
@@ -3140,7 +3140,7 @@ function upgradeImageResolution(url) {
 }
 
 async function translateAndFormatRecipe(candidate, soldier) {
-  const systemPromptTranslate = 
+  const systemPromptTranslate =
     "You are a professional chef and translation expert.\n" +
     "Your task is to translate an English recipe into high-quality, warm, natural, and idiomatic culinary Hebrew (עברית) suitable for an Israeli family making a Shabbat dinner.\n" +
     "Ensure:\n" +
@@ -3166,7 +3166,7 @@ async function translateAndFormatRecipe(candidate, soldier) {
     "}";
 
   const rawIngredients = (candidate.extendedIngredients || []).map(i => i.original).slice(0, 20);
-  
+
   let instructionsList = [];
   const analyzed = candidate.analyzedInstructions || [];
   if (analyzed && Array.isArray(analyzed) && analyzed.length > 0) {
@@ -3191,7 +3191,7 @@ async function translateAndFormatRecipe(candidate, soldier) {
     instructionsList = ["Cook according to taste."];
   }
 
-  const userPromptTranslate = 
+  const userPromptTranslate =
     `Original English Recipe details:\n` +
     `Title: ${candidate.title}\n` +
     `Ingredients:\n${rawIngredients.map(ing => `- ${ing}`).join("\n")}\n` +
@@ -3222,7 +3222,7 @@ async function translateAndFormatRecipe(candidate, soldier) {
 exports.generateRecipes = onCall(
   async (req) => {
     const { soldier, host, count = 2 } = req.data || {};
-    
+
     const normalizePrefs = (arr) => {
       if (!arr || !Array.isArray(arr)) return [];
       return arr.map(item => {
@@ -3239,7 +3239,7 @@ exports.generateRecipes = onCall(
     const kosherRequired = host?.keepsKosher || soldier?.isKosher;
     console.log(`Starting direct LLM recipe generation. Kosher Required: ${kosherRequired}, count: ${count}`);
 
-    const systemPrompt = 
+    const systemPrompt =
       "You are a master culinary chef specializing in authentic Israeli, Middle Eastern, Sephardic, and Ashkenazi home cooking, " +
       "specifically family-style Shabbat dinners. Your task is to generate a recipe in Hebrew that is: \n" +
       "1. A traditional, delicious, and common dish in the Israeli kitchen suitable for Shabbat dinner " +
@@ -3279,7 +3279,7 @@ exports.generateRecipes = onCall(
     const generatedRecipes = [];
 
     for (let i = 0; i < count; i++) {
-      let userPrompt = 
+      let userPrompt =
         `Generate recipe option ${i + 1} matching these constraints:\n` +
         `- Favorite Foods (often in Hebrew): ${JSON.stringify(soldier?.favoriteFoods || [])}\n` +
         `- Disliked Foods (often in Hebrew): ${JSON.stringify(soldier?.dislikedFoods || [])}\n` +
@@ -3289,7 +3289,7 @@ exports.generateRecipes = onCall(
 
       if (generatedRecipes.length > 0) {
         const selectedTitles = generatedRecipes.map(r => r.title);
-        userPrompt += 
+        userPrompt +=
           `Already Selected Recipes in this session: ${JSON.stringify(selectedTitles)}\n` +
           `CRITICAL: The new recipe must be a completely different type of dish/course from the already selected recipes. ` +
           `For example, if you already generated a chicken/meat main course, generate a vegetarian side dish, salad, or fish option.\n\n`;
@@ -3325,21 +3325,21 @@ exports.generateRecipes = onCall(
         }
       } catch (err) {
         console.error(`Error generating recipe option ${i + 1}:`, err);
-        
+
         // Push a safe fallback recipe to prevent function failure
         const fallbackId = Math.floor(Math.random() * 1000000);
         const fallbackTitle = i === 0 ? "עוף בתנור בסילאן ותפוחי אדמה" : "סלט ים תיכוני רענן";
-        const fallbackImgPrompt = i === 0 
-          ? "Roasted chicken with golden potatoes and glazed silan syrup, on a serving platter, cookbook photography" 
+        const fallbackImgPrompt = i === 0
+          ? "Roasted chicken with golden potatoes and glazed silan syrup, on a serving platter, cookbook photography"
           : "Fresh Mediterranean salad with cucumber, tomato, red onion, olive oil, mint leaves, premium food photography";
         const encodedFallback = encodeURIComponent(fallbackImgPrompt);
-        
+
         generatedRecipes.push({
           id: fallbackId,
           recipe_id: fallbackId,
           title: fallbackTitle,
           description: "מתכון ישראלי קלאסי וטעים המתאים לכל המשפחה לארוחת השבת.",
-          ingredients: i === 0 
+          ingredients: i === 0
             ? ["1 עוף שלם מחולק", "4 תפוחי אדמה קלופים וחתוכים", "4 כפות סילאן", "3 כפות שמן זית", "מלח ופלפל לפי הטעם"]
             : ["3 מלפפונים חתוכים", "3 עגבניות חתוכות", "1 בצל סגול פרוס", "מיץ מחצי לימון", "3 כפות שמן זית", "חופן עלי נענע"],
           instructions: i === 0
@@ -3425,7 +3425,7 @@ async function runEmergencyMatchmaking() {
   const hostingsSnap = await db.collection("family_hostings")
     .where("date", "in", [todayStr, tomorrowStr])
     .get();
-  
+
   const familyHostingDates = {};
   hostingsSnap.docs.forEach(d => {
     const h = d.data();
@@ -3502,10 +3502,10 @@ async function runEmergencyMatchmaking() {
         contentMessage,
         "emergency_host",
         "חייל זקוק לאירוח דחוף!",
-        { 
-          search_id: searchDoc.id, 
-          soldier_id: soldierSnap.id, 
-          date: request.when, 
+        {
+          search_id: searchDoc.id,
+          soldier_id: soldierSnap.id,
+          date: request.when,
           name: soldier.name || "חייל",
           distance: isNum(dist) ? parseFloat(dist.toFixed(1)) : null,
           has_hosting: Boolean(hasHosting)
@@ -3537,7 +3537,7 @@ exports.acceptEmergencyHost = onCall(async (req) => {
     const searchRef = db.collection("soldier_hosting_searches").doc(search_id);
     const searchSnap = await transaction.get(searchRef);
     if (!searchSnap.exists) throw new HttpsError("not-found", "Search not found");
-    
+
     const request = searchSnap.data();
     if (request.is_match) {
       return { success: false, reason: 'taken' };
@@ -3548,12 +3548,45 @@ exports.acceptEmergencyHost = onCall(async (req) => {
     const familySnap = await transaction.get(familyRef);
     const familyData = familySnap.exists ? familySnap.data() : {};
 
+    const soldierRef = db.collection("soldiers").doc(request.soldier_id);
+    const soldierSnap = await transaction.get(soldierRef);
+    const soldier = soldierSnap.exists ? soldierSnap.data() : {};
+
     const hostingsQuery = db.collection("family_hostings")
       .where("family_id", "==", uid)
       .where("date", "==", date)
       .where("status", "==", "open");
     const hostingsSnap = await transaction.get(hostingsQuery);
-    
+
+    const activeMatchRef = db.collection("active_matches").doc();
+    const matchId = activeMatchRef.id;
+
+    const guestObj = {
+      match_id: matchId,
+      soldier_id: request.soldier_id ?? null,
+      name: soldier.fullName ?? soldier.name ?? "חייל",
+      phone: soldier.phone ?? null,
+      unit: soldier.unit ?? null,
+      age: soldier.age ?? null,
+      avatarColor: soldier.avatarPreview ?? "#6f8f72",
+      profile_img_url: soldier.profile_img_url ?? null,
+      kosher: request.kosher ?? "none",
+      allergies: soldier.allergies ?? [],
+      bio: soldier.bio ?? null,
+      qOrigin: soldier.qOrigin ?? null,
+      qOffDuty: soldier.qOffDuty ?? [],
+      qFridayTradition: soldier.qFridayTradition ?? null,
+      qFavoriteDish: soldier.qFavoriteDish ?? null,
+      qDislikedFood: soldier.qDislikedFood ?? null,
+      qAfterMeal: soldier.qAfterMeal ?? [],
+      qAfterMealOther: soldier.qAfterMealOther ?? null,
+      qMoreInfo: soldier.qMoreInfo ?? null,
+      needSleep: request.needSleep ?? false,
+      needsTransport: request.transport ?? false,
+      walkDistance: request.walkDistance ?? false,
+      groupSize: request.guestCount || 1,
+    };
+
     let hostingId;
     if (hostingsSnap.empty) {
       const newHostingRef = db.collection("family_hostings").doc();
@@ -3568,11 +3601,7 @@ exports.acceptEmergencyHost = onCall(async (req) => {
         pickup: request.transport || false,
         notes: "Emergency hosting opened",
         status: "open",
-        guests: [{
-          id: request.soldier_id,
-          name: request.soldierName || "Soldier",
-          groupSize: request.guestCount || 1
-        }],
+        guests: [guestObj],
         occupied: request.guestCount || 1,
         is_fully_booked: true,
         created_at: FieldValue.serverTimestamp()
@@ -3587,14 +3616,10 @@ exports.acceptEmergencyHost = onCall(async (req) => {
       const currentOccupied = existing.occupied || 0;
       const newOccupied = currentOccupied + addedGuests;
       const newSoldiersCapacity = Math.max(currentSoldiersCapacity + addedGuests, newOccupied);
-      
+
       transaction.update(existingDoc.ref, {
         soldiers: newSoldiersCapacity,
-        guests: [...currentGuests, {
-          id: request.soldier_id,
-          name: request.soldierName || "Soldier",
-          groupSize: addedGuests
-        }],
+        guests: [...currentGuests, guestObj],
         occupied: newOccupied,
         is_fully_booked: true
       });
@@ -3608,9 +3633,8 @@ exports.acceptEmergencyHost = onCall(async (req) => {
       took_24h_dates: FieldValue.arrayUnion(date)
     });
 
-    const activeMatchRef = db.collection("active_matches").doc();
     transaction.set(activeMatchRef, {
-      id: activeMatchRef.id,
+      id: matchId,
       soldier_request_id: search_id,
       host_offer_id: hostingId,
       family_id: uid,
@@ -3634,7 +3658,7 @@ exports.acceptEmergencyHost = onCall(async (req) => {
           .where("type", "==", "emergency_host")
           .get();
         famNotifs.forEach(doc => batch.update(doc.ref, { read: true }));
-        
+
         // Clear this search's emergency notifications for all families
         const allNotifs = await db.collection("notifications")
           .where("type", "==", "emergency_host")
