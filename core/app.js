@@ -87,7 +87,7 @@ function App() {
           console.log('[notif] subscribeToNotifications available?', !!window.DB.subscribeToNotifications, '| uid:', user.uid);
           if (window.DB.subscribeToNotifications) {
             if (notificationsUnsubRef.current) notificationsUnsubRef.current();
-            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, 'soldier', (notifications) => {
               console.log('[notif] soldier got', notifications.length, 'notifications');
               setFormData(prev => ({ ...prev, notifications }));
             });
@@ -140,7 +140,7 @@ function App() {
           console.log('[notif] subscribeToNotifications available?', !!window.DB.subscribeToNotifications, '| uid:', user.uid);
           if (window.DB.subscribeToNotifications) {
             if (notificationsUnsubRef.current) notificationsUnsubRef.current();
-            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, (notifications) => {
+            notificationsUnsubRef.current = window.DB.subscribeToNotifications(user.uid, 'host', (notifications) => {
               console.log('[notif] host got', notifications.length, 'notifications');
               setFormData(prev => ({ ...prev, notifications }));
             });

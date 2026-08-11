@@ -233,22 +233,24 @@ window.DB = {
   // Notifications
   // Returns an unsubscribe function. Calls `callback` with an array of
   // notification objects sorted newest-first whenever the collection changes.
-  subscribeToNotifications(uid, callback) {
-    console.log('[notif] starting Firestore listener for uid:', uid);
+  subscribeToNotifications(uid, role, callback) {
+    console.log('[notif] starting Firestore listener for uid:', uid, 'role:', role);
     return window.db.collection('notifications')
       .where('user_id', '==', uid)
       .orderBy('sent_at', 'desc')
       .limit(50)
       .onSnapshot(snapshot => {
         console.log('[notif] Firestore snapshot:', snapshot.docs.length, 'docs');
-        const notifications = snapshot.docs.map(doc => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            ...d,
-            time: d.sent_at ? d.sent_at.toDate().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '',
-          };
-        });
+        const notifications = snapshot.docs
+          .map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              ...d,
+              time: d.sent_at ? d.sent_at.toDate().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '',
+            };
+          })
+          .filter(n => !role || !n.role || n.role === role);
         callback(notifications);
       }, err => {
         console.error('notifications listener error:', err);
