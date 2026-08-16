@@ -2005,6 +2005,7 @@ function S21SoldierProfile({ data, setData, onBack, onNewRequest, onEditRequest,
       <AppHeader 
         title={t('s15_landing_profile_title')} 
         onBack={onBack}
+        onLogout={onLogout}
       />
       <div className="w-full max-w-md mx-auto px-5 space-y-6">
         

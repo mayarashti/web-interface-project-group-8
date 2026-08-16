@@ -1690,7 +1690,7 @@ function S22HostProfile({ data, setData, onBack, onLogout }) {
 
   return (
     <div className="screen-enter min-h-screen bg-warm-50 pb-12">
-      <AppHeader title={t('profile_settings')} onBack={onBack} />
+      <AppHeader title={t('profile_settings')} onBack={onBack} onLogout={onLogout} />
 
       <div className="max-w-md mx-auto px-5 pt-6 space-y-5">
 

@@ -856,7 +856,13 @@ function AppHeader({ title, eyebrow, onBack, onProfile, profileAction, actions, 
 
           {/* Logo — absolutely centred so it never gets displaced by side buttons */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
-            <img src="MEMULAIM.png" alt="מימולאים" className="h-14 md:h-18 w-auto object-contain drop-shadow-md pointer-events-none" />
+            <img 
+              src="MEMULAIM.png" 
+              alt="מימולאים" 
+              className={`h-14 md:h-18 w-auto object-contain drop-shadow-md ${onLogout ? 'pointer-events-auto cursor-pointer active:scale-95 transition-transform' : 'pointer-events-none'}`}
+              onClick={onLogout ? onLogout : undefined}
+              title={onLogout ? t('logout') : undefined}
+            />
           </div>
 
           <div className="relative flex items-center gap-2 min-w-0 justify-end pr-1 ml-auto z-10">
